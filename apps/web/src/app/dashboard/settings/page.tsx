@@ -12,8 +12,9 @@ export default function SettingsPage() {
   useEffect(() => {
     const load = async () => {
       const supabase = createClient()
-      const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
-      const { data } = await supabase.from('businesses').select('*').eq('user_id', user!.id).single()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      const { data } = await supabase.from('businesses').select('*').eq('user_id', session.user.id).single()
       if (data) { setBusiness(data); setForm({ name: data.name, ai_prompt: data.ai_prompt || '', ai_enabled: data.ai_enabled }) }
     }
     load()

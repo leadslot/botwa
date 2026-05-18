@@ -4,6 +4,7 @@ import { MessageSquare, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 export default async function ConversationsPage() {
   const supabase = await createClient()
   const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
+  if (!user) { const { redirect } = await import('next/navigation'); redirect('/login') }
 
   const { data: business } = await supabase
     .from('businesses').select('id').eq('user_id', user!.id).single()
