@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { MessageCircle, LayoutDashboard, Wifi, Settings, MessageSquare, LogOut } from 'lucide-react'
+import { MessageCircle, LayoutDashboard, Wifi, Settings, MessageSquare, LogOut, CreditCard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -8,6 +8,7 @@ const navItems = [
   { href: '/dashboard/connect', icon: Wifi, label: 'Conectar WhatsApp' },
   { href: '/dashboard/conversations', icon: MessageSquare, label: 'Conversaciones' },
   { href: '/dashboard/settings', icon: Settings, label: 'Configuración' },
+  { href: '/dashboard/billing', icon: CreditCard, label: 'Suscripción' },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

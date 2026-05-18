@@ -1,23 +1,7 @@
 import Link from 'next/link'
 import { MessageCircle, Zap, Shield, Clock, ChevronRight, CheckCircle2, Smartphone } from 'lucide-react'
 
-async function getDolarBlue(): Promise<number> {
-  try {
-    const res = await fetch('https://dolarapi.com/v1/dolares/blue', { next: { revalidate: 3600 } })
-    const data = await res.json()
-    return data.venta ?? 1450
-  } catch {
-    return 1450
-  }
-}
-
-export default async function LandingPage() {
-  const dolarBlue = await getDolarBlue()
-  const precioARS = Math.ceil((15 * dolarBlue) / 1000) * 1000
-  const precioARSDisplay = precioARS.toLocaleString('es-AR')
-  const precioDiario = Math.ceil(precioARS / 30 / 100) * 100
-  const precioDiarioDisplay = precioDiario.toLocaleString('es-AR')
-
+export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
 
@@ -161,11 +145,10 @@ export default async function LandingPage() {
               <div className="text-center pt-4">
                 <p className="text-gray-500 text-sm font-medium mb-1">Plan Profesional</p>
                 <div className="flex items-end justify-center gap-1 mb-1">
-                  <span className="text-5xl font-black text-gray-900">${precioARSDisplay}</span>
-                  <span className="text-gray-400 mb-2">ARS/mes</span>
+                  <span className="text-5xl font-black text-gray-900">$15</span>
+                  <span className="text-gray-400 mb-2">USD/mes</span>
                 </div>
-                <p className="text-gray-400 text-sm">≈ USD 15/mes · dólar blue ${dolarBlue.toLocaleString('es-AR')}</p>
-                <p className="text-indigo-500 text-xs font-semibold mb-8">menos de ${precioDiarioDisplay} ARS por día</p>
+                <p className="text-gray-400 text-sm mb-8">El equivalente en pesos se calcula al momento del pago.</p>
 
                 <div className="space-y-3 text-left mb-8">
                   {[
