@@ -115,7 +115,7 @@ export const botManager = {
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
-          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date')
+          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated')
           .eq('id', businessId)
           .single()
 
@@ -165,6 +165,8 @@ export const botManager = {
                 messages_used: usados + 1,
                 daily_messages_count: newDailyCount,
                 daily_reset_date: today,
+                // ~430 tokens por intercambio (300 prompt + 30 user + 100 respuesta)
+                tokens_estimated: (business.tokens_estimated || 0) + 430,
               })
               .eq('id', businessId),
           ])
