@@ -1,44 +1,53 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { MessageSquare, Wifi, WifiOff, Settings, ChevronRight, Zap, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 
 const TRIAL_LIMIT = 50
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
-  if (!user) { const { redirect } = await import('next/navigation'); redirect('/login') }
+export default function DashboardPage() {
+  const [business, setBusiness] = useState<any>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [msgCount, setMsgCount] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('*')
-    .eq('user_id', user!.id)
-    .single()
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) { window.location.href = '/login'; return }
+      const [{ data: biz }, { data: sess }, { count }] = await Promise.all([
+        supabase.from('businesses').select('*').eq('user_id', session.user.id).single(),
+        supabase.from('whatsapp_sessions').select('status').single(),
+        supabase.from('whatsapp_messages').select('*', { count: 'exact', head: true }),
+      ])
+      setBusiness(biz)
+      setIsConnected(sess?.status === 'connected')
+      setMsgCount(count || 0)
+      setLoading(false)
+    })
+  }, [])
 
-  const { data: session } = business ? await supabase
-    .from('whatsapp_sessions')
-    .select('status')
-    .eq('business_id', business.id)
-    .single() : { data: null }
-
-  const { count: msgCount } = business ? await supabase
-    .from('whatsapp_messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('business_id', business.id) : { count: 0 }
-
-  const isConnected = session?.status === 'connected'
-
-  if (!business) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Completá tu configuración</h2>
-          <p className="text-gray-500 mb-4">Necesitamos algunos datos de tu negocio</p>
-          <Link href="/dashboard/onboarding" className="btn-primary">Configurar ahora</Link>
-        </div>
+  if (loading) return (
+    <div className="p-8 animate-pulse">
+      <div className="h-8 bg-gray-200 rounded-xl w-48 mb-2" />
+      <div className="h-4 bg-gray-100 rounded-xl w-32 mb-8" />
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        {[1,2,3].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 h-28" />)}
       </div>
-    )
-  }
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 h-32 mb-4" />
+    </div>
+  )
+
+  if (!business) return (
+    <div className="p-8 flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Completá tu configuración</h2>
+        <p className="text-gray-500 mb-4">Necesitamos algunos datos de tu negocio</p>
+        <Link href="/dashboard/onboarding" className="btn-primary">Configurar ahora</Link>
+      </div>
+    </div>
+  )
 
   return (
     <div className="p-8">
@@ -47,7 +56,6 @@ export default async function DashboardPage() {
         <p className="text-gray-500">{business.name}</p>
       </div>
 
-      {/* Status banner */}
       {!isConnected && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -81,7 +89,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Trial banner */}
       {!business.is_paid && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 mb-8 flex items-center justify-between">
           <div>
@@ -89,14 +96,10 @@ export default async function DashboardPage() {
               Prueba gratuita · {business.messages_used || 0}/{TRIAL_LIMIT} mensajes usados
             </p>
             <div className="w-full bg-indigo-100 rounded-full h-2 mt-2 mb-1">
-              <div
-                className="bg-indigo-500 h-2 rounded-full transition-all"
-                style={{ width: `${Math.min(100, ((business.messages_used || 0) / TRIAL_LIMIT) * 100)}%` }}
-              />
+              <div className="bg-indigo-500 h-2 rounded-full transition-all"
+                style={{ width: `${Math.min(100, ((business.messages_used || 0) / TRIAL_LIMIT) * 100)}%` }} />
             </div>
-            <p className="text-xs text-indigo-600">
-              {TRIAL_LIMIT - (business.messages_used || 0)} mensajes restantes
-            </p>
+            <p className="text-xs text-indigo-600">{TRIAL_LIMIT - (business.messages_used || 0)} mensajes restantes</p>
           </div>
           <Link href="/dashboard/billing" className="btn-primary text-sm py-2 px-4 flex items-center gap-1 ml-4 flex-shrink-0">
             <CreditCard className="w-4 h-4" /> Activar plan
@@ -104,10 +107,9 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
-          { label: 'Mensajes respondidos', value: msgCount || 0, icon: MessageSquare, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+          { label: 'Mensajes respondidos', value: msgCount, icon: MessageSquare, color: 'text-indigo-500', bg: 'bg-indigo-50' },
           { label: 'Estado del bot', value: isConnected ? 'Activo' : 'Inactivo', icon: Zap, color: isConnected ? 'text-emerald-500' : 'text-gray-400', bg: isConnected ? 'bg-emerald-50' : 'bg-gray-50' },
           { label: 'IA configurada', value: business.ai_enabled ? 'Sí' : 'No', icon: Settings, color: 'text-violet-500', bg: 'bg-violet-50' },
         ].map(({ label, value, icon: Icon, color, bg }) => (
@@ -121,7 +123,6 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Quick actions */}
       <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Acciones rápidas</h2>
       <div className="grid grid-cols-2 gap-4">
         {[

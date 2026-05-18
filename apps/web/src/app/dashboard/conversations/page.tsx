@@ -1,40 +1,52 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { MessageSquare, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 
-export default async function ConversationsPage() {
-  const supabase = await createClient()
-  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
-  if (!user) { const { redirect } = await import('next/navigation'); redirect('/login') }
+export default function ConversationsPage() {
+  const [convList, setConvList] = useState<any[]>([])
+  const [totalMsgs, setTotalMsgs] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  const { data: business } = await supabase
-    .from('businesses').select('id').eq('user_id', user!.id).single()
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) { window.location.href = '/login'; return }
+      const { data: business } = await supabase.from('businesses').select('id').eq('user_id', session.user.id).single()
+      if (!business) { setLoading(false); return }
+      const { data: messages } = await supabase
+        .from('whatsapp_messages')
+        .select('id, from_number, message, direction, created_at')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false })
+        .limit(200)
+      const conversations = (messages || []).reduce((acc: Record<string, any[]>, msg) => {
+        const key = msg.from_number.replace('@s.whatsapp.net', '')
+        if (!acc[key]) acc[key] = []
+        acc[key].push(msg)
+        return acc
+      }, {})
+      setConvList(Object.entries(conversations).map(([number, msgs]) => ({ number, lastMsg: msgs[0], count: msgs.length })))
+      setTotalMsgs(messages?.length || 0)
+      setLoading(false)
+    })
+  }, [])
 
-  const { data: messages } = business ? await supabase
-    .from('whatsapp_messages')
-    .select('id, from_number, message, direction, created_at')
-    .eq('business_id', business.id)
-    .order('created_at', { ascending: false })
-    .limit(200) : { data: [] }
-
-  // Agrupar por número
-  const conversations = messages?.reduce((acc: Record<string, any[]>, msg) => {
-    const key = msg.from_number.replace('@s.whatsapp.net', '')
-    if (!acc[key]) acc[key] = []
-    acc[key].push(msg)
-    return acc
-  }, {}) || {}
-
-  const convList = Object.entries(conversations).map(([number, msgs]) => ({
-    number,
-    lastMsg: msgs[0],
-    count: msgs.length,
-  }))
+  if (loading) return (
+    <div className="p-8 animate-pulse">
+      <div className="h-8 bg-gray-200 rounded-xl w-48 mb-2" />
+      <div className="h-4 bg-gray-100 rounded-xl w-64 mb-8" />
+      <div className="space-y-3">
+        {[1,2,3,4,5].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 h-20" />)}
+      </div>
+    </div>
+  )
 
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900">Conversaciones</h1>
-        <p className="text-gray-500">{convList.length} contactos · {messages?.length || 0} mensajes en total</p>
+        <p className="text-gray-500">{convList.length} contactos · {totalMsgs} mensajes en total</p>
       </div>
 
       {convList.length === 0 ? (

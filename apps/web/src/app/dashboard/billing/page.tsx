@@ -1,16 +1,30 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { CreditCard, CheckCircle2, Infinity as InfinityIcon, Zap } from 'lucide-react'
 import CouponForm from './CouponForm'
 
-export default async function BillingPage() {
-  const supabase = await createClient()
-  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
+export default function BillingPage() {
+  const [business, setBusiness] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('id, name, is_paid, plan, messages_used, coupon_used')
-    .eq('user_id', user!.id)
-    .single()
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) { window.location.href = '/login'; return }
+      const { data } = await supabase.from('businesses').select('id, name, is_paid, plan, messages_used, coupon_used').eq('user_id', session.user.id).single()
+      setBusiness(data)
+      setLoading(false)
+    })
+  }, [])
+
+  if (loading) return (
+    <div className="p-8 max-w-2xl animate-pulse">
+      <div className="h-8 bg-gray-200 rounded-xl w-40 mb-2" />
+      <div className="h-4 bg-gray-100 rounded-xl w-56 mb-8" />
+      <div className="bg-white rounded-2xl border border-gray-100 h-64 mb-4" />
+    </div>
+  )
 
   const isLifetime = business?.plan === 'lifetime'
   const isPaid = business?.is_paid && !isLifetime
@@ -24,7 +38,6 @@ export default async function BillingPage() {
         <p className="text-gray-500">Tu plan actual y opciones de activación</p>
       </div>
 
-      {/* Estado del plan */}
       {isLifetime ? (
         <div className="card border-2 border-emerald-500 mb-6">
           <div className="flex items-center gap-3 mb-2">
@@ -55,7 +68,6 @@ export default async function BillingPage() {
           <p className="text-gray-500 text-sm">Mensajes ilimitados · Bot activo 24/7</p>
         </div>
       ) : (
-        /* TRIAL */
         <div className="card border-2 border-indigo-500 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -66,16 +78,10 @@ export default async function BillingPage() {
             </div>
             <CreditCard className="w-5 h-5 text-indigo-400" />
           </div>
-
-          {/* Barra de trial */}
           <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-            <div
-              className={`h-2 rounded-full transition-all ${trialPct >= 80 ? 'bg-red-400' : 'bg-indigo-400'}`}
-              style={{ width: `${Math.max(2, trialPct)}%` }}
-            />
+            <div className={`h-2 rounded-full transition-all ${trialPct >= 80 ? 'bg-red-400' : 'bg-indigo-400'}`}
+              style={{ width: `${Math.max(2, trialPct)}%` }} />
           </div>
-
-          {/* Precio */}
           <div className="bg-indigo-50 rounded-xl p-4 mb-4">
             <p className="text-xs text-indigo-500 font-semibold uppercase tracking-wide mb-1">Para continuar sin límites</p>
             <div className="flex items-end gap-2 mb-1">
@@ -83,44 +89,19 @@ export default async function BillingPage() {
               <span className="text-gray-500 mb-1">ARS primer mes</span>
             </div>
             <p className="text-gray-500 text-sm">Luego <strong className="text-gray-700">$60.000/mes</strong> · Cancelás cuando querés</p>
-            <p className="text-indigo-600 text-xs font-semibold mt-1">= $1.333 ARS por día el primer mes</p>
           </div>
-
           <ul className="space-y-2 mb-5">
-            {[
-              'Bot activo 24/7 en nuestro servidor',
-              'IA con tu tono y negocio',
-              'Panel de conversaciones',
-              'Sin límite de mensajes',
-              'Soporte por WhatsApp',
-            ].map(f => (
+            {['Bot activo 24/7 en nuestro servidor','IA con tu tono y negocio','Panel de conversaciones','Sin límite de mensajes','Soporte por WhatsApp'].map(f => (
               <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                {f}
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />{f}
               </li>
             ))}
           </ul>
-
-          <a
-            href="https://mpago.la/botwa-suscripcion"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary w-full block text-center"
-          >
+          <a href="https://mpago.la/botwa-suscripcion" target="_blank" rel="noopener noreferrer" className="btn-primary w-full block text-center">
             Pagar con Mercado Pago
           </a>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            Pago seguro · Tarjeta, débito o transferencia
-          </p>
-
-          <CouponForm />
-        </div>
-      )}
-
-      {/* Si ya es activo o lifetime, igual mostrar el form de código (por si quieren aplicar otro) */}
-      {(isPaid || isLifetime) && !isLifetime && (
-        <div className="card">
-          <CouponForm />
+          <p className="text-xs text-gray-400 text-center mt-2">Pago seguro · Tarjeta, débito o transferencia</p>
+          <div className="mt-4"><CouponForm /></div>
         </div>
       )}
     </div>
