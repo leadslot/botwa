@@ -17,11 +17,10 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
-    try { await supabase.auth.signOut() } catch {}
     const { error } = await supabase.auth.signInWithPassword(form)
     if (error) { setError('Email o contraseña incorrectos'); setLoading(false); return }
-    router.push('/dashboard')
-    router.refresh()
+    // Hard redirect para que el servidor lea las cookies frescas
+    window.location.href = '/dashboard'
   }
 
   return (

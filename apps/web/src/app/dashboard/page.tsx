@@ -7,6 +7,7 @@ const TRIAL_LIMIT = 50
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) { const { redirect } = await import('next/navigation'); redirect('/login') }
 
   const { data: business } = await supabase
     .from('businesses')

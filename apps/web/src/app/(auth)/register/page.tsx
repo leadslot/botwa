@@ -54,7 +54,7 @@ export default function RegisterPage() {
       }
     }
 
-    router.push('/dashboard/onboarding')
+    window.location.href = '/dashboard/onboarding'
   }
 
   return (
