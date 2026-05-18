@@ -4,7 +4,7 @@ import CouponForm from './CouponForm'
 
 export default async function BillingPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
 
   const { data: business } = await supabase
     .from('businesses')

@@ -162,7 +162,7 @@ export default function OnboardingPage() {
   const handleFinish = async () => {
     setLoading(true)
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
     if (!user) return
 
     await supabase.from('businesses').insert({

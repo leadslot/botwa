@@ -13,7 +13,7 @@ const navItems = [
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
   if (!user) redirect('/login')
 
   return (
