@@ -11,28 +11,44 @@ export default function ConnectPage() {
     setLoading(true)
     try {
       await fetch('/api/whatsapp/start', { method: 'POST' })
-      pollStatus()
+      ;(window as any).__startWAPolling?.()
     } finally {
       setLoading(false)
     }
   }
 
-  const pollStatus = () => {
-    const interval = setInterval(async () => {
-      const res = await fetch('/api/whatsapp/status')
-      const data = await res.json()
-      setStatus(data.status)
-      setQR(data.qr)
-      if (data.status === 'connected') clearInterval(interval)
-    }, 2000)
-    return interval
-  }
-
   useEffect(() => {
-    fetch('/api/whatsapp/status').then(r => r.json()).then(d => {
-      setStatus(d.status)
-      setQR(d.qr)
-    })
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch('/api/whatsapp/status')
+        const data = await res.json()
+        setStatus(data.status)
+        setQR(data.qr)
+        if (data.status === 'connected' && interval) {
+          clearInterval(interval)
+          interval = null
+        }
+      } catch {}
+    }
+
+    checkStatus()
+
+    // Solo arrancar el polling si el usuario está conectando activamente
+    // Se activa desde startConnection()
+    const startPolling = () => {
+      if (interval) clearInterval(interval)
+      interval = setInterval(checkStatus, 3000)
+    }
+
+    // Exponer para que startConnection lo llame
+    ;(window as any).__startWAPolling = startPolling
+
+    return () => {
+      if (interval) clearInterval(interval)
+      delete (window as any).__startWAPolling
+    }
   }, [])
 
   return (
