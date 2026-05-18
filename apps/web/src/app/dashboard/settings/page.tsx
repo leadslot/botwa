@@ -10,14 +10,20 @@ export default function SettingsPage() {
   const [form, setForm] = useState({ name: '', ai_prompt: '', ai_enabled: true })
 
   useEffect(() => {
-    const load = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
-      const { data } = await supabase.from('businesses').select('*').eq('user_id', session.user.id).single()
+    const supabase = createClient()
+    const load = async (userId: string) => {
+      const { data } = await supabase.from('businesses').select('*').eq('user_id', userId).single()
       if (data) { setBusiness(data); setForm({ name: data.name, ai_prompt: data.ai_prompt || '', ai_enabled: data.ai_enabled }) }
     }
-    load()
+    // Try getSession first
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) load(session.user.id)
+    })
+    // Also listen for auth state changes (handles cases where session loads async)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) load(session.user.id)
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   const save = async () => {

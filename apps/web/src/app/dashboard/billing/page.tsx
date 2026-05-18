@@ -102,15 +102,15 @@ export default async function BillingPage() {
           </ul>
 
           <a
-            href="https://wa.me/5491112345678?text=Hola%2C+quiero+activar+BotWA+para+mi+negocio"
+            href="https://mpago.la/botwa-suscripcion"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary w-full block text-center"
           >
-            Activar suscripción por WhatsApp
+            Pagar con Mercado Pago
           </a>
           <p className="text-xs text-gray-400 text-center mt-2">
-            Te enviamos el link de pago de Mercado Pago por WhatsApp
+            Pago seguro · Tarjeta, débito o transferencia
           </p>
 
           <CouponForm />
