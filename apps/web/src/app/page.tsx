@@ -56,11 +56,11 @@ export default function LandingPage() {
                 Conectar mi WhatsApp
                 <ChevronRight className="w-5 h-5" />
               </Link>
-              <p className="text-sm text-gray-400">Sin tarjeta. Gratis 14 días.</p>
+              <p className="text-sm text-gray-400">Sin tarjeta. Primeros 50 mensajes gratis.</p>
             </div>
 
             <div className="flex items-center gap-6 mt-10">
-              {['Configuración en 2 min', 'Servidor siempre activo', 'Sin instalar nada'].map(t => (
+              {['Configuración simple', 'Servidor siempre activo', 'Sin instalar nada'].map(t => (
                 <div key={t} className="flex items-center gap-1.5 text-sm text-gray-500">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   {t}
@@ -81,7 +81,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { step: '01', icon: Smartphone, title: 'Registrás tu negocio', desc: 'Nombre, rubro y qué querés que responda el bot. Dos minutos.' },
+              { step: '01', icon: Smartphone, title: 'Registrás tu negocio', desc: 'Nombre, rubro y cómo querés que responda el bot. Sin conocimientos técnicos.' },
               { step: '02', icon: MessageCircle, title: 'Escaneás el QR', desc: 'Abrís WhatsApp, escaneás el código desde el panel. El bot queda conectado en nuestro servidor.' },
               { step: '03', icon: Zap, title: 'El bot trabaja por vos', desc: 'Cada mensaje que llegue tiene respuesta automática, inteligente y en el tono de tu negocio.' },
             ].map(({ step, icon: Icon, title, desc }) => (
@@ -111,9 +111,9 @@ export default function LandingPage() {
               { icon: Clock, title: 'Responde 24/7', desc: 'El bot vive en nuestro servidor. No depende de que tu PC esté prendida.' },
               { icon: Zap, title: 'IA que aprende tu tono', desc: 'Configurás cómo habla el bot: formal, amigable, técnico. Siempre suena como tu negocio.' },
               { icon: Shield, title: 'Conversaciones en tu panel', desc: 'Ves cada mensaje que llegó y cada respuesta que dio el bot. Podés tomar el control cuando querás.' },
-              { icon: MessageCircle, title: 'Múltiples IA disponibles', desc: 'Gemini, GPT-4, Claude. Elegís cuál usar o dejás la gratuita activada.' },
               { icon: Smartphone, title: 'Tu número, sin cambios', desc: 'Usás tu número de WhatsApp de siempre. Sin número nuevo. Sin trámites.' },
               { icon: CheckCircle2, title: 'Sin spam, sin masivos', desc: 'Solo responde mensajes que llegan. Nada de campañas ni listas. Tranquilo y legal.' },
+              { icon: MessageCircle, title: 'Siempre disponible', desc: 'Fines de semana, feriados, de madrugada. El bot no descansa ni se enferma.' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-colors">
                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-4">
@@ -139,7 +139,7 @@ export default function LandingPage() {
             <div className="card border-2 border-indigo-500 relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-4 py-1 rounded-full">
-                  14 DÍAS GRATIS
+                  50 MENSAJES GRATIS
                 </span>
               </div>
               <div className="text-center pt-4">
@@ -166,7 +166,7 @@ export default function LandingPage() {
                 </div>
 
                 <Link href="/register" className="btn-primary w-full block text-center">
-                  Empezar gratis 14 días
+                  Empezar gratis
                 </Link>
                 <p className="text-xs text-gray-400 mt-3">Sin tarjeta. Cancelás cuando querés.</p>
               </div>
@@ -184,7 +184,7 @@ export default function LandingPage() {
             </div>
             <span className="font-semibold text-gray-600">BotWA</span>
           </div>
-          <p>© 2025 BotWA. Hecho en Argentina 🇦🇷</p>
+          <p>© 2026 BotWA · Hecho en Argentina 🇦🇷</p>
         </div>
       </footer>
 
