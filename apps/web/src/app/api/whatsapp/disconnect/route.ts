@@ -1,0 +1,21 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+
+const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
+
+export async function POST() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { data: business } = await supabase
+    .from('businesses').select('id').eq('user_id', user.id).single()
+  if (!business) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+
+  await fetch(`${BOT_URL}/session/disconnect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ businessId: business.id })
+  })
+  return NextResponse.json({ ok: true })
+}

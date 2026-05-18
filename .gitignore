@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env.local
+.env
+dist/
+build/
+*.log
+.DS_Store
+Thumbs.db
+apps/bot/sessions/
+apps/bot/auth_info_baileys/
