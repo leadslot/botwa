@@ -115,24 +115,39 @@ export const botManager = {
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
-          .select('name, ai_prompt, ai_enabled')
+          .select('name, ai_prompt, ai_enabled, messages_used, is_paid')
           .eq('id', businessId)
           .single()
 
         if (!business?.ai_enabled) continue
+
+        // Chequeo de trial: 50 mensajes gratis
+        const TRIAL_LIMIT = 50
+        const usados = business.messages_used || 0
+        if (!business.is_paid && usados >= TRIAL_LIMIT) {
+          await sock.sendMessage(from, {
+            text: `Hola, el período de prueba gratuita de ${business.name} llegó a su límite de ${TRIAL_LIMIT} mensajes. Para continuar, activá tu suscripción en botwa-app.vercel.app 🙏`
+          })
+          continue
+        }
 
         // Generar respuesta con IA
         try {
           const response = await generateAIResponse(text, business)
           await sock.sendMessage(from, { text: response })
 
-          // Guardar respuesta
-          await supabase.from('whatsapp_messages').insert({
-            business_id: businessId,
-            from_number: from,
-            message: response,
-            direction: 'outbound',
-          })
+          // Guardar respuesta y sumar al contador
+          await Promise.all([
+            supabase.from('whatsapp_messages').insert({
+              business_id: businessId,
+              from_number: from,
+              message: response,
+              direction: 'outbound',
+            }),
+            supabase.from('businesses')
+              .update({ messages_used: usados + 1 })
+              .eq('id', businessId),
+          ])
         } catch (err) {
           console.error(`[${businessId}] Error IA:`, err.message)
         }

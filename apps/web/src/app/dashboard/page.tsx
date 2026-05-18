@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { MessageSquare, Wifi, WifiOff, Settings, ChevronRight, Zap } from 'lucide-react'
+import { MessageSquare, Wifi, WifiOff, Settings, ChevronRight, Zap, CreditCard } from 'lucide-react'
 import Link from 'next/link'
+
+const TRIAL_LIMIT = 50
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -75,6 +77,29 @@ export default async function DashboardPage() {
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             En línea
           </div>
+        </div>
+      )}
+
+      {/* Trial banner */}
+      {!business.is_paid && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 mb-8 flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-indigo-900">
+              Prueba gratuita · {business.messages_used || 0}/{TRIAL_LIMIT} mensajes usados
+            </p>
+            <div className="w-full bg-indigo-100 rounded-full h-2 mt-2 mb-1">
+              <div
+                className="bg-indigo-500 h-2 rounded-full transition-all"
+                style={{ width: `${Math.min(100, ((business.messages_used || 0) / TRIAL_LIMIT) * 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-indigo-600">
+              {TRIAL_LIMIT - (business.messages_used || 0)} mensajes restantes
+            </p>
+          </div>
+          <Link href="/dashboard/billing" className="btn-primary text-sm py-2 px-4 flex items-center gap-1 ml-4 flex-shrink-0">
+            <CreditCard className="w-4 h-4" /> Activar plan
+          </Link>
         </div>
       )}
 
