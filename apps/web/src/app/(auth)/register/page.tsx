@@ -28,6 +28,9 @@ export default function RegisterPage() {
 
     setLoading(true)
     const supabase = createClient()
+    // Limpiar sesión previa que puede tener chars no-ASCII en cookies/storage
+    try { await supabase.auth.signOut() } catch {}
+
     const { error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
