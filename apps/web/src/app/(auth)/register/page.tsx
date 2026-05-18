@@ -28,15 +28,32 @@ export default function RegisterPage() {
 
     setLoading(true)
     const supabase = createClient()
-    // Limpiar sesión previa que puede tener chars no-ASCII en cookies/storage
     try { await supabase.auth.signOut() } catch {}
 
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: { data: { full_name: form.name } }
+      options: {
+        data: { full_name: form.name },
+        emailRedirectTo: 'https://botwa-app.vercel.app/auth/callback',
+      }
     })
-    if (error) { setError(error.message); setLoading(false); return }
+    if (signUpError) { setError(signUpError.message); setLoading(false); return }
+
+    // Si no hay sesión (email confirmation activado en Supabase), el trigger DB ya
+    // confirmó el email → hacemos signIn inmediatamente para obtener la sesión
+    if (!signUpData.session) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      })
+      if (signInError) {
+        setError('Cuenta creada. Revisá tu email para confirmar y luego ingresá.')
+        setLoading(false)
+        return
+      }
+    }
+
     router.push('/dashboard/onboarding')
   }
 
