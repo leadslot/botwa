@@ -6,15 +6,15 @@
 // ============================================
 
 const API_POOL = [
-  // --- GRATIS: Gemini (hasta 1500 req/día por key) ---
-  { provider: 'gemini', key: process.env.GEMINI_API_KEY_1,   model: 'gemini-2.0-flash', label: 'Gemini-1' },
-  { provider: 'gemini', key: process.env.GEMINI_API_KEY_2,   model: 'gemini-2.0-flash', label: 'Gemini-2' },
-
-  // --- GRATIS: Groq (ultra rápido, ~14400 req/día por key) ---
+  // --- GRATIS: Groq primero (14.400 req/día, ~500K tokens/día por key) ---
   { provider: 'groq',   key: process.env.GROQ_API_KEY_1,     model: 'llama-3.3-70b-versatile', label: 'Groq-1' },
   { provider: 'groq',   key: process.env.GROQ_API_KEY_2,     model: 'llama-3.3-70b-versatile', label: 'Groq-2' },
 
-  // --- PAGO: fallback final (solo si todo lo de arriba falló) ---
+  // --- GRATIS: Gemini backup (1.500 req/día, ~1M tokens/día por key) ---
+  { provider: 'gemini', key: process.env.GEMINI_API_KEY_1,   model: 'gemini-2.0-flash', label: 'Gemini-1' },
+  { provider: 'gemini', key: process.env.GEMINI_API_KEY_2,   model: 'gemini-2.0-flash', label: 'Gemini-2' },
+
+  // --- PAGO: fallback final (~200+ usuarios activos para llegar acá) ---
   { provider: 'openai', key: process.env.OPENAI_API_KEY,     model: 'gpt-4o-mini', label: 'GPT-mini (pago)' },
 ]
 
