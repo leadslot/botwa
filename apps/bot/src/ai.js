@@ -1,22 +1,48 @@
 // ============================================
-// POOL DE APIs — ORDEN DE PRIORIDAD
-// Agrega keys en las variables de entorno.
-// Se usan en orden: si una da rate limit, pasa a la siguiente.
-// La última (paga) solo se usa si todas las gratis fallaron.
+// POOL DE APIs — cargado desde Supabase
+// Se puede gestionar desde el panel admin sin tocar código.
+// Fallback a env vars si Supabase no tiene keys cargadas.
 // ============================================
 
-const API_POOL = [
-  // --- GRATIS: Groq primero (14.400 req/día, ~500K tokens/día por key) ---
-  { provider: 'groq',   key: process.env.GROQ_API_KEY_1,     model: 'llama-3.3-70b-versatile', label: 'Groq-1' },
-  { provider: 'groq',   key: process.env.GROQ_API_KEY_2,     model: 'llama-3.3-70b-versatile', label: 'Groq-2' },
+import { createClient } from '@supabase/supabase-js'
+const _supabaseAI = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
 
-  // --- GRATIS: Gemini backup (1.500 req/día, ~1M tokens/día por key) ---
-  { provider: 'gemini', key: process.env.GEMINI_API_KEY_1,   model: 'gemini-2.0-flash', label: 'Gemini-1' },
-  { provider: 'gemini', key: process.env.GEMINI_API_KEY_2,   model: 'gemini-2.0-flash', label: 'Gemini-2' },
+let _apiPool = []
+let _poolLoadedAt = 0
+const POOL_TTL = 5 * 60 * 1000 // refresca cada 5 minutos
 
-  // --- PAGO: fallback final (~200+ usuarios activos para llegar acá) ---
-  { provider: 'openai', key: process.env.OPENAI_API_KEY,     model: 'gpt-4o-mini', label: 'GPT-mini (pago)' },
-]
+async function getPool() {
+  const now = Date.now()
+  if (_apiPool.length > 0 && now - _poolLoadedAt < POOL_TTL) return _apiPool
+
+  try {
+    const { data } = await _supabaseAI
+      .from('api_keys')
+      .select('*')
+      .eq('is_active', true)
+      .order('priority', { ascending: true })
+
+    if (data && data.length > 0) {
+      _apiPool = data.map(k => ({ provider: k.provider, key: k.key_value, model: k.model, label: k.label }))
+      _poolLoadedAt = now
+      console.log(`[AI] Pool cargado desde Supabase: ${_apiPool.map(k => k.label).join(', ')}`)
+      return _apiPool
+    }
+  } catch (e) {
+    console.warn('[AI] No se pudo cargar pool desde Supabase, usando env vars')
+  }
+
+  // Fallback a variables de entorno
+  _apiPool = [
+    { provider: 'groq',   key: process.env.GROQ_API_KEY_1,   model: 'llama-3.3-70b-versatile', label: 'Groq-1 (env)' },
+    { provider: 'groq',   key: process.env.GROQ_API_KEY_2,   model: 'llama-3.3-70b-versatile', label: 'Groq-2 (env)' },
+    { provider: 'gemini', key: process.env.GEMINI_API_KEY_1, model: 'gemini-2.0-flash',         label: 'Gemini-1 (env)' },
+    { provider: 'gemini', key: process.env.GEMINI_API_KEY_2, model: 'gemini-2.0-flash',         label: 'Gemini-2 (env)' },
+    { provider: 'openai', key: process.env.OPENAI_API_KEY,   model: 'gpt-4o-mini',              label: 'GPT-mini (env)' },
+  ].filter(e => e.key)
+  _poolLoadedAt = now
+  return _apiPool
+}
 
 // Keys bloqueadas temporalmente (rate limit). Se resetean solos al reiniciar.
 const blockedUntil = {}
@@ -26,6 +52,7 @@ export async function generateAIResponse(userMessage, business) {
     `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`
 
   const now = Date.now()
+  const API_POOL = await getPool()
 
   for (const entry of API_POOL) {
     // Saltear si no tiene key configurada

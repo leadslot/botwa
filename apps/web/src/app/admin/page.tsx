@@ -33,9 +33,15 @@ export default async function AdminPage() {
       <div className="max-w-6xl mx-auto">
 
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-black text-gray-900">Panel de Admin</h1>
-          <p className="text-gray-500">Uso de APIs y estado de todos los negocios</p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-gray-900">Panel de Admin</h1>
+            <p className="text-gray-500">Uso de APIs y estado de todos los negocios</p>
+          </div>
+          <a href="/admin/api-keys"
+            className="btn-primary text-sm flex items-center gap-2">
+            🔑 Gestionar APIs
+          </a>
         </div>
 
         {/* Stats globales */}
