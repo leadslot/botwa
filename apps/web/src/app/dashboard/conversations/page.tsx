@@ -11,10 +11,10 @@ export default async function ConversationsPage() {
 
   const { data: messages } = business ? await supabase
     .from('whatsapp_messages')
-    .select('*')
+    .select('id, from_number, message, direction, created_at')
     .eq('business_id', business.id)
     .order('created_at', { ascending: false })
-    .limit(100) : { data: [] }
+    .limit(200) : { data: [] }
 
   // Agrupar por número
   const conversations = messages?.reduce((acc: Record<string, any[]>, msg) => {
