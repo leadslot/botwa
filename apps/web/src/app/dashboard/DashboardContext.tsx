@@ -33,6 +33,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const load = async () => {
     try {
       const supabase = createClient()
+      // El middleware ya garantizó que hay sesión — no re-validamos
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) { window.location.href = '/login'; return }
       const { data } = await supabase

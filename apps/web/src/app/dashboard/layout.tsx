@@ -1,8 +1,5 @@
 import Link from 'next/link'
-import { Suspense } from 'react'
 import { MessageCircle, LayoutDashboard, Wifi, Settings, MessageSquare, LogOut, CreditCard } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import { DashboardProvider } from './DashboardContext'
 
 const navItems = [
@@ -13,14 +10,9 @@ const navItems = [
   { href: '/dashboard/billing', icon: CreditCard, label: 'Suscripción' },
 ]
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
-  if (!user) redirect('/login')
-
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-gray-100 flex flex-col fixed h-full z-20">
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center gap-2">
@@ -42,14 +34,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </nav>
 
         <div className="p-3 border-t border-gray-100">
-          <div className="flex items-center gap-3 px-3 py-2 mb-1">
-            <div className="w-7 h-7 bg-indigo-100 rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-indigo-600">
-                {user.email?.[0].toUpperCase()}
-              </span>
-            </div>
-            <span className="text-xs text-gray-500 truncate flex-1">{user.email}</span>
-          </div>
           <form action="/auth/signout" method="post">
             <button className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors w-full">
               <LogOut className="w-4 h-4" />
@@ -59,7 +43,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </aside>
 
-      {/* Main */}
       <main className="ml-60 flex-1 min-h-screen">
         <DashboardProvider>
           {children}
