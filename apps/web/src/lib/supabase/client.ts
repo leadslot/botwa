@@ -14,10 +14,16 @@ function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respon
   return fetch(input, init as RequestInit)
 }
 
+// Singleton — una sola instancia por session de browser
+let _client: ReturnType<typeof createBrowserClient> | null = null
+
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { fetch: safeFetch } }
-  )
+  if (!_client) {
+    _client = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { fetch: safeFetch } }
+    )
+  }
+  return _client
 }

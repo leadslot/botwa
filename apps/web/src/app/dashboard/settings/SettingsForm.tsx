@@ -2,28 +2,37 @@
 import { useState } from 'react'
 import { Save, Loader2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useDashboard } from '../DashboardContext'
 
-type Props = {
-  business: { id: string; name: string; ai_prompt: string | null; ai_enabled: boolean }
-}
-
-export default function SettingsForm({ business }: Props) {
-  const [loading, setLoading] = useState(false)
+export default function SettingsForm() {
+  const { business, loading, reload } = useDashboard()
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [form, setForm] = useState({
-    name: business.name,
-    ai_prompt: business.ai_prompt || '',
-    ai_enabled: business.ai_enabled,
-  })
+  const [form, setForm] = useState<{ name: string; ai_prompt: string; ai_enabled: boolean } | null>(null)
+
+  // Inicializar form cuando llegan los datos del contexto
+  if (!form && business) {
+    setForm({ name: business.name, ai_prompt: business.ai_prompt || '', ai_enabled: business.ai_enabled })
+  }
 
   const save = async () => {
-    setLoading(true)
+    if (!form || !business) return
+    setSaving(true)
     const supabase = createClient()
     await supabase.from('businesses').update(form).eq('id', business.id)
-    setLoading(false)
+    setSaving(false)
     setSaved(true)
+    reload()
     setTimeout(() => setSaved(false), 2000)
   }
+
+  if (loading || !form) return (
+    <div className="space-y-4 animate-pulse">
+      <div className="bg-white rounded-2xl border border-gray-100 h-20" />
+      <div className="bg-white rounded-2xl border border-gray-100 h-20" />
+      <div className="bg-white rounded-2xl border border-gray-100 h-64" />
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -33,9 +42,7 @@ export default function SettingsForm({ business }: Props) {
           <p className="text-sm text-gray-500">Si lo desactivás, los mensajes llegan pero el bot no responde</p>
         </div>
         <button onClick={() => setForm({ ...form, ai_enabled: !form.ai_enabled })}>
-          {form.ai_enabled
-            ? <ToggleRight className="w-10 h-10 text-indigo-500" />
-            : <ToggleLeft className="w-10 h-10 text-gray-300" />}
+          {form.ai_enabled ? <ToggleRight className="w-10 h-10 text-indigo-500" /> : <ToggleLeft className="w-10 h-10 text-gray-300" />}
         </button>
       </div>
 
@@ -51,17 +58,16 @@ export default function SettingsForm({ business }: Props) {
           <span className="text-xs text-gray-400">Define cómo habla el bot</span>
         </div>
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-3">
-          <p className="text-xs text-indigo-600">💡 Incluí: cómo se llama el negocio, qué hace, preguntas frecuentes, horarios, precios, etc.</p>
+          <p className="text-xs text-indigo-600">💡 Incluí: nombre del negocio, qué hace, preguntas frecuentes, horarios, precios</p>
         </div>
         <textarea value={form.ai_prompt} onChange={e => setForm({ ...form, ai_prompt: e.target.value })}
           rows={12} placeholder="Ej: Sos el asistente de Clínica San Martín. Atendemos de lunes a viernes de 9 a 18hs..."
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none font-mono" />
       </div>
 
-      <button onClick={save} disabled={loading}
-        className="btn-primary w-full flex items-center justify-center gap-2">
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        {saved ? '¡Guardado!' : loading ? 'Guardando...' : 'Guardar cambios'}
+      <button onClick={save} disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+        {saved ? '¡Guardado!' : saving ? 'Guardando...' : 'Guardar cambios'}
       </button>
     </div>
   )

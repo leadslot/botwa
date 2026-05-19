@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { MessageCircle, LayoutDashboard, Wifi, Settings, MessageSquare, LogOut, CreditCard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { DashboardProvider } from './DashboardContext'
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },
@@ -60,9 +61,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Main */}
       <main className="ml-60 flex-1 min-h-screen">
-        <Suspense fallback={<div className="p-8 animate-pulse"><div className="h-8 bg-gray-200 rounded-xl w-48 mb-4" /><div className="h-4 bg-gray-100 rounded-xl w-32" /></div>}>
+        <DashboardProvider>
           {children}
-        </Suspense>
+        </DashboardProvider>
       </main>
     </div>
   )

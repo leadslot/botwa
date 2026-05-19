@@ -1,28 +1,16 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useDashboard } from '../DashboardContext'
 import { CreditCard, CheckCircle2, Infinity as InfinityIcon, Zap } from 'lucide-react'
 import CouponForm from './CouponForm'
 
 export default function BillingPage() {
-  const [business, setBusiness] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) { window.location.href = '/login'; return }
-      const { data } = await supabase.from('businesses').select('id, name, is_paid, plan, messages_used, coupon_used').eq('user_id', session.user.id).single()
-      setBusiness(data)
-      setLoading(false)
-    })
-  }, [])
+  const { business, loading } = useDashboard()
 
   if (loading) return (
     <div className="p-8 max-w-2xl animate-pulse">
       <div className="h-8 bg-gray-200 rounded-xl w-40 mb-2" />
       <div className="h-4 bg-gray-100 rounded-xl w-56 mb-8" />
-      <div className="bg-white rounded-2xl border border-gray-100 h-64 mb-4" />
+      <div className="bg-white rounded-2xl border border-gray-100 h-64" />
     </div>
   )
 
@@ -46,26 +34,22 @@ export default function BillingPage() {
             </div>
             <div>
               <p className="font-bold text-gray-900">Acceso de por vida</p>
-              <p className="text-xs text-emerald-600 font-semibold">Código aplicado: {business?.coupon_used}</p>
+              <p className="text-xs text-emerald-600 font-semibold">Código: {business?.coupon_used}</p>
             </div>
           </div>
-          <p className="text-gray-500 text-sm">Tu cuenta nunca vence. No se realiza ningún cobro.</p>
+          <p className="text-gray-500 text-sm">Tu cuenta nunca vence.</p>
         </div>
       ) : isPaid ? (
         <div className="card border-2 border-indigo-500 mb-6">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
               <Zap className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
               <p className="font-bold text-gray-900">Plan Activo</p>
-              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                Al día
-              </span>
+              <p className="text-gray-500 text-sm">Mensajes ilimitados · Bot activo 24/7</p>
             </div>
           </div>
-          <p className="text-gray-500 text-sm">Mensajes ilimitados · Bot activo 24/7</p>
         </div>
       ) : (
         <div className="card border-2 border-indigo-500 mb-6">
@@ -79,8 +63,7 @@ export default function BillingPage() {
             <CreditCard className="w-5 h-5 text-indigo-400" />
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-            <div className={`h-2 rounded-full transition-all ${trialPct >= 80 ? 'bg-red-400' : 'bg-indigo-400'}`}
-              style={{ width: `${Math.max(2, trialPct)}%` }} />
+            <div className={`h-2 rounded-full ${trialPct >= 80 ? 'bg-red-400' : 'bg-indigo-400'}`} style={{ width: `${Math.max(2, trialPct)}%` }} />
           </div>
           <div className="bg-indigo-50 rounded-xl p-4 mb-4">
             <p className="text-xs text-indigo-500 font-semibold uppercase tracking-wide mb-1">Para continuar sin límites</p>
@@ -88,10 +71,10 @@ export default function BillingPage() {
               <span className="text-4xl font-black text-gray-900">$40.000</span>
               <span className="text-gray-500 mb-1">ARS primer mes</span>
             </div>
-            <p className="text-gray-500 text-sm">Luego <strong className="text-gray-700">$60.000/mes</strong> · Cancelás cuando querés</p>
+            <p className="text-gray-500 text-sm">Luego <strong className="text-gray-700">$60.000/mes</strong></p>
           </div>
           <ul className="space-y-2 mb-5">
-            {['Bot activo 24/7 en nuestro servidor','IA con tu tono y negocio','Panel de conversaciones','Sin límite de mensajes','Soporte por WhatsApp'].map(f => (
+            {['Bot activo 24/7','IA con tu tono y negocio','Panel de conversaciones','Sin límite de mensajes','Soporte por WhatsApp'].map(f => (
               <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />{f}
               </li>

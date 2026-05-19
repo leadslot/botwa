@@ -1,32 +1,12 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useDashboard } from './DashboardContext'
 import { MessageSquare, Wifi, WifiOff, Settings, ChevronRight, Zap, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 
 const TRIAL_LIMIT = 50
 
 export default function DashboardPage() {
-  const [business, setBusiness] = useState<any>(null)
-  const [isConnected, setIsConnected] = useState(false)
-  const [msgCount, setMsgCount] = useState(0)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) { window.location.href = '/login'; return }
-      const [{ data: biz }, { data: sess }, { count }] = await Promise.all([
-        supabase.from('businesses').select('*').eq('user_id', session.user.id).single(),
-        supabase.from('whatsapp_sessions').select('status').single(),
-        supabase.from('whatsapp_messages').select('*', { count: 'exact', head: true }),
-      ])
-      setBusiness(biz)
-      setIsConnected(sess?.status === 'connected')
-      setMsgCount(count || 0)
-      setLoading(false)
-    })
-  }, [])
+  const { business, loading } = useDashboard()
 
   if (loading) return (
     <div className="p-8 animate-pulse">
@@ -56,50 +36,14 @@ export default function DashboardPage() {
         <p className="text-gray-500">{business.name}</p>
       </div>
 
-      {!isConnected && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-              <WifiOff className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="font-semibold text-amber-900">WhatsApp no conectado</p>
-              <p className="text-sm text-amber-700">El bot no está activo todavía</p>
-            </div>
-          </div>
-          <Link href="/dashboard/connect" className="btn-primary text-sm py-2 px-5 flex items-center gap-1">
-            Conectar ahora <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-      )}
-
-      {isConnected && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mb-8 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-            <Wifi className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div>
-            <p className="font-semibold text-emerald-900">Bot activo y respondiendo</p>
-            <p className="text-sm text-emerald-700">Tu WhatsApp está conectado al servidor</p>
-          </div>
-          <div className="ml-auto badge-green">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            En línea
-          </div>
-        </div>
-      )}
-
       {!business.is_paid && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 mb-8 flex items-center justify-between">
           <div>
-            <p className="font-semibold text-indigo-900">
-              Prueba gratuita · {business.messages_used || 0}/{TRIAL_LIMIT} mensajes usados
-            </p>
+            <p className="font-semibold text-indigo-900">Prueba gratuita · {business.messages_used}/{TRIAL_LIMIT} mensajes usados</p>
             <div className="w-full bg-indigo-100 rounded-full h-2 mt-2 mb-1">
-              <div className="bg-indigo-500 h-2 rounded-full transition-all"
-                style={{ width: `${Math.min(100, ((business.messages_used || 0) / TRIAL_LIMIT) * 100)}%` }} />
+              <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${Math.min(100, (business.messages_used / TRIAL_LIMIT) * 100)}%` }} />
             </div>
-            <p className="text-xs text-indigo-600">{TRIAL_LIMIT - (business.messages_used || 0)} mensajes restantes</p>
+            <p className="text-xs text-indigo-600">{TRIAL_LIMIT - business.messages_used} mensajes restantes</p>
           </div>
           <Link href="/dashboard/billing" className="btn-primary text-sm py-2 px-4 flex items-center gap-1 ml-4 flex-shrink-0">
             <CreditCard className="w-4 h-4" /> Activar plan
@@ -109,9 +53,9 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
-          { label: 'Mensajes respondidos', value: msgCount, icon: MessageSquare, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-          { label: 'Estado del bot', value: isConnected ? 'Activo' : 'Inactivo', icon: Zap, color: isConnected ? 'text-emerald-500' : 'text-gray-400', bg: isConnected ? 'bg-emerald-50' : 'bg-gray-50' },
-          { label: 'IA configurada', value: business.ai_enabled ? 'Sí' : 'No', icon: Settings, color: 'text-violet-500', bg: 'bg-violet-50' },
+          { label: 'Mensajes respondidos', value: business.messages_used, icon: MessageSquare, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+          { label: 'Estado del bot', value: business.ai_enabled ? 'Activo' : 'Pausado', icon: Zap, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+          { label: 'IA configurada', value: business.ai_prompt ? 'Sí' : 'No', icon: Settings, color: 'text-violet-500', bg: 'bg-violet-50' },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="card">
             <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
