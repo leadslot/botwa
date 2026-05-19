@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { MessageCircle, RefreshCw, CheckCircle2, WifiOff } from 'lucide-react'
 
 export default function ConnectPage() {
-  const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected'>('disconnected')
+  const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting'>('disconnected')
   const [qr, setQR] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -20,29 +20,28 @@ export default function ConnectPage() {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null
 
+    const startPolling = () => {
+      if (interval) clearInterval(interval)
+      interval = setInterval(checkStatus, 3000)
+    }
+
     const checkStatus = async () => {
       try {
         const res = await fetch('/api/whatsapp/status')
         const data = await res.json()
         setStatus(data.status)
         setQR(data.qr)
-        if (data.status === 'connected' && interval) {
-          clearInterval(interval)
-          interval = null
+        if (data.status === 'connected') {
+          if (interval) { clearInterval(interval); interval = null }
+        } else if (data.status === 'reconnecting' || data.status === 'waiting_qr') {
+          // Auto-poll hasta que conecte
+          if (!interval) startPolling()
         }
       } catch {}
     }
 
     checkStatus()
 
-    // Solo arrancar el polling si el usuario está conectando activamente
-    // Se activa desde startConnection()
-    const startPolling = () => {
-      if (interval) clearInterval(interval)
-      interval = setInterval(checkStatus, 3000)
-    }
-
-    // Exponer para que startConnection lo llame
     ;(window as any).__startWAPolling = startPolling
 
     return () => {
@@ -94,7 +93,15 @@ export default function ConnectPage() {
           </div>
         )}
 
-        {(status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr'].includes(status))) && (
+        {status === 'reconnecting' && (
+          <div className="py-8">
+            <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Reconectando...</h2>
+            <p className="text-gray-500 text-sm">El bot está levantando tu sesión automáticamente.</p>
+          </div>
+        )}
+
+        {(status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr','reconnecting'].includes(status))) && (
           <div className="py-8">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <WifiOff className="w-7 h-7 text-gray-400" />
