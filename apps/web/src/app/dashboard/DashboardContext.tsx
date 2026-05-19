@@ -31,16 +31,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) { window.location.href = '/login'; return }
-    const { data } = await supabase
-      .from('businesses')
-      .select('id, name, is_paid, plan, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count')
-      .eq('user_id', session.user.id)
-      .single()
-    setBusiness(data)
-    setLoading(false)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) { window.location.href = '/login'; return }
+      const { data } = await supabase
+        .from('businesses')
+        .select('id, name, is_paid, plan, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count')
+        .eq('user_id', session.user.id)
+        .single()
+      setBusiness(data)
+    } catch (e) {
+      console.error('DashboardContext load error:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])
