@@ -30,29 +30,39 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const load = async () => {
+  const fetchBusiness = async (userId: string) => {
     try {
       const supabase = createClient()
-      // El middleware ya garantizó que hay sesión — no re-validamos
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) { window.location.href = '/login'; return }
       const { data } = await supabase
         .from('businesses')
         .select('id, name, is_paid, plan, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count')
-        .eq('user_id', session.user.id)
+        .eq('user_id', userId)
         .single()
       setBusiness(data)
     } catch (e) {
-      console.error('DashboardContext load error:', e)
+      console.error('DashboardContext fetchBusiness error:', e)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const supabase = createClient()
+    // onAuthStateChange es el método confiable — dispara cuando la sesión está disponible
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      if (session?.user) {
+        fetchBusiness(session.user.id)
+      } else {
+        // Sin sesión → redirigir (el middleware también protege, esto es fallback)
+        setLoading(false)
+        window.location.href = '/login'
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
-    <DashboardContext.Provider value={{ business, loading, reload: load }}>
+    <DashboardContext.Provider value={{ business, loading, reload: () => {} }}>
       {children}
     </DashboardContext.Provider>
   )
