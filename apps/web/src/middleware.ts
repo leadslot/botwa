@@ -49,5 +49,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+  // Solo rutas que realmente necesitan auth check
+  matcher: ['/dashboard/:path*', '/login', '/register'],
 }
