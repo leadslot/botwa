@@ -75,6 +75,8 @@ async function useSupabaseAuthState(businessId) {
 const activeSessions = new Map()
 // Mapa de QR pendientes: businessId -> qrBase64
 const pendingQRs = new Map()
+// Contactos por sesión: businessId -> Map<jid, {name, number}>
+const contactsCache = new Map()
 
 export const botManager = {
 
@@ -98,6 +100,28 @@ export const botManager = {
     })
 
     sock.ev.on('creds.update', saveCreds)
+
+    // Acumular contactos en cache
+    if (!contactsCache.has(businessId)) contactsCache.set(businessId, new Map())
+    const contacts = contactsCache.get(businessId)
+
+    sock.ev.on('contacts.upsert', (newContacts) => {
+      for (const c of newContacts) {
+        if (!c.id.endsWith('@s.whatsapp.net')) continue
+        const number = c.id.replace('@s.whatsapp.net', '')
+        const name = c.name || c.notify || c.verifiedName || ''
+        contacts.set(number, { number, name })
+      }
+    })
+
+    sock.ev.on('contacts.update', (updates) => {
+      for (const c of updates) {
+        if (!c.id?.endsWith('@s.whatsapp.net')) continue
+        const number = c.id.replace('@s.whatsapp.net', '')
+        const existing = contacts.get(number) || { number, name: '' }
+        contacts.set(number, { ...existing, name: c.name || c.notify || existing.name })
+      }
+    })
 
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update
@@ -255,6 +279,14 @@ export const botManager = {
       await sock.logout()
       activeSessions.delete(businessId)
     }
+  },
+
+  getContacts(businessId) {
+    const map = contactsCache.get(businessId)
+    if (!map) return []
+    return Array.from(map.values())
+      .filter(c => c.name)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'))
   },
 
   async restoreActiveSessions() {

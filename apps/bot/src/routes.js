@@ -31,6 +31,12 @@ export function setupRoutes(app, botManager) {
     res.json({ ok: true })
   })
 
+  // Obtener contactos de la sesión activa
+  app.get('/session/contacts/:businessId', (req, res) => {
+    const contacts = botManager.getContacts(req.params.businessId)
+    res.json({ contacts })
+  })
+
   // Enviar mensaje manual desde el panel
   app.post('/message/send', async (req, res) => {
     const { businessId, to, text } = req.body

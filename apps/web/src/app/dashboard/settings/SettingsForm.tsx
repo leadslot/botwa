@@ -67,6 +67,9 @@ export default function SettingsForm() {
   const [priceList, setPriceList] = useState<PriceRow[]>([])
   const [excludedNumbers, setExcludedNumbers] = useState<string[]>([])
   const [newNumber, setNewNumber] = useState('')
+  const [waContacts, setWaContacts] = useState<{number:string;name:string}[]>([])
+  const [contactsLoaded, setContactsLoaded] = useState(false)
+  const [contactSearch, setContactSearch] = useState('')
   const csvRef = useRef<HTMLInputElement>(null)
   const [ready, setReady] = useState(false)
 
@@ -138,6 +141,19 @@ export default function SettingsForm() {
       setExcludedNumbers(p => [...p, n])
       setNewNumber('')
     }
+  }
+
+  const toggleExcluded = (number: string) => {
+    setExcludedNumbers(p =>
+      p.includes(number) ? p.filter(x => x !== number) : [...p, number]
+    )
+  }
+
+  const loadWAContacts = async () => {
+    const res = await fetch('/api/whatsapp/contacts')
+    const { contacts } = await res.json()
+    setWaContacts(contacts || [])
+    setContactsLoaded(true)
   }
 
   const hasWizardData = aiPrompt.includes('<!-- WIZARD_DATA:')
@@ -319,39 +335,88 @@ export default function SettingsForm() {
 
       {/* ── Contactos excluidos ───────────────────────────────────────────────── */}
       <div className="card">
-        <div className="flex items-center gap-2 mb-1">
-          <UserX className="w-4 h-4 text-gray-500" />
-          <p className="font-semibold text-gray-900">Contactos excluidos</p>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <UserX className="w-4 h-4 text-gray-500" />
+            <p className="font-semibold text-gray-900">Contactos excluidos</p>
+          </div>
+          <button type="button" onClick={loadWAContacts}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all">
+            <Plus className="w-3.5 h-3.5" /> Elegir de WhatsApp
+          </button>
         </div>
-        <p className="text-sm text-gray-500 mb-4">El bot no responde a estos números. Ideal para familiares, amigos o tu propio número.</p>
+        <p className="text-sm text-gray-500 mb-4">El bot ignora completamente estos números.</p>
 
+        {/* Selector de contactos de WA */}
+        {contactsLoaded && (
+          <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden">
+            <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+              <input
+                value={contactSearch}
+                onChange={e => setContactSearch(e.target.value)}
+                placeholder="Buscar contacto..."
+                className="w-full bg-transparent text-sm focus:outline-none"
+              />
+            </div>
+            <div className="max-h-52 overflow-y-auto divide-y divide-gray-50">
+              {waContacts.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">
+                  No se encontraron contactos. El bot necesita recibir al menos un mensaje de cada número para que aparezca aquí.
+                </p>
+              ) : (
+                waContacts
+                  .filter(c => !contactSearch || c.name.toLowerCase().includes(contactSearch.toLowerCase()) || c.number.includes(contactSearch))
+                  .map(c => {
+                    const excluded = excludedNumbers.includes(c.number)
+                    return (
+                      <label key={c.number} className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${excluded ? 'bg-red-50' : ''}`}>
+                        <input type="checkbox" checked={excluded} onChange={() => toggleExcluded(c.number)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
+                          <p className="text-xs text-gray-400">+{c.number}</p>
+                        </div>
+                        {excluded && <span className="text-xs text-red-500 font-medium shrink-0">Excluido</span>}
+                      </label>
+                    )
+                  })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Ingreso manual */}
         <div className="flex gap-2 mb-3">
           <input
             value={newNumber}
             onChange={e => setNewNumber(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addExcluded()}
-            placeholder="Ej: 5491123456789 (sin + ni espacios)"
+            placeholder="O ingresá un número manual: 5491123456789"
             className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
           />
           <button type="button" onClick={addExcluded}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">
             <Plus className="w-3.5 h-3.5" /> Agregar
           </button>
         </div>
 
+        {/* Chips de excluidos */}
         {excludedNumbers.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-xl">Sin números excluidos</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {excludedNumbers.map(n => (
-              <div key={n} className="flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1.5 text-sm text-gray-700">
-                <span>+{n}</span>
-                <button type="button" onClick={() => setExcludedNumbers(p => p.filter(x => x !== n))}
-                  className="text-gray-400 hover:text-red-500 transition-colors">
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
+            {excludedNumbers.map(n => {
+              const contact = waContacts.find(c => c.number === n)
+              return (
+                <div key={n} className="flex items-center gap-1.5 bg-red-50 border border-red-100 rounded-full px-3 py-1.5 text-sm text-red-700">
+                  <span>{contact?.name || `+${n}`}</span>
+                  <button type="button" onClick={() => setExcludedNumbers(p => p.filter(x => x !== n))}
+                    className="text-red-400 hover:text-red-600 transition-colors">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
