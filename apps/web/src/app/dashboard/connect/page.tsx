@@ -94,7 +94,7 @@ export default function ConnectPage() {
           </div>
         )}
 
-        {status === 'disconnected' && (
+        {(status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr'].includes(status))) && (
           <div className="py-8">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <WifiOff className="w-7 h-7 text-gray-400" />
@@ -104,6 +104,13 @@ export default function ConnectPage() {
             <button onClick={startConnection} disabled={loading} className="btn-primary">
               {loading ? 'Iniciando...' : 'Conectar WhatsApp'}
             </button>
+          </div>
+        )}
+
+        {status === 'waiting_qr' && !qr && (
+          <div className="py-8">
+            <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-500 text-sm">Generando código QR...</p>
           </div>
         )}
       </div>

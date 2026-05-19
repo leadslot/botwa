@@ -1,27 +1,19 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useDashboard } from '../DashboardContext'
 import { MessageSquare, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 
 export default function ConversationsPage() {
-  const { business, loading: bizLoading } = useDashboard()
+  const { loading: bizLoading } = useDashboard()
   const [convList, setConvList] = useState<any[]>([])
   const [totalMsgs, setTotalMsgs] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (bizLoading) return
-    if (!business) { setLoading(false); return }
-
-    const supabase = createClient()
-    supabase
-      .from('whatsapp_messages')
-      .select('id, from_number, message, direction, created_at')
-      .eq('business_id', business.id)
-      .order('created_at', { ascending: false })
-      .limit(200)
-      .then(({ data: messages }: { data: any[] | null }) => {
+    fetch('/api/conversations')
+      .then(r => r.json())
+      .then(({ messages }: { messages: any[] }) => {
         const conversations = (messages || []).reduce((acc: Record<string, any[]>, msg: any) => {
           const key = msg.from_number.replace('@s.whatsapp.net', '')
           if (!acc[key]) acc[key] = []
@@ -34,7 +26,7 @@ export default function ConversationsPage() {
         setTotalMsgs(messages?.length || 0)
         setLoading(false)
       })
-  }, [business, bizLoading])
+  }, [bizLoading])
 
   if (bizLoading || loading) return (
     <div className="p-8 animate-pulse">

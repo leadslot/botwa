@@ -161,20 +161,44 @@ export default function OnboardingPage() {
 
   const handleFinish = async () => {
     setLoading(true)
-    const supabase = createClient()
-    const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
-    if (!user) return
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (!user || authError) {
+        alert('Sesión expirada. Por favor volvé a iniciar sesión.')
+        window.location.href = '/login'
+        return
+      }
 
-    await supabase.from('businesses').insert({
-      user_id: user.id,
-      name,
-      category: template?.label || 'Personalizado',
-      ai_prompt: generatedPrompt,
-      ai_enabled: true,
-      messages_used: 0,
-    })
+      // Verificar si ya existe un negocio (evitar duplicados)
+      const { data: existing } = await supabase
+        .from('businesses').select('id').eq('user_id', user.id).single()
+      if (existing) {
+        router.push('/dashboard/settings')
+        return
+      }
 
-    router.push('/dashboard/connect')
+      const { error: insertError } = await supabase.from('businesses').insert({
+        user_id: user.id,
+        name,
+        category: template?.label || 'Personalizado',
+        ai_prompt: generatedPrompt,
+        ai_enabled: true,
+        messages_used: 0,
+      })
+
+      if (insertError) {
+        console.error('Error al guardar negocio:', insertError)
+        alert('Error al guardar: ' + insertError.message)
+        setLoading(false)
+        return
+      }
+
+      router.push('/dashboard/connect')
+    } catch (e) {
+      console.error(e)
+      setLoading(false)
+    }
   }
 
   const allFieldsFilled = template?.fields.every(f =>

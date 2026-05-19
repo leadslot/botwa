@@ -1,6 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
 
 type Business = {
   id: string
@@ -29,40 +28,40 @@ export function useDashboard() {
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
+  const fetched = useRef(false)
 
-  const fetchBusiness = async (userId: string) => {
+  const fetchBusiness = async () => {
+    if (fetched.current) return
+    fetched.current = true
     try {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('businesses')
-        .select('id, name, is_paid, plan, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count')
-        .eq('user_id', userId)
-        .single()
-      setBusiness(data)
+      const res = await fetch('/api/business')
+      const json = await res.json()
+      if (json.business) {
+        setBusiness(json.business)
+      } else {
+        // Sin negocio — ir a onboarding solo si no estamos ya ahí
+        if (!window.location.pathname.includes('/onboarding')) {
+          window.location.replace('/dashboard/onboarding')
+        }
+      }
     } catch (e) {
-      console.error('DashboardContext fetchBusiness error:', e)
+      console.error('DashboardContext error:', e)
     } finally {
       setLoading(false)
     }
   }
 
+  const reload = () => {
+    fetched.current = false
+    fetchBusiness()
+  }
+
   useEffect(() => {
-    const supabase = createClient()
-    // onAuthStateChange es el método confiable — dispara cuando la sesión está disponible
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      if (session?.user) {
-        fetchBusiness(session.user.id)
-      } else {
-        // Sin sesión → redirigir (el middleware también protege, esto es fallback)
-        setLoading(false)
-        window.location.href = '/login'
-      }
-    })
-    return () => subscription.unsubscribe()
+    fetchBusiness()
   }, [])
 
   return (
-    <DashboardContext.Provider value={{ business, loading, reload: () => {} }}>
+    <DashboardContext.Provider value={{ business, loading, reload }}>
       {children}
     </DashboardContext.Provider>
   )
