@@ -31,13 +31,32 @@ export default function OnboardingPage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/login'); return }
-    await supabase.from('businesses').insert({
-      user_id: user.id,
-      name: extractBusinessName(prompt),
-      ai_prompt: prompt,
-      ai_enabled: true,
-      messages_used: 0,
-    })
+
+    // Verificar si ya existe un negocio configurado — nunca sobreescribir config real
+    const { data: existing } = await supabase
+      .from('businesses').select('id, ai_prompt').eq('user_id', user.id).single()
+
+    if (existing) {
+      // Si ya tiene prompt real, no lo pisamos — ir directo a settings
+      if (existing.ai_prompt && existing.ai_prompt.length > 50) {
+        router.push('/dashboard/settings')
+        return
+      }
+      // Tiene registro pero prompt vacío/corto — actualizarlo
+      await supabase.from('businesses').update({
+        name: extractBusinessName(prompt),
+        ai_prompt: prompt,
+        ai_enabled: true,
+      }).eq('id', existing.id)
+    } else {
+      await supabase.from('businesses').insert({
+        user_id: user.id,
+        name: extractBusinessName(prompt),
+        ai_prompt: prompt,
+        ai_enabled: true,
+        messages_used: 0,
+      })
+    }
     router.push('/dashboard/connect')
   }
 

@@ -56,7 +56,8 @@ export async function generateAIResponse(userMessage, business) {
 - Sin listas, sin bullets, sin numeración, sin asteriscos, sin títulos.
 - Escribí como una persona real por WhatsApp: natural, directo, breve.
 - Si tenés mucho para decir, elegí lo más importante y dejá lo demás para cuando el cliente pregunte.
-- Nunca hagas preguntas múltiples en el mismo mensaje. Solo una pregunta a la vez.`
+- Nunca hagas preguntas múltiples en el mismo mensaje. Solo una pregunta a la vez.
+- PRECIOS: NUNCA inventes ni estimes precios. Si no tenés el precio exacto en tu información, respondé: "Los precios los manejamos por consulta, mandame una foto o contame qué tenés en mente y te doy un presupuesto." Nunca des rangos de precio inventados.`
 
   const systemPrompt = (business.ai_prompt ? basePrompt : `${basePrompt}\n\nRespondé siempre en menos de 3 oraciones. Sé conciso y directo.`) + WHATSAPP_FORMAT_RULE
   const tokenMatch = basePrompt.match(/Tokens máximos:\s*(\d+)/)
