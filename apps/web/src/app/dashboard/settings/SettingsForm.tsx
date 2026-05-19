@@ -1,58 +1,11 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Save, Loader2, ToggleLeft, ToggleRight, Wand2, ChevronDown, ChevronUp, Pencil, Plus, Trash2, Upload, UserX } from 'lucide-react'
+import { Save, Loader2, ToggleLeft, ToggleRight, Wand2, ChevronDown, ChevronUp, Plus, Trash2, Upload, UserX } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useDashboard } from '../DashboardContext'
 import SetupWizard, { parseWizardDataFromPrompt } from './SetupWizard'
 
 type PriceRow = { name: string; price: string }
-
-// ─── Section editor types ─────────────────────────────────────────────────────
-
-type SectionKey = 'identidad' | 'info' | 'servicios' | 'reglas' | 'faqs' | 'estilo'
-
-const SECTIONS: { key: SectionKey; label: string; desc: string }[] = [
-  { key: 'identidad', label: 'Identidad y perfil',    desc: 'Nombre, responsable, tono, perfil del bot' },
-  { key: 'info',      label: 'Info básica',            desc: 'Dirección, horario, pagos, link' },
-  { key: 'servicios', label: 'Servicios',              desc: 'Servicios y precios del rubro' },
-  { key: 'reglas',    label: 'Reglas y derivación',   desc: 'Límites del bot y a dónde deriva' },
-  { key: 'faqs',      label: 'Preguntas frecuentes',  desc: 'Pares pregunta → respuesta' },
-  { key: 'estilo',    label: 'Estilo de respuesta',   desc: 'Largo de las respuestas' },
-]
-
-// ─── Mini section modal ───────────────────────────────────────────────────────
-
-interface SectionModalProps {
-  section: SectionKey
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  wizardData: Record<string, any>
-  businessId: string
-  onClose: () => void
-  onSaved: (prompt: string) => void
-}
-
-function SectionModal({ section, wizardData, businessId, onClose, onSaved }: SectionModalProps) {
-  // We'll open the full wizard pre-populated and jump to the right step
-  const stepMap: Record<SectionKey, number> = {
-    identidad: 3,
-    info: 4,
-    servicios: 5,
-    reglas: 6,
-    faqs: 7,
-    estilo: 8,
-  }
-  return (
-    <SetupWizard
-      businessId={businessId}
-      onClose={onClose}
-      onSaved={onSaved}
-      initialData={wizardData as Parameters<typeof SetupWizard>[0]['initialData']}
-      initialStep={stepMap[section]}
-    />
-  )
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function SettingsForm() {
   const { business, loading, reload } = useDashboard()
@@ -61,8 +14,6 @@ export default function SettingsForm() {
   const [saveError, setSaveError] = useState('')
   const [promptExpanded, setPromptExpanded] = useState(false)
   const [wizardOpen, setWizardOpen] = useState(false)
-  const [editSection, setEditSection] = useState<SectionKey | null>(null)
-  const [sectionsExpanded, setSectionsExpanded] = useState(true)
   const [name, setName] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiEnabled, setAiEnabled] = useState(true)
@@ -125,7 +76,7 @@ export default function SettingsForm() {
     }
   }
 
-  // ── Price list helpers ───────────────────────────────────────────────────────
+  // ── Price list helpers
   const addPriceRow = () => setPriceList(p => [...p, { name: '', price: '' }])
   const updatePriceRow = (i: number, field: 'name' | 'price', val: string) =>
     setPriceList(p => p.map((r, idx) => idx === i ? { ...r, [field]: val } : r))
@@ -147,7 +98,7 @@ export default function SettingsForm() {
     e.target.value = ''
   }
 
-  // ── Excluded numbers helpers ─────────────────────────────────────────────────
+  // ── Excluded numbers helpers
   const addExcluded = () => {
     const n = newNumber.replace(/\D/g, '')
     if (n && !excludedNumbers.includes(n)) {
@@ -189,25 +140,16 @@ export default function SettingsForm() {
         />
       )}
 
-      {editSection && business && parsedWizardData && (
-        <SectionModal
-          section={editSection}
-          wizardData={parsedWizardData}
-          businessId={business.id}
-          onClose={() => setEditSection(null)}
-          onSaved={(prompt) => { setAiPrompt(prompt); setEditSection(null); reload() }}
-        />
-      )}
-
+      {/* Wizard card */}
       <div className="card bg-indigo-50 border-indigo-100">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-semibold text-indigo-900">
-              {hasWizardData ? 'Editar configuración completa' : 'Configurar con asistente'}
+              {hasWizardData ? 'Editar configuración' : 'Configurar con asistente'}
             </p>
             <p className="text-sm text-indigo-600 mt-0.5">
               {hasWizardData
-                ? 'Abrí el wizard con todos tus datos ya cargados para modificar lo que quieras'
+                ? 'Tu configuración actual fue generada con el asistente. Hacé clic para editarla.'
                 : 'Respondé las preguntas y generamos el prompt automáticamente'}
             </p>
           </div>
@@ -220,45 +162,7 @@ export default function SettingsForm() {
         </div>
       </div>
 
-      {/* Section editor — only shown when wizard data exists */}
-      {hasWizardData && parsedWizardData && business && (
-        <div className="card border-gray-100">
-          <button
-            type="button"
-            onClick={() => setSectionsExpanded(v => !v)}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <div>
-              <p className="font-semibold text-gray-900">Editar sección</p>
-              <p className="text-sm text-gray-500">Modificá una parte sin rehacer el wizard completo</p>
-            </div>
-            {sectionsExpanded
-              ? <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" />
-              : <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />}
-          </button>
-
-          {sectionsExpanded && (
-            <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
-              {SECTIONS.map(s => (
-                <div key={s.key} className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{s.label}</p>
-                    <p className="text-xs text-gray-500">{s.desc}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditSection(s.key)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all"
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Editar
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* Bot activo */}
       <div className="card flex items-center justify-between">
         <div>
           <p className="font-semibold text-gray-900">Bot activo</p>
@@ -269,46 +173,41 @@ export default function SettingsForm() {
         </button>
       </div>
 
+      {/* Nombre del negocio */}
       <div className="card">
         <label className="block text-sm font-semibold text-gray-700 mb-2">Nombre del negocio</label>
         <input type="text" value={name} onChange={e => setName(e.target.value)}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
       </div>
 
+      {/* Prompt del asistente */}
       <div className="card">
         <button type="button" onClick={() => setPromptExpanded(v => !v)}
           className="w-full flex items-center justify-between text-left">
-          <div>
-            <p className="font-semibold text-gray-900">Prompt del asistente</p>
-            <p className="text-sm text-gray-500">
-              {hasWizardData ? 'Generado por el wizard — podés editarlo o reemplazarlo' : 'Pegá o escribí cómo querés que responda el bot'}
-            </p>
-          </div>
+          <p className="font-semibold text-gray-900">Prompt del asistente</p>
           {promptExpanded
             ? <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" />
             : <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />}
         </button>
+        {!promptExpanded && aiPrompt && (
+          <p className="mt-2 text-xs text-gray-400 truncate font-mono">{aiPrompt.slice(0, 100)}…</p>
+        )}
         {promptExpanded && (
           <div className="mt-4 border-t border-gray-100 pt-4">
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-3">
-              <p className="text-xs text-amber-700">⚠️ Si pegás un prompt propio, se reemplaza el generado por el wizard. Guardá los cambios para aplicarlo.</p>
-            </div>
+            <p className="text-xs text-gray-400 mb-3">Podés pegar un prompt propio o editarlo directamente.</p>
             <textarea value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
               rows={14} placeholder="Ej: Sos el asistente de Centro Vital. Atendemos de lunes a viernes de 9 a 18hs..."
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none font-mono" />
           </div>
         )}
-        {!promptExpanded && aiPrompt && (
-          <p className="mt-2 text-xs text-gray-400 truncate font-mono">{aiPrompt.slice(0, 120)}…</p>
-        )}
       </div>
 
-      {/* ── Lista de precios ──────────────────────────────────────────────────── */}
+      {/* Lista de precios */}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="font-semibold text-gray-900">Lista de precios</p>
-            <p className="text-sm text-gray-500">El bot va a usar estos precios exactos. Sin lista, no da precios.</p>
+            <p className="text-sm text-gray-500">El bot usará estos precios exactos al responder consultas.</p>
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => csvRef.current?.click()}
@@ -359,7 +258,7 @@ export default function SettingsForm() {
         <p className="text-xs text-gray-400 mt-3">Formato CSV: columna 1 = nombre, columna 2 = precio. Podés exportar desde Excel como CSV.</p>
       </div>
 
-      {/* ── Contactos excluidos ───────────────────────────────────────────────── */}
+      {/* Contactos excluidos */}
       <div className="card">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
@@ -368,12 +267,11 @@ export default function SettingsForm() {
           </div>
           <button type="button" onClick={loadWAContacts}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all">
-            <Plus className="w-3.5 h-3.5" /> Elegir de WhatsApp
+            <Plus className="w-3.5 h-3.5" /> Cargar desde WhatsApp
           </button>
         </div>
         <p className="text-sm text-gray-500 mb-4">El bot ignora completamente estos números.</p>
 
-        {/* Selector de contactos de WA */}
         {contactsLoaded && (
           <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
@@ -384,14 +282,16 @@ export default function SettingsForm() {
                 className="w-full bg-transparent text-sm focus:outline-none"
               />
             </div>
-            <div className="max-h-52 overflow-y-auto divide-y divide-gray-50">
+            <div className="max-h-60 overflow-y-auto divide-y divide-gray-50">
               {waContacts.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-6">
-                  No se encontraron contactos. El bot necesita recibir al menos un mensaje de cada número para que aparezca aquí.
+                  No se encontraron contactos. Los contactos aparecen a medida que el bot recibe mensajes.
                 </p>
               ) : (
                 waContacts
-                  .filter(c => !contactSearch || c.name.toLowerCase().includes(contactSearch.toLowerCase()) || c.number.includes(contactSearch))
+                  .filter(c => !contactSearch ||
+                    (c.name && c.name.toLowerCase().includes(contactSearch.toLowerCase())) ||
+                    c.number.includes(contactSearch))
                   .map(c => {
                     const excluded = excludedNumbers.includes(c.number)
                     return (
@@ -399,8 +299,8 @@ export default function SettingsForm() {
                         <input type="checkbox" checked={excluded} onChange={() => toggleExcluded(c.number)}
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
-                          <p className="text-xs text-gray-400">+{c.number}</p>
+                          <p className="text-sm font-medium text-gray-800 truncate">{c.name || `+${c.number}`}</p>
+                          {c.name && <p className="text-xs text-gray-400">+{c.number}</p>}
                         </div>
                         {excluded && <span className="text-xs text-red-500 font-medium shrink-0">Excluido</span>}
                       </label>
@@ -411,13 +311,16 @@ export default function SettingsForm() {
           </div>
         )}
 
-        {/* Ingreso manual */}
+        <p className="text-xs text-gray-400 mb-3">
+          Los contactos aparecen a medida que sincroniza con WhatsApp. También podés cargar cualquier número manualmente.
+        </p>
+
         <div className="flex gap-2 mb-3">
           <input
             value={newNumber}
             onChange={e => setNewNumber(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addExcluded()}
-            placeholder="O ingresá un número manual: 5491123456789"
+            placeholder="O agregá un número: 5491123456789"
             className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
           />
           <button type="button" onClick={addExcluded}
@@ -426,7 +329,6 @@ export default function SettingsForm() {
           </button>
         </div>
 
-        {/* Chips de excluidos */}
         {excludedNumbers.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-xl">Sin números excluidos</p>
         ) : (
@@ -455,7 +357,7 @@ export default function SettingsForm() {
 
       <button onClick={save} disabled={saving} className={`btn-primary w-full flex items-center justify-center gap-2 ${saved ? '!bg-green-500' : ''}`}>
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        {saved ? '✓ Guardado correctamente' : saving ? 'Guardando...' : 'Guardar cambios'}
+        {saved ? '✓ Guardado' : saving ? 'Guardando...' : 'Guardar cambios'}
       </button>
     </div>
   )

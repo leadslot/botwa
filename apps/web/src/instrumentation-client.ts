@@ -42,3 +42,17 @@ try {
     ;(window as any).__fp = 1
   }
 } catch {}
+
+try {
+  if (!(window as any).__hp) {
+    const _set = Headers.prototype.set
+    const _append = Headers.prototype.append
+    Headers.prototype.set = function(name: string, value: string) {
+      return _set.call(this, name, String(value).replace(/[^\x00-\xFF]/g, ''))
+    }
+    Headers.prototype.append = function(name: string, value: string) {
+      return _append.call(this, name, String(value).replace(/[^\x00-\xFF]/g, ''))
+    }
+    ;(window as any).__hp = 1
+  }
+} catch {}

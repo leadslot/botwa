@@ -142,6 +142,12 @@ export const botManager = {
           .from('whatsapp_sessions')
           .upsert({ business_id: businessId, status: 'connected', qr_code: null })
         console.log(`[${businessId}] WhatsApp conectado`)
+        // Request full contact sync from WhatsApp
+        try {
+          await sock.fetchAppStateSync(['regular_high', 'regular_low', 'regular'])
+        } catch (e) {
+          console.log(`[${businessId}] Contact sync:`, e.message)
+        }
       }
 
       if (connection === 'close') {
@@ -285,8 +291,12 @@ export const botManager = {
     const map = contactsCache.get(businessId)
     if (!map) return []
     return Array.from(map.values())
-      .filter(c => c.name)
-      .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+      .sort((a, b) => {
+        if (a.name && b.name) return a.name.localeCompare(b.name, 'es')
+        if (a.name) return -1
+        if (b.name) return 1
+        return a.number.localeCompare(b.number)
+      })
   },
 
   async restoreActiveSessions() {
