@@ -37,16 +37,33 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     fetched.current = true
     try {
       const res = await fetch('/api/business')
+      if (!res.ok) {
+        // Error de red o server — NO redirigir, solo loggear
+        console.error('DashboardContext: /api/business returned', res.status)
+        setLoading(false)
+        return
+      }
       const json = await res.json()
       if (json.business) {
         setBusiness(json.business)
       } else {
-        // Sin negocio — ir a onboarding solo si no estamos ya ahí
-        if (!window.location.pathname.includes('/onboarding')) {
-          window.location.replace('/dashboard/onboarding')
+        // Solo redirigir a onboarding si el usuario está autenticado
+        // pero definitivamente no tiene negocio (respuesta 200 con business: null)
+        // Verificar primero que no sea un error de sesión
+        const checkAuth = await fetch('/api/business').then(r => r.json()).catch(() => null)
+        if (checkAuth?.business) {
+          // Segunda llamada sí devolvió negocio (era timing) — usar ese
+          setBusiness(checkAuth.business)
+        } else if (checkAuth !== null) {
+          // Dos llamadas confirmaron que no hay negocio → onboarding
+          if (!window.location.pathname.includes('/onboarding')) {
+            window.location.replace('/dashboard/onboarding')
+          }
         }
+        // Si checkAuth === null hubo error de red — no redirigir
       }
     } catch (e) {
+      // Error de red — NO redirigir, mantener estado anterior
       console.error('DashboardContext error:', e)
     } finally {
       setLoading(false)
@@ -55,6 +72,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const reload = () => {
     fetched.current = false
+    setBusiness(prev => prev) // mantener datos actuales mientras recarga
     fetchBusiness()
   }
 

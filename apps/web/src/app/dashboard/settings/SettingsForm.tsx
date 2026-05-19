@@ -58,6 +58,8 @@ export default function SettingsForm() {
   const { business, loading, reload } = useDashboard()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [promptExpanded, setPromptExpanded] = useState(false)
   const [wizardOpen, setWizardOpen] = useState(false)
   const [editSection, setEditSection] = useState<SectionKey | null>(null)
   const [sectionsExpanded, setSectionsExpanded] = useState(true)
@@ -98,18 +100,29 @@ export default function SettingsForm() {
   const save = async () => {
     if (!business) return
     setSaving(true)
-    const supabase = createClient()
-    await supabase.from('businesses').update({
-      name,
-      ai_prompt: aiPrompt,
-      ai_enabled: aiEnabled,
-      price_list: priceList.filter(r => r.name.trim()),
-      excluded_numbers: excludedNumbers.filter(Boolean),
-    }).eq('id', business.id)
-    setSaving(false)
-    setSaved(true)
-    reload()
-    setTimeout(() => setSaved(false), 2000)
+    setSaveError('')
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('businesses').update({
+        name,
+        ai_prompt: aiPrompt,
+        ai_enabled: aiEnabled,
+        price_list: priceList.filter(r => r.name.trim()),
+        excluded_numbers: excludedNumbers.filter(Boolean),
+      }).eq('id', business.id)
+      if (error) {
+        setSaveError('Error al guardar: ' + error.message)
+      } else {
+        setSaved(true)
+        reload()
+        setTimeout(() => setSaved(false), 3000)
+      }
+    } catch (e: unknown) {
+      setSaveError('Error de conexión. Intentá de nuevo.')
+      console.error('save error:', e)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── Price list helpers ───────────────────────────────────────────────────────
@@ -262,20 +275,33 @@ export default function SettingsForm() {
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
       </div>
 
-      {!hasWizardData && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-semibold text-gray-700">Prompt del asistente</label>
-            <span className="text-xs text-gray-400">Define cómo habla el bot</span>
+      <div className="card">
+        <button type="button" onClick={() => setPromptExpanded(v => !v)}
+          className="w-full flex items-center justify-between text-left">
+          <div>
+            <p className="font-semibold text-gray-900">Prompt del asistente</p>
+            <p className="text-sm text-gray-500">
+              {hasWizardData ? 'Generado por el wizard — podés editarlo o reemplazarlo' : 'Pegá o escribí cómo querés que responda el bot'}
+            </p>
           </div>
-          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-3">
-            <p className="text-xs text-indigo-600">💡 Incluí: nombre del negocio, qué hace, preguntas frecuentes, horarios, precios</p>
+          {promptExpanded
+            ? <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" />
+            : <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />}
+        </button>
+        {promptExpanded && (
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-3">
+              <p className="text-xs text-amber-700">⚠️ Si pegás un prompt propio, se reemplaza el generado por el wizard. Guardá los cambios para aplicarlo.</p>
+            </div>
+            <textarea value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
+              rows={14} placeholder="Ej: Sos el asistente de Centro Vital. Atendemos de lunes a viernes de 9 a 18hs..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none font-mono" />
           </div>
-          <textarea value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
-            rows={12} placeholder="Ej: Sos el asistente de Centro Vital. Atendemos de lunes a viernes de 9 a 18hs..."
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none font-mono" />
-        </div>
-      )}
+        )}
+        {!promptExpanded && aiPrompt && (
+          <p className="mt-2 text-xs text-gray-400 truncate font-mono">{aiPrompt.slice(0, 120)}…</p>
+        )}
+      </div>
 
       {/* ── Lista de precios ──────────────────────────────────────────────────── */}
       <div className="card">
@@ -421,9 +447,15 @@ export default function SettingsForm() {
         )}
       </div>
 
-      <button onClick={save} disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
+      {saveError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
+
+      <button onClick={save} disabled={saving} className={`btn-primary w-full flex items-center justify-center gap-2 ${saved ? '!bg-green-500' : ''}`}>
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        {saved ? '¡Guardado!' : saving ? 'Guardando...' : 'Guardar cambios'}
+        {saved ? '✓ Guardado correctamente' : saving ? 'Guardando...' : 'Guardar cambios'}
       </button>
     </div>
   )
