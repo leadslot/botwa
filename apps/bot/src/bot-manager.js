@@ -166,11 +166,18 @@ export const botManager = {
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
-          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated')
+          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list')
           .eq('id', businessId)
           .single()
 
         if (!business?.ai_enabled) continue
+
+        // Chequear si el número está excluido
+        const fromClean = from.replace(/@[^@]+$/, '')
+        if (business.excluded_numbers?.some(n => fromClean.endsWith(n.replace(/\D/g, '')) || n.replace(/\D/g, '').endsWith(fromClean.replace(/\D/g, '')))) {
+          console.log(`[${businessId}] Número excluido: ${from}`)
+          continue
+        }
 
         // ── LÍMITES ──────────────────────────────────────────
         const TRIAL_LIMIT = 50        // mensajes totales en prueba

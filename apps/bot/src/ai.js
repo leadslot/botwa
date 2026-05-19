@@ -48,8 +48,18 @@ async function getPool() {
 const blockedUntil = {}
 
 export async function generateAIResponse(userMessage, business) {
-  const basePrompt = business.ai_prompt ||
-    `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`
+  // Inyectar lista de precios si existe
+  let priceBlock = ''
+  if (business.price_list && business.price_list.length > 0) {
+    const lines = business.price_list
+      .filter(p => p.name?.trim())
+      .map(p => `- ${p.name.trim()}: ${p.price?.trim() || 'consultar'}`)
+      .join('\n')
+    if (lines) priceBlock = `\n\nLISTA DE PRECIOS (EXACTA, usá solo estos valores):\n${lines}\nSi te preguntan por algo que no está en esta lista, decí que ese precio se maneja por consulta.`
+  }
+
+  const basePrompt = (business.ai_prompt ||
+    `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`) + priceBlock
 
   const WHATSAPP_FORMAT_RULE = `\n\nFORMATO WHATSAPP (OBLIGATORIO, NO IGNORAR):
 - Máximo 2-3 oraciones por mensaje. Nunca más.
