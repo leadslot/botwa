@@ -462,17 +462,17 @@ const RUBRO_FIELDS: Record<string, FieldDef[]> = {
 
 const STYLE_OPTIONS: { key: ResponseStyle; label: string; desc: string; tokens: number; example: string }[] = [
   {
-    key: 'corta', label: 'Corta', tokens: 150,
+    key: 'corta', label: 'Corta', tokens: 100,
     desc: 'Respuestas de 1-2 líneas. Ideal para consultas simples y negocios de alto volumen.',
     example: '"Sí, tenemos lugar el jueves. ¿Mañana o tarde?"',
   },
   {
-    key: 'normal', label: 'Normal', tokens: 250,
+    key: 'normal', label: 'Normal', tokens: 180,
     desc: 'Respuestas de 2-3 líneas. Balance entre información y brevedad.',
     example: '"Tenemos lugar el jueves y viernes. ¿Qué día te viene mejor? El turno dura aprox 1 hora."',
   },
   {
-    key: 'detallada', label: 'Detallada', tokens: 400,
+    key: 'detallada', label: 'Detallada', tokens: 300,
     desc: 'Respuestas más completas. Ideal para servicios complejos o productos con mucha info.',
     example: '"Para el servicio que mencionás necesitaríamos una consulta previa para evaluar..."',
   },
@@ -581,7 +581,7 @@ export function parseWizardDataFromPrompt(prompt: string): Partial<WizardData> |
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
-  businessId: string
+  businessId?: string
   onClose: () => void
   onSaved: (prompt: string) => void
   initialData?: Partial<WizardData>
@@ -638,10 +638,12 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
 
   const finish = async () => {
     const prompt = buildPrompt(data)
-    setSaving(true)
-    const supabase = createClient()
-    await supabase.from('businesses').update({ ai_prompt: prompt }).eq('id', businessId)
-    setSaving(false)
+    if (businessId) {
+      setSaving(true)
+      const supabase = createClient()
+      await supabase.from('businesses').update({ ai_prompt: prompt }).eq('id', businessId)
+      setSaving(false)
+    }
     onSaved(prompt)
     onClose()
   }

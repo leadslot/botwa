@@ -48,8 +48,19 @@ async function getPool() {
 const blockedUntil = {}
 
 export async function generateAIResponse(userMessage, business) {
-  const systemPrompt = business.ai_prompt ||
+  const basePrompt = business.ai_prompt ||
     `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`
+
+  const WHATSAPP_FORMAT_RULE = `\n\nFORMATO WHATSAPP (OBLIGATORIO, NO IGNORAR):
+- Máximo 2-3 oraciones por mensaje. Nunca más.
+- Sin listas, sin bullets, sin numeración, sin asteriscos, sin títulos.
+- Escribí como una persona real por WhatsApp: natural, directo, breve.
+- Si tenés mucho para decir, elegí lo más importante y dejá lo demás para cuando el cliente pregunte.
+- Nunca hagas preguntas múltiples en el mismo mensaje. Solo una pregunta a la vez.`
+
+  const systemPrompt = (business.ai_prompt ? basePrompt : `${basePrompt}\n\nRespondé siempre en menos de 3 oraciones. Sé conciso y directo.`) + WHATSAPP_FORMAT_RULE
+  const tokenMatch = basePrompt.match(/Tokens máximos:\s*(\d+)/)
+  const maxTokens = tokenMatch ? parseInt(tokenMatch[1]) : 200
 
   const now = Date.now()
   const API_POOL = await getPool()
@@ -66,7 +77,7 @@ export async function generateAIResponse(userMessage, business) {
 
     try {
       console.log(`[AI] Usando ${entry.label}`)
-      const response = await callProvider(entry, userMessage, systemPrompt)
+      const response = await callProvider(entry, userMessage, systemPrompt, maxTokens)
       return response
     } catch (err) {
       if (isRateLimit(err)) {
@@ -86,16 +97,16 @@ export async function generateAIResponse(userMessage, business) {
 // LLAMADAS POR PROVEEDOR
 // ============================================
 
-async function callProvider(entry, message, systemPrompt) {
+async function callProvider(entry, message, systemPrompt, maxTokens = 250) {
   switch (entry.provider) {
-    case 'gemini': return callGemini(entry, message, systemPrompt)
-    case 'groq':   return callGroq(entry, message, systemPrompt)
-    case 'openai': return callOpenAI(entry, message, systemPrompt)
+    case 'gemini': return callGemini(entry, message, systemPrompt, maxTokens)
+    case 'groq':   return callGroq(entry, message, systemPrompt, maxTokens)
+    case 'openai': return callOpenAI(entry, message, systemPrompt, maxTokens)
     default: throw new Error(`Proveedor desconocido: ${entry.provider}`)
   }
 }
 
-async function callGemini({ key, model }, message, systemPrompt) {
+async function callGemini({ key, model }, message, systemPrompt, maxTokens = 250) {
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
     {
@@ -104,7 +115,7 @@ async function callGemini({ key, model }, message, systemPrompt) {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 300 }
+        generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens }
       })
     }
   )
@@ -114,7 +125,7 @@ async function callGemini({ key, model }, message, systemPrompt) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No pude procesar tu mensaje.'
 }
 
-async function callGroq({ key, model }, message, systemPrompt) {
+async function callGroq({ key, model }, message, systemPrompt, maxTokens = 250) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
@@ -122,7 +133,7 @@ async function callGroq({ key, model }, message, systemPrompt) {
       model,
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: maxTokens,
     })
   })
   if (res.status === 429) throw new RateLimitError('Groq rate limit')
@@ -131,7 +142,7 @@ async function callGroq({ key, model }, message, systemPrompt) {
   return data.choices?.[0]?.message?.content || 'No pude procesar tu mensaje.'
 }
 
-async function callOpenAI({ key, model }, message, systemPrompt) {
+async function callOpenAI({ key, model }, message, systemPrompt, maxTokens = 250) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
@@ -139,7 +150,7 @@ async function callOpenAI({ key, model }, message, systemPrompt) {
       model,
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
       temperature: 0.7,
-      max_tokens: 300,
+      max_tokens: maxTokens,
     })
   })
   if (res.status === 429) throw new RateLimitError('OpenAI rate limit')
