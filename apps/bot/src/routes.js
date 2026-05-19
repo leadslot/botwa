@@ -32,8 +32,8 @@ export function setupRoutes(app, botManager) {
   })
 
   // Obtener contactos de la sesión activa
-  app.get('/session/contacts/:businessId', (req, res) => {
-    const contacts = botManager.getContacts(req.params.businessId)
+  app.get('/session/contacts/:businessId', async (req, res) => {
+    const contacts = await botManager.getContacts(req.params.businessId)
     res.json({ contacts })
   })
 

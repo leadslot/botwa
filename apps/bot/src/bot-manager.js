@@ -101,26 +101,60 @@ export const botManager = {
 
     sock.ev.on('creds.update', saveCreds)
 
-    // Acumular contactos en cache
-    if (!contactsCache.has(businessId)) contactsCache.set(businessId, new Map())
+    // Acumular contactos en cache (precargados desde Supabase si existen)
+    if (!contactsCache.has(businessId)) {
+      contactsCache.set(businessId, new Map())
+      // Cargar contactos persistidos de arranques anteriores
+      try {
+        const { data } = await supabase
+          .from('whatsapp_sessions').select('contacts_data').eq('business_id', businessId).single()
+        if (data?.contacts_data?.length) {
+          for (const c of data.contacts_data) {
+            contactsCache.get(businessId).set(c.number, c)
+          }
+          console.log(`[${businessId}] Contactos cargados desde Supabase: ${data.contacts_data.length}`)
+        }
+      } catch {}
+    }
     const contacts = contactsCache.get(businessId)
 
+    // Guarda contactos en Supabase después de actualizaciones (debounced 10s)
+    let saveContactsTimer = null
+    const scheduleContactsSave = () => {
+      clearTimeout(saveContactsTimer)
+      saveContactsTimer = setTimeout(async () => {
+        const list = Array.from(contacts.values())
+        await supabase.from('whatsapp_sessions')
+          .upsert({ business_id: businessId, contacts_data: list }, { onConflict: 'business_id' })
+        console.log(`[${businessId}] Contactos guardados en Supabase: ${list.length}`)
+      }, 10000)
+    }
+
     sock.ev.on('contacts.upsert', (newContacts) => {
+      let changed = false
       for (const c of newContacts) {
         if (!c.id.endsWith('@s.whatsapp.net')) continue
         const number = c.id.replace('@s.whatsapp.net', '')
         const name = c.name || c.notify || c.verifiedName || ''
-        contacts.set(number, { number, name })
+        if (name || !contacts.has(number)) {
+          contacts.set(number, { number, name })
+          changed = true
+        }
       }
+      if (changed) scheduleContactsSave()
     })
 
     sock.ev.on('contacts.update', (updates) => {
+      let changed = false
       for (const c of updates) {
         if (!c.id?.endsWith('@s.whatsapp.net')) continue
         const number = c.id.replace('@s.whatsapp.net', '')
         const existing = contacts.get(number) || { number, name: '' }
-        contacts.set(number, { ...existing, name: c.name || c.notify || existing.name })
+        const name = c.name || c.notify || existing.name
+        contacts.set(number, { ...existing, name })
+        changed = true
       }
+      if (changed) scheduleContactsSave()
     })
 
     sock.ev.on('connection.update', async (update) => {
@@ -287,16 +321,34 @@ export const botManager = {
     }
   },
 
-  getContacts(businessId) {
+  async getContacts(businessId) {
     const map = contactsCache.get(businessId)
-    if (!map) return []
-    return Array.from(map.values())
-      .sort((a, b) => {
+    // Si la cache en memoria tiene datos, usarlos
+    if (map && map.size > 0) {
+      return Array.from(map.values()).sort((a, b) => {
         if (a.name && b.name) return a.name.localeCompare(b.name, 'es')
         if (a.name) return -1
         if (b.name) return 1
         return a.number.localeCompare(b.number)
       })
+    }
+    // Fallback: buscar en Supabase (cache vacía por restart reciente)
+    try {
+      const { data } = await supabase
+        .from('whatsapp_sessions').select('contacts_data').eq('business_id', businessId).single()
+      if (data?.contacts_data?.length) {
+        // Repoblar cache
+        if (!contactsCache.has(businessId)) contactsCache.set(businessId, new Map())
+        for (const c of data.contacts_data) contactsCache.get(businessId).set(c.number, c)
+        return data.contacts_data.sort((a, b) => {
+          if (a.name && b.name) return a.name.localeCompare(b.name, 'es')
+          if (a.name) return -1
+          if (b.name) return 1
+          return a.number.localeCompare(b.number)
+        })
+      }
+    } catch {}
+    return []
   },
 
   async restoreActiveSessions() {
