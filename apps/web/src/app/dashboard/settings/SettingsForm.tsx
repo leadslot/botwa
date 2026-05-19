@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Save, Loader2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useDashboard } from '../DashboardContext'
@@ -10,10 +10,11 @@ export default function SettingsForm() {
   const [saved, setSaved] = useState(false)
   const [form, setForm] = useState<{ name: string; ai_prompt: string; ai_enabled: boolean } | null>(null)
 
-  // Inicializar form cuando llegan los datos del contexto
-  if (!form && business) {
-    setForm({ name: business.name, ai_prompt: business.ai_prompt || '', ai_enabled: business.ai_enabled })
-  }
+  useEffect(() => {
+    if (business && !form) {
+      setForm({ name: business.name, ai_prompt: business.ai_prompt || '', ai_enabled: business.ai_enabled })
+    }
+  }, [business])
 
   const save = async () => {
     if (!form || !business) return
