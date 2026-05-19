@@ -1,20 +1,75 @@
 import makeWASocket, {
   DisconnectReason,
-  useMultiFileAuthState,
+  initAuthCreds,
+  BufferJSON,
   makeCacheableSignalKeyStore,
   fetchLatestBaileysVersion,
+  proto,
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import { createClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
-import path from 'path'
-import fs from 'fs'
 import { generateAIResponse } from './ai.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 )
+
+// ─── Supabase-backed auth state (persiste credenciales aunque Railway se reinicie)
+async function useSupabaseAuthState(businessId) {
+  const read = async () => {
+    const { data } = await supabase
+      .from('whatsapp_sessions')
+      .select('session_data')
+      .eq('business_id', businessId)
+      .single()
+    if (!data?.session_data) return null
+    try { return JSON.parse(JSON.stringify(data.session_data), BufferJSON.reviver) } catch { return null }
+  }
+
+  const write = async (creds, keys) => {
+    const payload = JSON.parse(JSON.stringify({ creds, keys }, BufferJSON.replacer))
+    await supabase.from('whatsapp_sessions')
+      .upsert({ business_id: businessId, session_data: payload }, { onConflict: 'business_id' })
+  }
+
+  const stored = await read()
+  const creds = stored?.creds || initAuthCreds()
+  const keys  = stored?.keys  || {}
+
+  return {
+    state: {
+      creds,
+      keys: {
+        get: async (type, ids) => {
+          const result = {}
+          for (const id of ids) {
+            let val = keys[type]?.[id]
+            if (val) {
+              if (type === 'app-state-sync-key') {
+                val = proto.Message.AppStateSyncKeyData.fromObject(val)
+              }
+              result[id] = val
+            }
+          }
+          return result
+        },
+        set: async (data) => {
+          for (const category in data) {
+            keys[category] = keys[category] || {}
+            for (const id in data[category]) {
+              if (data[category][id]) keys[category][id] = data[category][id]
+              else delete keys[category][id]
+            }
+          }
+          await write(creds, keys)
+        }
+      }
+    },
+    saveCreds: () => write(creds, keys),
+  }
+}
 
 // Mapa de sesiones activas en memoria: businessId -> socket
 const activeSessions = new Map()
@@ -28,10 +83,7 @@ export const botManager = {
       return { status: 'already_connected' }
     }
 
-    const sessionDir = path.join(process.cwd(), 'sessions', businessId)
-    fs.mkdirSync(sessionDir, { recursive: true })
-
-    const { state, saveCreds } = await useMultiFileAuthState(sessionDir)
+    const { state, saveCreds } = await useSupabaseAuthState(businessId)
     const { version } = await fetchLatestBaileysVersion()
 
     const sock = makeWASocket({
@@ -78,11 +130,10 @@ export const botManager = {
           console.log(`[${businessId}] Reconectando...`)
           setTimeout(() => this.startSession(businessId), 3000)
         } else {
+          // Logout explícito — limpiar credenciales guardadas
           await supabase
             .from('whatsapp_sessions')
-            .upsert({ business_id: businessId, status: 'disconnected' })
-          // Limpiar sesión guardada
-          fs.rmSync(sessionDir, { recursive: true, force: true })
+            .upsert({ business_id: businessId, status: 'disconnected', session_data: null })
         }
       }
     })
