@@ -10,7 +10,8 @@ export default function ConversationsPage() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async (res: any) => {
+      const session = res.data?.session
       if (!session?.user) { window.location.href = '/login'; return }
       const { data: business } = await supabase.from('businesses').select('id').eq('user_id', session.user.id).single()
       if (!business) { setLoading(false); return }
@@ -20,13 +21,13 @@ export default function ConversationsPage() {
         .eq('business_id', business.id)
         .order('created_at', { ascending: false })
         .limit(200)
-      const conversations = (messages || []).reduce((acc: Record<string, any[]>, msg) => {
+      const conversations = (messages || []).reduce((acc: Record<string, any[]>, msg: any) => {
         const key = msg.from_number.replace('@s.whatsapp.net', '')
         if (!acc[key]) acc[key] = []
         acc[key].push(msg)
         return acc
       }, {})
-      setConvList(Object.entries(conversations).map(([number, msgs]) => ({ number, lastMsg: msgs[0], count: msgs.length })))
+      setConvList(Object.entries(conversations).map(([number, msgs]) => ({ number, lastMsg: (msgs as any[])[0], count: (msgs as any[]).length })))
       setTotalMsgs(messages?.length || 0)
       setLoading(false)
     })
