@@ -23,11 +23,17 @@ export default function SettingsForm() {
   }, [loading, business, ready])
 
   if (!ready) return (
-    <div className="space-y-4 animate-pulse">
-      <div className="bg-white rounded-2xl border border-gray-100 h-20" />
-      <div className="bg-white rounded-2xl border border-gray-100 h-20" />
-      <div className="bg-white rounded-2xl border border-gray-100 h-64" />
-      <div className="bg-indigo-200 rounded-2xl h-12 opacity-40" />
+    <div className="space-y-4">
+      {/* DEBUG — borrar después */}
+      <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm font-mono text-red-700">
+        loading: {String(loading)} | business: {business ? business.id : 'null'} | ready: {String(ready)}
+      </div>
+      <div className="animate-pulse space-y-4">
+        <div className="bg-white rounded-2xl border border-gray-100 h-20" />
+        <div className="bg-white rounded-2xl border border-gray-100 h-20" />
+        <div className="bg-white rounded-2xl border border-gray-100 h-64" />
+        <div className="bg-indigo-200 rounded-2xl h-12 opacity-40" />
+      </div>
     </div>
   )
 
