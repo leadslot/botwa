@@ -192,6 +192,10 @@ export const botManager = {
 
         if (code !== DisconnectReason.loggedOut) {
           console.log(`[${businessId}] Reconectando...`)
+          // Marcar como 'reconnecting' para que un posible restart también lo restaure
+          await supabase
+            .from('whatsapp_sessions')
+            .upsert({ business_id: businessId, status: 'reconnecting' }, { onConflict: 'business_id' })
           setTimeout(() => this.startSession(businessId), 3000)
         } else {
           // Logout explícito — limpiar credenciales guardadas
@@ -352,14 +356,19 @@ export const botManager = {
   },
 
   async restoreActiveSessions() {
+    // Restaurar cualquier sesión que tenga credenciales guardadas (no solo 'connected')
+    // Esto cubre el caso donde Railway redesplegó y el status quedó en otro valor
     const { data } = await supabase
       .from('whatsapp_sessions')
-      .select('business_id')
-      .eq('status', 'connected')
+      .select('business_id, status, session_data')
+      .neq('status', 'disconnected')
 
     for (const row of data || []) {
-      console.log(`Restaurando sesión: ${row.business_id}`)
-      await this.startSession(row.business_id)
+      // Si tiene session_data (credenciales), reconectar aunque el status no sea 'connected'
+      if (row.session_data || row.status === 'connected') {
+        console.log(`Restaurando sesión [${row.status}]: ${row.business_id}`)
+        await this.startSession(row.business_id)
+      }
     }
   }
 }
