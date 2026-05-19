@@ -1,10 +1,30 @@
 'use client'
+import { useState, useEffect } from 'react'
 import { useDashboard } from '../DashboardContext'
-import { CreditCard, CheckCircle2, Infinity as InfinityIcon, Zap } from 'lucide-react'
+import { CreditCard, CheckCircle2, Infinity as InfinityIcon, Zap, Loader2 } from 'lucide-react'
 import CouponForm from './CouponForm'
 
+const MP_PLAN_URL = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${process.env.NEXT_PUBLIC_MP_PLAN_ID || '3ec02d432a2d4e38969392039bbcf632'}`
+
 export default function BillingPage() {
-  const { business, loading } = useDashboard()
+  const { business, loading, reload } = useDashboard()
+  const [paying, setPaying] = useState(false)
+
+  // Si volvió de MP con pago ok, recargar negocio
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('pago=ok')) {
+      reload()
+    }
+  }, [])
+
+  const handlePrimerMes = async () => {
+    setPaying(true)
+    try {
+      const res = await fetch('/api/mp/create-preference', { method: 'POST' })
+      const data = await res.json()
+      if (data.init_point) window.location.href = data.init_point
+    } catch { setPaying(false) }
+  }
 
   if (loading) return (
     <div className="p-8 max-w-2xl animate-pulse">
@@ -80,10 +100,11 @@ export default function BillingPage() {
               </li>
             ))}
           </ul>
-          <a href="https://mpago.la/botwa-suscripcion" target="_blank" rel="noopener noreferrer" className="btn-primary w-full block text-center">
-            Pagar con Mercado Pago
-          </a>
+          <button onClick={handlePrimerMes} disabled={paying} className="btn-primary w-full flex items-center justify-center gap-2">
+            {paying ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirigiendo...</> : 'Pagar primer mes · $40.000'}
+          </button>
           <p className="text-xs text-gray-400 text-center mt-2">Pago seguro · Tarjeta, débito o transferencia</p>
+          <p className="text-xs text-gray-400 text-center">Luego podés suscribirte a <strong>$60.000/mes</strong> con renovación automática</p>
           <div className="mt-4"><CouponForm /></div>
         </div>
       )}
