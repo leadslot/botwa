@@ -390,8 +390,14 @@ export const botManager = {
         if (!business?.ai_enabled) continue
 
         // Chequear si el número está excluido
-        if (business.excluded_numbers?.some(n => fromClean.endsWith(n.replace(/\D/g, '')) || n.replace(/\D/g, '').endsWith(fromClean.replace(/\D/g, '')))) {
-          console.log(`[${businessId}] Número excluido: ${from}`)
+        // Funciona tanto con números reales como con LIDs (el usuario puede bloquear desde el panel)
+        const fromDigits = fromClean.replace(/\D/g, '')
+        const isExcluded = business.excluded_numbers?.some(n => {
+          const nDigits = n.replace(/\D/g, '')
+          return nDigits === fromDigits || fromDigits.endsWith(nDigits) || nDigits.endsWith(fromDigits)
+        })
+        if (isExcluded) {
+          console.log(`[${businessId}] Contacto excluido: ${from}`)
           continue
         }
 
