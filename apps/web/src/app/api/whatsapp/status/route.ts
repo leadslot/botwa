@@ -21,33 +21,59 @@ export async function GET() {
   if (!business) return NextResponse.json({ status: 'disconnected' })
 
   try {
-    const res = await fetch(`${BOT_URL}/session/qr/${business.id}`, { signal: AbortSignal.timeout(4000) })
+    const res = await fetch(`${BOT_URL}/session/qr/${business.id}`, {
+      signal: AbortSignal.timeout(6000)
+    })
     const data = await res.json()
-    // Si el bot dice disconnected, verificar en Supabase si hay credenciales guardadas
-    // (puede estar arrancando / restaurando sesión)
+
+    // Bot respondió — si dice connected, sincronizar Supabase
+    if (data.status === 'connected') {
+      admin.from('whatsapp_sessions')
+        .upsert({ business_id: business.id, status: 'connected', qr_code: null }, { onConflict: 'business_id' })
+        .then(() => {}).catch(() => {})
+      return NextResponse.json({ status: 'connected', qr: null })
+    }
+
+    // Bot dice disconnected en memoria → ver qué dice Supabase
     if (data.status === 'disconnected') {
-      const { data: sessionRow } = await admin
+      const { data: row } = await admin
         .from('whatsapp_sessions')
         .select('status, session_data')
         .eq('business_id', business.id)
         .single()
-      if (sessionRow?.session_data && sessionRow.status !== 'disconnected') {
+
+      // Supabase dice 'connected' → el bot está arrancando, confiar en Supabase
+      if (row?.status === 'connected' && row?.session_data) {
+        return NextResponse.json({ status: 'reconnecting', qr: null })
+      }
+      // Supabase dice explícitamente 'reconnecting'
+      if (row?.status === 'reconnecting' && row?.session_data) {
         return NextResponse.json({ status: 'reconnecting', qr: null })
       }
     }
+
     return NextResponse.json(data)
+
   } catch {
-    // Bot caído — verificar Supabase
+    // Bot no responde (timeout o caído) → confiar en Supabase
     try {
-      const { data: sessionRow } = await admin
+      const { data: row } = await admin
         .from('whatsapp_sessions')
         .select('status, session_data')
         .eq('business_id', business.id)
         .single()
-      if (sessionRow?.session_data && sessionRow.status !== 'disconnected') {
-        return NextResponse.json({ status: 'reconnecting', qr: null })
-      }
+
+      if (!row?.session_data) return NextResponse.json({ status: 'disconnected', qr: null })
+
+      // Si Supabase dice connected → reportar connected (no reconectando)
+      if (row.status === 'connected') return NextResponse.json({ status: 'connected', qr: null })
+
+      // Si Supabase dice reconectando → reportar reconectando
+      if (row.status === 'reconnecting') return NextResponse.json({ status: 'reconnecting', qr: null })
+
+      return NextResponse.json({ status: 'disconnected', qr: null })
     } catch {}
+
     return NextResponse.json({ status: 'disconnected', qr: null })
   }
 }

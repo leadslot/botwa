@@ -80,7 +80,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {waStatus === 'reconnecting' && (
+      {waStatus === 'reconnecting' && business.messages_used === 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
           <Zap className="w-5 h-5 text-amber-500 flex-shrink-0" />
           <div>
