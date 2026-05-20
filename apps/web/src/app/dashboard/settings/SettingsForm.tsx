@@ -23,7 +23,6 @@ export default function SettingsForm() {
   const [newNumber, setNewNumber] = useState('')
   const [waContacts, setWaContacts] = useState<{number:string;name:string}[]>([])
   const [contactsLoaded, setContactsLoaded] = useState(false)
-  const [contactsLoading, setContactsLoading] = useState(false)
   const [contactSearch, setContactSearch] = useState('')
   const csvRef = useRef<HTMLInputElement>(null)
   const contactsCsvRef = useRef<HTMLInputElement>(null)
@@ -116,18 +115,6 @@ export default function SettingsForm() {
     setExcludedNumbers(p =>
       p.includes(number) ? p.filter(x => x !== number) : [...p, number]
     )
-  }
-
-  const loadWAContacts = async () => {
-    setContactsLoading(true)
-    try {
-      const res = await fetch('/api/whatsapp/contacts')
-      const { contacts } = await res.json()
-      setWaContacts(contacts || [])
-      setContactsLoaded(true)
-    } finally {
-      setContactsLoading(false)
-    }
   }
 
   const handleContactsCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,7 +225,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-24">
       {wizardOpen && business && (
         <SetupWizard
           businessId={business.id}
@@ -250,13 +237,13 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
       )}
 
       {/* Wizard card */}
-      <div className="card bg-indigo-50 border-indigo-100">
+      <div className="rounded-[24px] border border-violet-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-semibold text-indigo-900">
               {hasWizardData ? 'Editar configuración' : 'Configurar con asistente'}
             </p>
-            <p className="text-sm text-indigo-600 mt-0.5">
+            <p className="text-sm text-[#6C4DFF] mt-0.5">
               {hasWizardData
                 ? 'Tu configuración actual fue generada con el asistente. Hacé clic para editarla.'
                 : 'Respondé las preguntas y generamos el prompt automáticamente'}
@@ -264,7 +251,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
           </div>
           <button
             onClick={() => setWizardOpen(true)}
-            className="btn-primary flex items-center gap-2 whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200"
           >
             <Wand2 className="w-4 h-4" /> {hasWizardData ? 'Editar' : 'Iniciar wizard'}
           </button>
@@ -272,24 +259,24 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
       </div>
 
       {/* Bot activo */}
-      <div className="card flex items-center justify-between">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)] flex items-center justify-between">
         <div>
           <p className="font-semibold text-gray-900">Bot activo</p>
           <p className="text-sm text-gray-500">Si lo desactivás, los mensajes llegan pero el bot no responde</p>
         </div>
         <button onClick={() => setAiEnabled(!aiEnabled)}>
-          {aiEnabled ? <ToggleRight className="w-10 h-10 text-indigo-500" /> : <ToggleLeft className="w-10 h-10 text-gray-300" />}
+          {aiEnabled ? <ToggleRight className="w-10 h-10 text-[#6C4DFF]" /> : <ToggleLeft className="w-10 h-10 text-gray-300" />}
         </button>
       </div>
 
       {/* Delay de respuesta */}
-      <div className="card">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between mb-1">
           <div>
             <p className="font-semibold text-gray-900">Demora antes de responder</p>
             <p className="text-sm text-gray-500">El bot espera este tiempo antes de enviar la respuesta — se ve más natural</p>
           </div>
-          <span className="text-2xl font-black text-indigo-600 shrink-0 ml-4">
+          <span className="text-2xl font-black text-[#6C4DFF] shrink-0 ml-4">
             {responseDelay === 0 ? 'Inmediato' : `${responseDelay}s`}
           </span>
         </div>
@@ -297,7 +284,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
           type="range" min={0} max={60} step={1}
           value={responseDelay}
           onChange={e => setResponseDelay(Number(e.target.value))}
-          className="w-full accent-indigo-500 mt-3"
+          className="w-full accent-[#6C4DFF] mt-3"
         />
         <div className="flex justify-between text-xs text-gray-400 mt-1">
           <span>Inmediato</span>
@@ -309,14 +296,14 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
       </div>
 
       {/* Nombre del negocio */}
-      <div className="card">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <label className="block text-sm font-semibold text-gray-700 mb-2">Nombre del negocio</label>
         <input type="text" value={name} onChange={e => setName(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4DFF] transition-all" />
       </div>
 
       {/* Prompt del asistente */}
-      <div className="card">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <button type="button" onClick={() => setPromptExpanded(v => !v)}
           className="w-full flex items-center justify-between text-left">
           <p className="font-semibold text-gray-900">Prompt del asistente</p>
@@ -362,13 +349,13 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
             </div>
             <textarea value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
               rows={14} placeholder="Ej: Sos el asistente de Centro Vital. Atendemos de lunes a viernes de 9 a 18hs..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none font-mono" />
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4DFF] transition-all resize-none font-mono" />
           </div>
         )}
       </div>
 
       {/* Lista de precios */}
-      <div className="card">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="font-semibold text-gray-900">Lista de precios</p>
@@ -381,7 +368,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
             </button>
             <input ref={csvRef} type="file" accept=".csv,.tsv,.txt" className="hidden" onChange={handleCSV} />
             <button type="button" onClick={addPriceRow}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-200 bg-[#F1EDFF] text-sm font-medium text-[#6C4DFF] hover:bg-[#F1EDFF] transition-all">
               <Plus className="w-3.5 h-3.5" /> Agregar
             </button>
           </div>
@@ -404,13 +391,13 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
                   value={row.name}
                   onChange={e => updatePriceRow(i, 'name', e.target.value)}
                   placeholder="Ej: Tatuaje pequeño"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4DFF] transition-all"
                 />
                 <input
                   value={row.price}
                   onChange={e => updatePriceRow(i, 'price', e.target.value)}
                   placeholder="Ej: $15.000"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4DFF] transition-all"
                 />
                 <button type="button" onClick={() => removePriceRow(i)}
                   className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all">
@@ -426,7 +413,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
       </div>
 
       {/* Contactos excluidos */}
-      <div className="card">
+      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <UserX className="w-4 h-4 text-gray-500" />
@@ -434,24 +421,16 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => contactsCsvRef.current?.click()}
-              disabled={contactsLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all disabled:opacity-60">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-200 bg-[#F1EDFF] text-sm font-medium text-[#6C4DFF] hover:bg-[#F1EDFF] transition-all">
               <Upload className="w-3.5 h-3.5" /> Subir lista CSV
             </button>
             <input ref={contactsCsvRef} type="file" accept=".csv,.tsv,.txt" className="hidden" onChange={handleContactsCSV} />
-            <button type="button" onClick={loadWAContacts} disabled={contactsLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-60">
-              {contactsLoading
-                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando...</>
-                : <><Plus className="w-3.5 h-3.5" /> Desde WhatsApp</>
-              }
-            </button>
           </div>
         </div>
         <p className="text-sm text-gray-500 mb-2">El bot ignora completamente estos números.</p>
         <p className="text-xs text-gray-400 mb-4">CSV: columna A = nombre, columna B = número. O subí solo números sin encabezado.</p>
 
-        {(contactsLoaded || contactsLoading) && (
+        {contactsLoaded && (
           <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
               <input
@@ -462,18 +441,8 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
               />
             </div>
             <div className="max-h-60 overflow-y-auto divide-y divide-gray-50">
-              {contactsLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
-                  <svg className="animate-spin w-4 h-4 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                  </svg>
-                  Cargando chats de WhatsApp...
-                </div>
-              ) : waContacts.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">
-                  WhatsApp todavía no sincronizó chats. Probá nuevamente en unos segundos o enviá/recibí un mensaje.
-                </p>
+              {waContacts.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">El CSV no tiene contactos válidos.</p>
               ) : (
                 waContacts
                   .filter(c => !contactSearch ||
@@ -484,7 +453,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
                     return (
                       <label key={c.number} className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${excluded ? 'bg-red-50' : ''}`}>
                         <input type="checkbox" checked={excluded} onChange={() => toggleExcluded(c.number)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                          className="rounded border-gray-300 text-[#6C4DFF] focus:ring-[#6C4DFF]" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-800 truncate">{c.name || `+${c.number}`}</p>
                           {c.name && <p className="text-xs text-gray-400">+{c.number}</p>}
@@ -498,17 +467,13 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
           </div>
         )}
 
-        <p className="text-xs text-gray-400 mb-3">
-          Los contactos aparecen a medida que sincroniza con WhatsApp. También podés cargar cualquier número manualmente.
-        </p>
-
         <div className="flex gap-2 mb-3">
           <input
             value={newNumber}
             onChange={e => setNewNumber(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addExcluded()}
             placeholder="O agregá un número: 5491123456789"
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4DFF] transition-all"
           />
           <button type="button" onClick={addExcluded}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all">
@@ -542,7 +507,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
         </div>
       )}
 
-      <button onClick={save} disabled={saving} className={`btn-primary w-full flex items-center justify-center gap-2 ${saved ? '!bg-green-500' : ''}`}>
+      <button onClick={save} disabled={saving} className={`sticky bottom-4 z-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-4 text-sm font-black text-white shadow-2xl shadow-violet-200 ${saved ? '!from-green-500 !to-green-500' : ''}`}>
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         {saved ? '✓ Guardado' : saving ? 'Guardando...' : 'Guardar cambios'}
       </button>

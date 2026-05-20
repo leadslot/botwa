@@ -50,6 +50,32 @@ export function setupRoutes(app, botManager) {
     res.json({ chats })
   })
 
+  // Pausar/reanudar bot para un contacto específico
+  app.post('/session/pause', (req, res) => {
+    const { businessId, number, paused } = req.body
+    if (!businessId || !number) return res.status(400).json({ error: 'businessId y number requeridos' })
+    if (paused) botManager.pauseContact(businessId, number)
+    else botManager.unpauseContact(businessId, number)
+    res.json({ ok: true, paused })
+  })
+
+  // Obtener lista de contactos pausados
+  app.get('/session/paused/:businessId', (req, res) => {
+    res.json({ paused: botManager.getPausedContacts(req.params.businessId) })
+  })
+
+  // Solicitar código de vinculación (alternativa al QR)
+  app.post('/session/pair-code', async (req, res) => {
+    const { businessId, phone } = req.body
+    if (!businessId || !phone) return res.status(400).json({ error: 'businessId y phone requeridos' })
+    try {
+      const code = await botManager.requestPairingCode(businessId, phone.replace(/\D/g, ''))
+      res.json({ code })
+    } catch (e) {
+      res.status(500).json({ error: e.message })
+    }
+  })
+
   // Enviar mensaje manual desde el panel
   app.post('/message/send', async (req, res) => {
     const { businessId, to, text } = req.body

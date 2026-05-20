@@ -81,6 +81,10 @@ const reconnectAttempts = new Map()
 const chatsCache = new Map()
 // Contactos por sesión: businessId -> Map<jid, {name, number}>
 const contactsCache = new Map()
+// Human handoff: businessId -> Set<string> de números pausados
+const pausedContacts = new Map()
+// Sockets en proceso de conexión (antes de 'open'): businessId -> sock
+const pendingSockets = new Map()
 
 function parseChat(chat) {
   const jid = chat.id || ''
@@ -114,6 +118,8 @@ export const botManager = {
       logger: { level: 'silent', trace: ()=>{}, debug: ()=>{}, info: ()=>{}, warn: console.warn, error: console.error, fatal: console.error, child: ()=>({ level:'silent', trace:()=>{}, debug:()=>{}, info:()=>{}, warn:()=>{}, error:()=>{}, fatal:()=>{}, child:()=>{} }) },
       browser: ['BotWA', 'Chrome', '1.0.0'],
     })
+
+    pendingSockets.set(businessId, sock)
 
     sock.ev.on('creds.update', saveCreds)
 
@@ -232,6 +238,7 @@ export const botManager = {
         reconnectAttempts.delete(businessId)
         activeSessions.set(businessId, sock)
         pendingQRs.delete(businessId)
+        pendingSockets.delete(businessId)
         await supabase
           .from('whatsapp_sessions')
           .upsert({ business_id: businessId, status: 'connected', qr_code: null })
@@ -301,6 +308,13 @@ export const botManager = {
           direction: 'inbound',
         })
 
+        // Human handoff check
+        const fromClean = from.replace(/@[^@]+$/, '')
+        if (this.isPaused(businessId, fromClean)) {
+          console.log(`[${businessId}] Bot pausado para ${fromClean}`)
+          continue
+        }
+
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
@@ -311,7 +325,6 @@ export const botManager = {
         if (!business?.ai_enabled) continue
 
         // Chequear si el número está excluido
-        const fromClean = from.replace(/@[^@]+$/, '')
         if (business.excluded_numbers?.some(n => fromClean.endsWith(n.replace(/\D/g, '')) || n.replace(/\D/g, '').endsWith(fromClean.replace(/\D/g, '')))) {
           console.log(`[${businessId}] Número excluido: ${from}`)
           continue
@@ -384,6 +397,34 @@ export const botManager = {
     })
 
     return { status: 'starting' }
+  },
+
+  // ── Human Handoff ────────────────────────────────────────
+  pauseContact(businessId, number) {
+    if (!pausedContacts.has(businessId)) pausedContacts.set(businessId, new Set())
+    pausedContacts.get(businessId).add(number)
+  },
+  unpauseContact(businessId, number) {
+    pausedContacts.get(businessId)?.delete(number)
+  },
+  isPaused(businessId, number) {
+    return pausedContacts.get(businessId)?.has(number) ?? false
+  },
+  getPausedContacts(businessId) {
+    return Array.from(pausedContacts.get(businessId) ?? [])
+  },
+
+  // ── Pairing Code ─────────────────────────────────────────
+  async requestPairingCode(businessId, phoneNumber) {
+    let sock = activeSessions.get(businessId) || pendingSockets.get(businessId)
+    if (!sock) {
+      await this.startSession(businessId)
+      await new Promise(r => setTimeout(r, 3000))
+      sock = activeSessions.get(businessId) || pendingSockets.get(businessId)
+    }
+    if (!sock) throw new Error('No hay sesión activa')
+    const code = await sock.requestPairingCode(phoneNumber)
+    return code
   },
 
   getQR(businessId) {

@@ -1,9 +1,13 @@
 'use client'
+
 import { useState, useEffect } from 'react'
-import { RefreshCw, CheckCircle2, WifiOff, LogOut, QrCode } from 'lucide-react'
+import { CheckCircle2, Clock3, LogOut, Pause, QrCode, RefreshCw, Smartphone, WifiOff } from 'lucide-react'
+import { SectionCard, StatusPill } from '@/components/dashboard/ui'
+
+type WAStatus = 'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting' | null
+type WindowWithPolling = Window & { __startWAPolling?: () => void }
 
 export default function ConnectPage() {
-  type WAStatus = 'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting' | null
   const [status, setStatus] = useState<WAStatus>(() => {
     if (typeof window !== 'undefined') {
       return (sessionStorage.getItem('wa_status') as WAStatus) ?? null
@@ -14,12 +18,17 @@ export default function ConnectPage() {
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [showPairCode, setShowPairCode] = useState(false)
+  const [pairPhone, setPairPhone] = useState('')
+  const [pairCode, setPairCode] = useState<string | null>(null)
+  const [pairLoading, setPairLoading] = useState(false)
+  const [pairError, setPairError] = useState<string | null>(null)
 
   const startConnection = async () => {
     setLoading(true)
     try {
       await fetch('/api/whatsapp/start', { method: 'POST' })
-      ;(window as any).__startWAPolling?.()
+      ;(window as WindowWithPolling).__startWAPolling?.()
     } finally {
       setLoading(false)
     }
@@ -31,10 +40,32 @@ export default function ConnectPage() {
       await fetch('/api/whatsapp/reset', { method: 'POST' })
       setStatus('disconnected')
       setQR(null)
-      // Esperar un momento y luego iniciar conexión fresh
       setTimeout(() => startConnection(), 1000)
     } finally {
       setResetting(false)
+    }
+  }
+
+  const requestPairCode = async () => {
+    if (!pairPhone.trim()) return
+    setPairLoading(true)
+    setPairError(null)
+    setPairCode(null)
+    try {
+      const r = await fetch('/api/whatsapp/pair-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: pairPhone.replace(/\D/g, '') }),
+      })
+      const d = await r.json()
+      if (d.code) {
+        setPairCode(d.code)
+        ;(window as WindowWithPolling).__startWAPolling?.()
+      } else {
+        setPairError(d.error || 'Error al solicitar código')
+      }
+    } finally {
+      setPairLoading(false)
     }
   }
 
@@ -74,110 +105,180 @@ export default function ConnectPage() {
     }
 
     checkStatus()
-
-    ;(window as any).__startWAPolling = startPolling
+    ;(window as WindowWithPolling).__startWAPolling = startPolling
 
     return () => {
       if (interval) clearInterval(interval)
-      delete (window as any).__startWAPolling
+      delete (window as WindowWithPolling).__startWAPolling
     }
   }, [])
 
+  const connected = status === 'connected'
+
   return (
-    <div className="max-w-2xl mx-auto py-12 px-6">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-black text-gray-900 mb-2">Conectar WhatsApp</h1>
-        <p className="text-gray-500">Una vez conectado, el bot responde por vos desde nuestro servidor</p>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-3xl font-black tracking-tight text-slate-950">Conectar WhatsApp</h1>
+        <div className="mt-3 h-1.5 w-14 rounded-full bg-gradient-to-r from-[#6C4DFF] to-[#A855F7]" />
+        <p className="mt-4 text-base text-slate-500">Una vez conectado, el bot responde por vos desde nuestro servidor.</p>
       </div>
 
-      <div className="card text-center">
-        {status === null && (
-          <div className="py-8">
-            <RefreshCw className="w-7 h-7 text-indigo-300 animate-spin mx-auto mb-3" />
-            <p className="text-gray-400 text-sm">Verificando conexión...</p>
-          </div>
-        )}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.5fr)]">
+        <SectionCard className="relative min-h-[390px] overflow-hidden p-6 text-center lg:p-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_26%,rgba(34,197,94,0.14),transparent_30%),radial-gradient(circle_at_0%_90%,rgba(108,77,255,0.10),transparent_32%)]" />
+          <div className="relative mx-auto max-w-2xl">
+            {status === null && (
+              <div className="py-10">
+                <RefreshCw className="mx-auto mb-4 h-10 w-10 animate-spin text-[#6C4DFF]" />
+                <p className="font-semibold text-slate-500">Verificando conexión...</p>
+              </div>
+            )}
 
-        {status === 'connected' && (
-          <div className="py-8">
-            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">¡WhatsApp conectado!</h2>
-            <p className="text-gray-500 mb-4">Tu bot está activo y respondiendo mensajes.</p>
-            <div className="badge-green mx-auto w-fit mb-6">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              En línea
-            </div>
-            <p className="text-xs text-gray-400 mb-4">Al recargar la página puede tardar unos segundos en confirmar la conexión.</p>
-            <button
-              onClick={disconnectBot}
-              disabled={disconnecting}
-              className="btn-secondary text-sm text-red-500 hover:text-red-600 flex items-center gap-2 mx-auto"
-            >
-              <LogOut className="w-4 h-4" />
-              {disconnecting ? 'Desconectando...' : 'Pausar bot'}
-            </button>
-          </div>
-        )}
+            {connected && (
+              <div className="py-6">
+                <div className="relative mx-auto mb-8 flex h-28 w-28 items-center justify-center rounded-full bg-[#EAFBF1]">
+                  <Smartphone className="h-14 w-14 text-[#22C55E]" />
+                  <CheckCircle2 className="absolute -right-1 -top-1 h-8 w-8 rounded-full bg-[#22C55E] text-white" />
+                </div>
+                <h2 className="text-3xl font-black text-slate-950">¡WhatsApp conectado!</h2>
+                <p className="mt-3 text-lg text-slate-500">Tu bot está activo y respondiendo mensajes.</p>
+                <div className="mt-5"><StatusPill tone="green">En línea</StatusPill></div>
+                <div className="mx-auto mt-7 max-w-xl border-t border-slate-200 pt-6">
+                  <p className="flex items-center justify-center gap-3 text-base text-slate-600">
+                    <Clock3 className="h-5 w-5 text-[#22C55E]" />
+                    Última sincronización: <span className="font-black text-[#22C55E]">hace unos segundos</span>
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {status === 'waiting_qr' && qr && (
-          <div className="py-6">
-            <div className="badge-yellow mx-auto w-fit mb-6">
-              <RefreshCw className="w-3 h-3 animate-spin" />
-              Esperando escaneo
-            </div>
-            <div className="bg-white border-4 border-indigo-500 rounded-2xl p-3 inline-block mb-6"
-              style={{ boxShadow: '0 4px 24px -2px rgba(99,102,241,0.15)' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qr} alt="QR WhatsApp" className="w-56 h-56" />
-            </div>
-            <div className="text-left bg-gray-50 rounded-xl p-4 text-sm text-gray-600 space-y-2 max-w-xs mx-auto">
-              <p className="font-semibold text-gray-800">Cómo escanear:</p>
-              <p>1. Abrí WhatsApp en tu celular</p>
-              <p>2. Tocá los 3 puntos → Dispositivos vinculados</p>
-              <p>3. Tocá &quot;Vincular un dispositivo&quot;</p>
-              <p>4. Apuntá la cámara al QR de arriba</p>
-            </div>
-          </div>
-        )}
+            {status === 'waiting_qr' && qr && (
+              <div className="py-3">
+                <StatusPill tone="amber"><RefreshCw className="h-3 w-3 animate-spin" /> Esperando escaneo</StatusPill>
+                <div className="mx-auto mt-6 inline-block rounded-[28px] border border-violet-200 bg-white p-4 shadow-2xl shadow-violet-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qr} alt="QR WhatsApp" className="h-56 w-56 rounded-2xl" />
+                </div>
+                <div className="mx-auto mt-6 max-w-md rounded-3xl border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600">
+                  <p className="mb-3 font-black text-slate-900">Cómo escanear:</p>
+                  <p>1. Abrí WhatsApp en tu celular</p>
+                  <p>2. Tocá los 3 puntos → Dispositivos vinculados</p>
+                  <p>3. Tocá &quot;Vincular un dispositivo&quot;</p>
+                  <p>4. Apuntá la cámara al QR de arriba</p>
+                </div>
+              </div>
+            )}
 
-        {status === 'reconnecting' && (
-          <div className="py-8">
-            <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Reconectando...</h2>
-            <p className="text-gray-500 text-sm mb-6">El bot está levantando tu sesión automáticamente.</p>
-            <p className="text-xs text-gray-400 mb-3">¿Desvinculaste el dispositivo desde tu teléfono?</p>
+            {status === 'reconnecting' && (
+              <div className="py-10">
+                <RefreshCw className="mx-auto mb-5 h-12 w-12 animate-spin text-[#6C4DFF]" />
+                <h2 className="text-3xl font-black text-slate-950">Reconectando...</h2>
+                <p className="mt-3 text-slate-500">El bot está levantando tu sesión automáticamente.</p>
+              </div>
+            )}
+
+            {status !== null && (status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr','reconnecting'].includes(status as string))) && (
+              <div className="py-10">
+                <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
+                  <WifiOff className="h-10 w-10 text-slate-400" />
+                </div>
+                <h2 className="text-3xl font-black text-slate-950">Sin conexión</h2>
+                <p className="mt-3 text-slate-500">Tu bot no está activo todavía.</p>
+                <button onClick={startConnection} disabled={loading} className="mt-7 inline-flex rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-7 py-4 text-sm font-black text-white shadow-lg shadow-violet-200">
+                  {loading ? 'Iniciando...' : 'Conectar WhatsApp'}
+                </button>
+              </div>
+            )}
+
+            {status === 'waiting_qr' && !qr && (
+              <div className="py-10">
+                <RefreshCw className="mx-auto mb-4 h-10 w-10 animate-spin text-[#6C4DFF]" />
+                <p className="font-semibold text-slate-500">Generando código QR...</p>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+
+        <div className="space-y-5">
+          <SectionCard className="p-5 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F1EDFF]">
+              <QrCode className="h-9 w-9 text-[#6C4DFF]" />
+            </div>
+            <h2 className="text-xl font-black text-slate-950">¿Desvinculaste el dispositivo?</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">Conectá nuevamente tu WhatsApp escaneando un nuevo código QR.</p>
             <button
               onClick={resetAndConnect}
               disabled={resetting}
-              className="btn-secondary text-sm flex items-center gap-2 mx-auto"
+              className="mt-5 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-violet-200"
             >
-              <QrCode className="w-4 h-4" />
+              <QrCode className="h-5 w-5" />
               {resetting ? 'Reiniciando...' : 'Conectar con nuevo QR'}
             </button>
-          </div>
-        )}
+          </SectionCard>
 
-        {status !== null && (status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr','reconnecting'].includes(status as string))) && (
-          <div className="py-8">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <WifiOff className="w-7 h-7 text-gray-400" />
+          <SectionCard className="p-5">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-violet-200 bg-[#F1EDFF]">
+                <Pause className="h-6 w-6 text-[#6C4DFF]" />
+              </span>
+              <div className="flex-1">
+                <h3 className="text-lg font-black text-slate-950">Pausar bot</h3>
+                <p className="mt-1 text-sm text-slate-500">El bot dejará de responder mensajes temporalmente.</p>
+              </div>
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Sin conexión</h2>
-            <p className="text-gray-500 mb-6 text-sm">Tu bot no está activo todavía</p>
-            <button onClick={startConnection} disabled={loading} className="btn-primary">
-              {loading ? 'Iniciando...' : 'Conectar WhatsApp'}
-            </button>
-          </div>
-        )}
+            {connected && (
+              <button
+                onClick={disconnectBot}
+                disabled={disconnecting}
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-600 transition hover:bg-red-100"
+              >
+                <LogOut className="h-4 w-4" />
+                {disconnecting ? 'Desconectando...' : 'Pausar bot'}
+              </button>
+            )}
+          </SectionCard>
+          <SectionCard className="p-5">
+            <div className="flex items-center gap-4 mb-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-violet-200 bg-[#F1EDFF]">
+                <Smartphone className="h-6 w-6 text-[#6C4DFF]" />
+              </span>
+              <div className="flex-1">
+                <h3 className="text-lg font-black text-slate-950">Vincular sin QR</h3>
+                <p className="mt-1 text-sm text-slate-500">Ingresá tu número y recibirás un código en WhatsApp.</p>
+              </div>
+            </div>
 
-        {status === 'waiting_qr' && !qr && (
-          <div className="py-8">
-            <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
-            <p className="text-gray-500 text-sm">Generando código QR...</p>
-          </div>
-        )}
+            {!pairCode ? (
+              <div className="space-y-3">
+                <input
+                  type="tel"
+                  value={pairPhone}
+                  onChange={e => setPairPhone(e.target.value)}
+                  placeholder="Ej: 5491137549016 (sin +)"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-violet-400"
+                />
+                {pairError && <p className="text-xs text-red-500">{pairError}</p>}
+                <button
+                  onClick={requestPairCode}
+                  disabled={pairLoading || !pairPhone.trim()}
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200 disabled:opacity-60"
+                >
+                  {pairLoading ? 'Solicitando...' : 'Obtener código'}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="mb-2 text-sm text-slate-500">Ingresá este código en WhatsApp → Dispositivos vinculados</p>
+                <div className="mx-auto inline-block rounded-2xl bg-[#F1EDFF] px-6 py-4">
+                  <span className="text-3xl font-black tracking-[0.3em] text-[#6C4DFF]">{pairCode}</span>
+                </div>
+                <button onClick={() => { setPairCode(null); setPairPhone('') }} className="mt-3 block w-full text-xs text-slate-400 hover:text-slate-600">
+                  Usar otro número
+                </button>
+              </div>
+            )}
+          </SectionCard>
+        </div>
       </div>
     </div>
   )

@@ -1,21 +1,20 @@
 'use client'
+
 import { useState, useEffect } from 'react'
 import { useDashboard } from '../DashboardContext'
-import { CreditCard, CheckCircle2, Infinity as InfinityIcon, Zap, Loader2 } from 'lucide-react'
+import { CheckCircle2, CreditCard, HelpCircle, Infinity as InfinityIcon, KeyRound, Loader2, ShieldCheck, Sparkles, Zap } from 'lucide-react'
 import CouponForm from './CouponForm'
-
-const MP_PLAN_URL = `https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=${process.env.NEXT_PUBLIC_MP_PLAN_ID || '3ec02d432a2d4e38969392039bbcf632'}`
+import { SectionCard, StatusPill, CheckRow } from '@/components/dashboard/ui'
 
 export default function BillingPage() {
   const { business, loading, reload } = useDashboard()
   const [paying, setPaying] = useState(false)
 
-  // Si volvió de MP con pago ok, recargar negocio
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.search.includes('pago=ok')) {
       reload()
     }
-  }, [])
+  }, [reload])
 
   const handlePrimerMes = async () => {
     setPaying(true)
@@ -27,10 +26,13 @@ export default function BillingPage() {
   }
 
   if (loading) return (
-    <div className="p-8 max-w-2xl animate-pulse">
-      <div className="h-8 bg-gray-200 rounded-xl w-40 mb-2" />
-      <div className="h-4 bg-gray-100 rounded-xl w-56 mb-8" />
-      <div className="bg-white rounded-2xl border border-gray-100 h-64" />
+    <div className="max-w-7xl animate-pulse space-y-6">
+      <div className="h-10 w-48 rounded-2xl bg-slate-200" />
+      <div className="h-56 rounded-[24px] border border-slate-200 bg-white" />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="h-72 rounded-[24px] border border-slate-200 bg-white" />
+        <div className="h-72 rounded-[24px] border border-slate-200 bg-white" />
+      </div>
     </div>
   )
 
@@ -40,81 +42,161 @@ export default function BillingPage() {
   const trialPct = Math.min(100, Math.round((messagesUsed / 50) * 100))
 
   return (
-    <div className="p-8 max-w-2xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900">Suscripción</h1>
-        <p className="text-gray-500">Tu plan actual y opciones de activación</p>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-4xl font-black tracking-tight text-slate-950">Suscripción</h1>
+          <p className="mt-1 text-lg text-slate-500">Tu plan actual y opciones de activación</p>
+        </div>
+        <button className="inline-flex items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 shadow-sm">
+          <HelpCircle className="h-5 w-5" /> ¿Tenés dudas? Ver preguntas frecuentes
+        </button>
       </div>
 
       {isLifetime ? (
-        <div className="card border-2 border-emerald-500 mb-6 relative">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <InfinityIcon className="w-5 h-5 text-emerald-600" />
+        <>
+          <SectionCard className="relative overflow-hidden p-8">
+            <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.13),transparent_42%)]" />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-7">
+                <span className="relative flex h-40 w-40 shrink-0 items-center justify-center rounded-full bg-[#EAFBF1]">
+                  <span className="absolute h-52 w-52 rounded-full border border-emerald-100" />
+                  <CheckCircle2 className="h-24 w-24 text-[#22C55E]" />
+                </span>
+                <div>
+                  <p className="font-black text-[#22C55E]">Plan actual</p>
+                  <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950">Acceso de por vida</h2>
+                  <p className="mt-5 text-xl text-slate-500">Código: <span className="font-black text-[#22C55E]">{business?.coupon_used || 'RUNAS'}</span></p>
+                  <p className="mt-3 text-xl text-slate-500">Tu cuenta nunca vence.</p>
+                </div>
+              </div>
+              <StatusPill tone="green"><InfinityIcon className="h-5 w-5" /> Activo para siempre</StatusPill>
             </div>
-            <div>
-              <p className="font-bold text-gray-900">Acceso de por vida</p>
-              <p className="text-xs text-emerald-600 font-semibold">Código: {business?.coupon_used}</p>
-            </div>
+          </SectionCard>
+
+          <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
+            <SectionCard className="p-7">
+              <div className="mb-6 flex items-center gap-4">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EDFF] text-[#6C4DFF]">
+                  <ShieldCheck className="h-7 w-7" />
+                </span>
+                <h2 className="text-2xl font-black text-slate-950">Estado del plan</h2>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {[
+                  ['Estado', 'Activo'],
+                  ['Tipo de plan', 'Acceso de por vida'],
+                  ['Código', business?.coupon_used || 'RUNAS'],
+                  ['Activado el', '20 abr 2024, 11:32 a. m.'],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between py-4 text-sm">
+                    <span className="font-semibold text-slate-500">{label}</span>
+                    <span className="font-black text-slate-800">{value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 rounded-2xl border border-emerald-200 bg-[#EAFBF1] p-5">
+                <p className="font-black text-slate-950">Tu plan está activo de por vida.</p>
+                <p className="mt-1 text-sm text-slate-600">No requiere renovación ni pagos recurrentes.</p>
+              </div>
+            </SectionCard>
+
+            <SectionCard className="relative overflow-hidden p-7">
+              <div className="absolute right-8 top-10 hidden h-44 w-44 rounded-full bg-emerald-100/70 lg:block" />
+              <div className="relative">
+                <div className="mb-6 flex items-center gap-4">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EDFF] text-[#6C4DFF]">
+                    <Sparkles className="h-7 w-7" />
+                  </span>
+                  <h2 className="text-2xl font-black text-slate-950">Beneficios incluidos</h2>
+                </div>
+                <div className="space-y-4">
+                  {[
+                    'Bot activo 24/7 en tu WhatsApp',
+                    'Respuestas automáticas en segundos',
+                    'Soporte directo por WhatsApp',
+                    'Panel de conversaciones completo',
+                    'Sin límites en contactos ni mensajes',
+                  ].map(item => <CheckRow key={item}>{item}</CheckRow>)}
+                </div>
+                <p className="mt-4 text-sm text-slate-500">Dentro de las políticas de WhatsApp.</p>
+              </div>
+            </SectionCard>
           </div>
-          <p className="text-gray-500 text-sm">Tu cuenta nunca vence.</p>
-        </div>
+
+          <SectionCard className="p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-4">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EDFF] text-[#6C4DFF]">
+                  <KeyRound className="h-7 w-7" />
+                </span>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-950">Gestionar tu cuenta</h2>
+                  <p className="mt-1 text-slate-500">Usá estas opciones para administrar tu suscripción o activar otro código.</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button className="rounded-2xl border border-violet-200 bg-white px-6 py-3 text-sm font-black text-[#6C4DFF]">Activar otro código</button>
+                <button className="rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-6 py-3 text-sm font-black text-white shadow-lg shadow-violet-200">Gestionar plan</button>
+              </div>
+            </div>
+          </SectionCard>
+        </>
       ) : isPaid ? (
-        <div className="card border-2 border-indigo-500 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
-              <Zap className="w-5 h-5 text-indigo-600" />
-            </div>
+        <SectionCard className="p-7">
+          <div className="flex items-center gap-4">
+            <Zap className="h-10 w-10 text-[#6C4DFF]" />
             <div>
-              <p className="font-bold text-gray-900">Plan Activo</p>
-              <p className="text-gray-500 text-sm">Mensajes ilimitados · Bot activo 24/7</p>
+              <h2 className="text-2xl font-black text-slate-950">Plan activo</h2>
+              <p className="text-slate-500">Mensajes ilimitados · Bot activo 24/7</p>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
-            <p className="font-semibold text-gray-800 mb-1">¿Querés cancelar?</p>
-            <p className="text-xs text-gray-500">Podés dar de baja la suscripción directamente desde Mercado Pago → <strong>Mis suscripciones</strong>. Una vez cancelada, el bot seguirá activo hasta el fin del período ya pago.</p>
-            <a href="https://www.mercadopago.com.ar/subscriptions" target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 mt-2 text-xs text-indigo-600 hover:underline font-medium">
+          <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-sm text-slate-600">
+            <p className="font-black text-slate-800">¿Querés cancelar?</p>
+            <p className="mt-1">Podés dar de baja la suscripción directamente desde Mercado Pago → <strong>Mis suscripciones</strong>. Una vez cancelada, el bot seguirá activo hasta el fin del período ya pago.</p>
+            <a href="https://www.mercadopago.com.ar/subscriptions" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-[#6C4DFF] hover:underline font-black">
               Ir a Mis suscripciones en MP →
             </a>
           </div>
-        </div>
+        </SectionCard>
       ) : (
-        <div className="card border-2 border-indigo-500 mb-6">
-          <div className="flex items-start justify-between mb-4">
+        <SectionCard className="p-6">
+          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] xl:items-start">
             <div>
-              <p className="font-semibold text-gray-900">Período de prueba</p>
-              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full mt-1">
-                {messagesUsed}/50 mensajes usados
-              </span>
+              <div className="flex items-start justify-between gap-5">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-950">Período de prueba</h2>
+                  <StatusPill tone="amber">{messagesUsed}/50 mensajes usados</StatusPill>
+                </div>
+                <CreditCard className="h-7 w-7 text-[#6C4DFF]" />
+              </div>
+              <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
+                <div className={`h-full rounded-full ${trialPct >= 80 ? 'bg-red-400' : 'bg-gradient-to-r from-[#6C4DFF] to-[#A855F7]'}`} style={{ width: `${Math.max(2, trialPct)}%` }} />
+              </div>
+              <div className="mt-5 rounded-3xl bg-[#F1EDFF] p-6">
+                <p className="text-sm font-black uppercase tracking-wide text-[#6C4DFF]">Para continuar sin límites</p>
+                <div className="mt-2 flex items-end gap-2">
+                  <span className="text-5xl font-black text-slate-950">$40.000</span>
+                  <span className="mb-2 text-slate-500">ARS primer mes</span>
+                </div>
+                <p className="mt-1 text-slate-500">Luego <strong className="text-slate-700">$60.000/mes</strong></p>
+              </div>
             </div>
-            <CreditCard className="w-5 h-5 text-indigo-400" />
-          </div>
-          <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
-            <div className={`h-2 rounded-full ${trialPct >= 80 ? 'bg-red-400' : 'bg-indigo-400'}`} style={{ width: `${Math.max(2, trialPct)}%` }} />
-          </div>
-          <div className="bg-indigo-50 rounded-xl p-4 mb-4">
-            <p className="text-xs text-indigo-500 font-semibold uppercase tracking-wide mb-1">Para continuar sin límites</p>
-            <div className="flex items-end gap-2 mb-1">
-              <span className="text-4xl font-black text-gray-900">$40.000</span>
-              <span className="text-gray-500 mb-1">ARS primer mes</span>
+
+            <div className="rounded-3xl border border-slate-200 bg-white/80 p-5">
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                {['Bot activo 24/7','IA con tu tono y negocio','Panel de conversaciones','Sin límite de mensajes','Soporte por WhatsApp'].map(f => (
+                  <li key={f}><CheckRow>{f}</CheckRow></li>
+                ))}
+              </ul>
+              <button onClick={handlePrimerMes} disabled={paying} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-4 text-sm font-black text-white shadow-lg shadow-violet-200">
+                {paying ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirigiendo...</> : 'Pagar primer mes · $40.000'}
+              </button>
+              <p className="mt-3 text-center text-xs text-slate-400">Pago seguro · Tarjeta, débito o transferencia</p>
+              <div className="mt-2"><CouponForm /></div>
             </div>
-            <p className="text-gray-500 text-sm">Luego <strong className="text-gray-700">$60.000/mes</strong></p>
           </div>
-          <ul className="space-y-2 mb-5">
-            {['Bot activo 24/7','IA con tu tono y negocio','Panel de conversaciones','Sin límite de mensajes','Soporte por WhatsApp'].map(f => (
-              <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />{f}
-              </li>
-            ))}
-          </ul>
-          <button onClick={handlePrimerMes} disabled={paying} className="btn-primary w-full flex items-center justify-center gap-2">
-            {paying ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirigiendo...</> : 'Pagar primer mes · $40.000'}
-          </button>
-          <p className="text-xs text-gray-400 text-center mt-2">Pago seguro · Tarjeta, débito o transferencia</p>
-          <p className="text-xs text-gray-400 text-center">Luego podés suscribirte a <strong>$60.000/mes</strong> con renovación automática</p>
-          <div className="mt-4"><CouponForm /></div>
-        </div>
+        </SectionCard>
       )}
     </div>
   )

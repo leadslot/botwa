@@ -1,6 +1,43 @@
 'use client'
+
 import { useDashboard } from './DashboardContext'
-import { MessageSquare, Wifi, WifiOff, Settings, Zap, CreditCard, CheckCircle2, AlertCircle } from 'lucide-react'
+import { SectionCard, StatusPill, MiniLineChart } from '@/components/dashboard/ui'
+
+function RealChart({ days }: { days: { label: string; inbound: number; outbound: number }[] }) {
+  const maxVal = Math.max(...days.flatMap(d => [d.inbound, d.outbound]), 1)
+  const W = 220, H = 80, pad = 8
+  const xs = days.map((_, i) => pad + (i / (days.length - 1)) * (W - pad * 2))
+  const y = (v: number) => H - pad - (v / maxVal) * (H - pad * 2)
+  const path = (vals: number[]) => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${xs[i]},${y(v)}`).join(' ')
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-28 w-full">
+        <path d="M8 60H212" stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
+        <path d={path(days.map(d => d.outbound))} fill="none" stroke="#6C4DFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={path(days.map(d => d.inbound))} fill="none" stroke="#A855F7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+        {days.map((d, i) => <circle key={i} cx={xs[i]} cy={y(d.outbound)} r="3.5" fill="#fff" stroke="#6C4DFF" strokeWidth="2.5" />)}
+      </svg>
+      <div className="mt-2 flex justify-between px-1">
+        {days.map((d, i) => <span key={i} className="text-[10px] text-slate-400">{d.label}</span>)}
+      </div>
+      <div className="mt-3 flex gap-4">
+        <span className="flex items-center gap-1.5 text-xs text-slate-500"><span className="h-2 w-4 rounded-full bg-[#6C4DFF]" />Respondidos</span>
+        <span className="flex items-center gap-1.5 text-xs text-slate-500"><span className="h-2 w-4 rounded-full bg-[#A855F7] opacity-60" />Recibidos</span>
+      </div>
+    </div>
+  )
+}
+import {
+  Bot,
+  CheckCircle2,
+  ChevronRight,
+  CreditCard,
+  MessageCircle,
+  MessageSquare,
+  Settings,
+  Wifi,
+  WifiOff,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -9,139 +46,246 @@ const TRIAL_LIMIT = 50
 export default function DashboardPage() {
   const { business, loading } = useDashboard()
   const [waStatus, setWaStatus] = useState<'connected' | 'disconnected' | 'reconnecting' | null>(null)
+  const [recentContacts, setRecentContacts] = useState<{number:string;msg:string;time:string}[]>([])
+  const [statDays, setStatDays] = useState<{label:string;inbound:number;outbound:number}[]>([])
 
   useEffect(() => {
     fetch('/api/whatsapp/status')
       .then(r => r.json())
       .then(d => setWaStatus(d.status))
       .catch(() => setWaStatus('disconnected'))
+    fetch('/api/conversations')
+      .then(r => r.json())
+      .then(({ messages }) => {
+        if (!messages?.length) return
+        const map: Record<string, {msg:string;time:string}> = {}
+        for (const m of messages) {
+          const n = m.from_number.replace(/@[^@]+$/, '').replace(/[^0-9+]/g, '')
+          if (!map[n]) map[n] = { msg: m.message, time: m.created_at }
+        }
+        setRecentContacts(Object.entries(map).slice(0, 4).map(([number, v]) => ({ number, ...v })))
+      })
+      .catch(() => {})
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(({ days }) => { if (days?.length) setStatDays(days) })
+      .catch(() => {})
   }, [])
 
   if (loading) return (
-    <div className="p-8 animate-pulse">
-      <div className="h-8 bg-gray-200 rounded-xl w-48 mb-2" />
-      <div className="h-4 bg-gray-100 rounded-xl w-32 mb-8" />
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[1,2,3].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 h-28" />)}
+    <div className="animate-pulse space-y-6">
+      <div className="h-10 w-56 rounded-2xl bg-slate-200" />
+      <div className="grid gap-5 lg:grid-cols-3">
+        {[1, 2, 3].map(i => <div key={i} className="h-36 rounded-[24px] border border-slate-200 bg-white" />)}
       </div>
+      <div className="h-48 rounded-[24px] border border-slate-200 bg-white" />
     </div>
   )
 
   if (!business) return (
-    <div className="p-8 flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Completá tu configuración</h2>
-        <p className="text-gray-500 mb-4">Necesitamos algunos datos de tu negocio</p>
-        <Link href="/dashboard/onboarding" className="btn-primary">Configurar ahora</Link>
-      </div>
+    <div className="flex min-h-[70vh] items-center justify-center">
+      <SectionCard className="max-w-md p-8 text-center">
+        <h2 className="text-2xl font-black text-slate-950">Completá tu configuración</h2>
+        <p className="mt-2 text-slate-500">Necesitamos algunos datos de tu negocio para activar BotWA.</p>
+        <Link href="/dashboard/onboarding" className="mt-6 inline-flex rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200">
+          Configurar ahora
+        </Link>
+      </SectionCard>
     </div>
   )
 
   const waLabel = waStatus === 'connected' ? 'Conectado' : waStatus === 'reconnecting' ? 'Reconectando' : 'Desconectado'
-  const waColor = waStatus === 'connected' ? 'text-emerald-500' : waStatus === 'reconnecting' ? 'text-amber-500' : 'text-red-400'
-  const waBg = waStatus === 'connected' ? 'bg-emerald-50' : waStatus === 'reconnecting' ? 'bg-amber-50' : 'bg-red-50'
-  const WaIcon = waStatus === 'connected' ? CheckCircle2 : waStatus === 'reconnecting' ? Zap : WifiOff
+  const waTone = waStatus === 'connected' ? 'green' : waStatus === 'reconnecting' ? 'amber' : 'red'
+  const messagesUsed = business.messages_used ?? 0
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900">Hola 👋</h1>
-        <p className="text-gray-500">{business.name}</p>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-950">Hola 👋</h1>
+          <p className="mt-1 text-lg font-medium text-slate-500">{business.name}</p>
+        </div>
       </div>
 
       {!business.is_paid && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 mb-8 flex items-center justify-between">
-          <div className="flex-1">
-            <p className="font-semibold text-indigo-900">Prueba gratuita · {business.messages_used}/{TRIAL_LIMIT} mensajes usados</p>
-            <div className="w-full bg-indigo-100 rounded-full h-2 mt-2 mb-1">
-              <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${Math.min(100, (business.messages_used / TRIAL_LIMIT) * 100)}%` }} />
+        <SectionCard className="p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex-1">
+              <p className="font-black text-slate-950">Prueba gratuita · {messagesUsed}/{TRIAL_LIMIT} mensajes usados</p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F1EDFF]">
+                <div className="h-full rounded-full bg-gradient-to-r from-[#6C4DFF] to-[#A855F7]" style={{ width: `${Math.min(100, (messagesUsed / TRIAL_LIMIT) * 100)}%` }} />
+              </div>
+              <p className="mt-2 text-sm text-slate-500">{TRIAL_LIMIT - messagesUsed} mensajes restantes</p>
             </div>
-            <p className="text-xs text-indigo-600">{TRIAL_LIMIT - business.messages_used} mensajes restantes</p>
+            <Link href="/dashboard/billing" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200">
+              <CreditCard className="h-4 w-4" /> Activar plan
+            </Link>
           </div>
-          <Link href="/dashboard/billing" className="btn-primary text-sm py-2 px-4 flex items-center gap-1 ml-4 flex-shrink-0">
-            <CreditCard className="w-4 h-4" /> Activar plan
-          </Link>
-        </div>
+        </SectionCard>
       )}
 
-      {/* Estado del sistema */}
       {waStatus === 'disconnected' && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <WifiOff className="w-5 h-5 text-red-400 flex-shrink-0" />
-            <div>
-              <p className="font-semibold text-red-800 text-sm">WhatsApp desconectado</p>
-              <p className="text-xs text-red-600">El bot no está respondiendo mensajes</p>
+        <SectionCard className="border-red-200 bg-red-50 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <WifiOff className="h-5 w-5 text-red-500" />
+              <div>
+                <p className="font-black text-red-800">WhatsApp desconectado</p>
+                <p className="text-sm text-red-600">El bot no está respondiendo mensajes.</p>
+              </div>
             </div>
+            <Link href="/dashboard/connect" className="rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white">
+              Conectar
+            </Link>
           </div>
-          <Link href="/dashboard/connect" className="btn-primary text-sm py-2 px-4">
-            Conectar
-          </Link>
-        </div>
+        </SectionCard>
       )}
 
-      {waStatus === 'reconnecting' && business.messages_used === 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
-          <Zap className="w-5 h-5 text-amber-500 flex-shrink-0" />
-          <div>
-            <p className="font-semibold text-amber-800 text-sm">Reconectando WhatsApp...</p>
-            <p className="text-xs text-amber-600">El bot se está reiniciando automáticamente</p>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <SectionCard className="overflow-hidden p-5">
+          <div className="flex items-start justify-between gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] text-white shadow-lg shadow-violet-200">
+              <MessageSquare className="h-6 w-6" />
+            </span>
+            <MiniLineChart className="h-14 w-32" />
           </div>
-        </div>
-      )}
+          <p className="mt-3 text-sm font-semibold text-slate-500">Mensajes respondidos</p>
+          <p className="mt-1 text-3xl font-black text-slate-950">{messagesUsed}</p>
+          <p className="mt-2 text-sm font-semibold text-slate-400">Total acumulado</p>
+        </SectionCard>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[
-          {
-            label: 'Mensajes respondidos',
-            value: business.messages_used,
-            icon: MessageSquare,
-            color: 'text-indigo-500',
-            bg: 'bg-indigo-50'
-          },
-          {
-            label: 'WhatsApp',
-            value: waStatus === null ? '...' : waLabel,
-            icon: WaIcon,
-            color: waColor,
-            bg: waBg,
-          },
-          {
-            label: 'Bot IA',
-            value: business.ai_enabled ? 'Activo' : 'Pausado',
-            icon: business.ai_enabled ? CheckCircle2 : AlertCircle,
-            color: business.ai_enabled ? 'text-emerald-500' : 'text-gray-400',
-            bg: business.ai_enabled ? 'bg-emerald-50' : 'bg-gray-50',
-          },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="card">
-            <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
-              <Icon className={`w-5 h-5 ${color}`} />
-            </div>
-            <p className="text-2xl font-black text-gray-900">{value}</p>
-            <p className="text-sm text-gray-500 mt-1">{label}</p>
+        <SectionCard className="relative overflow-hidden p-5">
+          <span className="absolute right-6 top-6 h-24 w-24 rounded-full border border-emerald-100 bg-emerald-50" />
+          <span className="absolute right-14 top-14 h-8 w-8 rounded-full border-4 border-emerald-500 bg-white" />
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#22C55E] to-emerald-600 text-white shadow-lg shadow-emerald-100">
+            <Wifi className="h-6 w-6" />
+          </span>
+          <p className="mt-3 text-sm font-semibold text-slate-500">Estado de WhatsApp</p>
+          <p className={`mt-1 text-2xl font-black ${waStatus === 'connected' ? 'text-emerald-600' : 'text-slate-950'}`}>{waLabel}</p>
+          <div className="mt-3"><StatusPill tone={waTone}>{waStatus === null ? 'Verificando' : waLabel}</StatusPill></div>
+        </SectionCard>
+
+        <SectionCard className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] text-white shadow-lg shadow-violet-200">
+              <Bot className="h-6 w-6" />
+            </span>
+            <span className={`relative h-8 w-14 rounded-full ${business.ai_enabled ? 'bg-gradient-to-r from-[#6C4DFF] to-[#A855F7]' : 'bg-slate-200'}`}>
+              <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow ${business.ai_enabled ? 'right-1' : 'left-1'}`} />
+            </span>
           </div>
-        ))}
+          <p className="mt-3 text-sm font-semibold text-slate-500">Bot activo</p>
+          <p className="mt-1 text-2xl font-black text-slate-950">{business.ai_enabled ? 'Activo' : 'Pausado'}</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">Respondiendo 24/7</p>
+        </SectionCard>
       </div>
 
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Acciones rápidas</h2>
-      <div className="grid grid-cols-2 gap-4">
-        {[
-          { href: '/dashboard/connect', icon: Wifi, title: 'Conectar WhatsApp', desc: 'Escaneá el QR o revisá el estado de conexión' },
-          { href: '/dashboard/conversations', icon: MessageSquare, title: 'Ver conversaciones', desc: 'Leé todos los mensajes recibidos' },
-          { href: '/dashboard/settings', icon: Settings, title: 'Configurar bot', desc: 'Editá el prompt, precios y comportamiento' },
-          { href: '/dashboard/billing', icon: CreditCard, title: 'Suscripción', desc: 'Activar plan o ver estado de pago' },
-        ].map(({ href, icon: Icon, title, desc }) => (
-          <Link key={href} href={href} className="card-hover flex items-start gap-4">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Icon className="w-5 h-5 text-indigo-500" />
+      <SectionCard className="relative overflow-hidden p-5">
+        <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_50%_50%,rgba(108,77,255,0.16),transparent_45%)]" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-5">
+            <span className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#EAFBF1]">
+              <span className="absolute h-28 w-28 rounded-full bg-emerald-100/60" />
+              <MessageCircle className="relative h-11 w-11 text-[#22C55E]" />
+              <CheckCircle2 className="absolute right-0 top-1 h-6 w-6 rounded-full bg-white text-[#22C55E]" />
+            </span>
+            <div>
+              <h2 className="text-2xl font-black text-slate-950">WhatsApp conectado</h2>
+              <p className="mt-1 text-slate-500">Tu bot está activo y respondiendo mensajes.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <StatusPill tone="green">En línea</StatusPill>
+                <StatusPill tone="slate">Última actividad: ahora mismo</StatusPill>
+              </div>
+            </div>
+          </div>
+          <Link href="/dashboard/conversations" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-7 py-4 text-sm font-black text-white shadow-lg shadow-violet-200">
+            Ver conversaciones <ChevronRight className="h-5 w-5" />
+          </Link>
+        </div>
+      </SectionCard>
+
+      <div>
+        <h2 className="mb-4 text-lg font-black text-slate-950">Acciones rápidas</h2>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            { href: '/dashboard/connect', icon: Wifi, title: 'Conectar WhatsApp', desc: 'Escaneá el QR o revisá el estado de conexión.' },
+            { href: '/dashboard/conversations', icon: MessageSquare, title: 'Ver conversaciones', desc: 'Leé todos los mensajes recibidos y respondidos.' },
+            { href: '/dashboard/settings', icon: Settings, title: 'Configurar bot', desc: 'Editá el prompt, precios y comportamiento.' },
+            { href: '/dashboard/billing', icon: CreditCard, title: 'Suscripción', desc: 'Activá tu plan o revisá el estado de pago.' },
+          ].map(({ href, icon: Icon, title, desc }) => (
+            <Link key={href} href={href}>
+              <SectionCard className="group flex h-full items-center gap-3 p-4 transition hover:-translate-y-0.5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F1EDFF] text-[#6C4DFF]">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-black text-slate-950">{title}</p>
+                  <p className="mt-1 text-sm leading-5 text-slate-500">{desc}</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-slate-400 transition group-hover:text-[#6C4DFF]" />
+              </SectionCard>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+        <SectionCard className="p-5">
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-black text-slate-950">Actividad de mensajes</h2>
+              <p className="text-sm text-slate-500">Últimos 7 días</p>
+            </div>
+            <StatusPill tone="violet">Últimos 7 días</StatusPill>
+          </div>
+          <div className="mb-4 grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-500">Recibidos</p>
+              <p className="text-3xl font-black text-slate-950">{statDays.reduce((s,d)=>s+d.inbound,0) || 0}</p>
+              <p className="text-sm font-semibold text-slate-400">últimos 7 días</p>
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">{title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+              <p className="text-sm font-semibold text-slate-500">Respondidos</p>
+              <p className="text-3xl font-black text-slate-950">{statDays.reduce((s,d)=>s+d.outbound,0) || 0}</p>
+              <p className="text-sm font-semibold text-slate-400">últimos 7 días</p>
             </div>
-          </Link>
-        ))}
+          </div>
+          {statDays.length > 0 ? (
+            <RealChart days={statDays} />
+          ) : (
+            <MiniLineChart className="h-36 w-full" />
+          )}
+        </SectionCard>
+
+        <SectionCard className="p-5">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-black text-slate-950">Conversaciones recientes</h2>
+            <Link href="/dashboard/conversations" className="text-sm font-black text-[#6C4DFF]">Ver todas</Link>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {recentContacts.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">Sin conversaciones todavía</p>
+            ) : recentContacts.map(({ number, msg, time }) => {
+              const d = new Date(time)
+              const today = new Date()
+              const timeLabel = d.toDateString() === today.toDateString()
+                ? d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+                : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+              return (
+                <div key={number} className="flex items-center gap-4 py-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-emerald-100 text-sm font-black text-[#6C4DFF]">
+                    {number.slice(-2)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-black text-slate-950">+{number}</p>
+                    <p className="truncate text-sm text-slate-500">{msg}</p>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-500">{timeLabel}</p>
+                </div>
+              )
+            })}
+          </div>
+        </SectionCard>
       </div>
     </div>
   )
