@@ -33,9 +33,9 @@ export default function LandingPage() {
 
         <div className="max-w-6xl mx-auto px-6 pt-20 pb-24">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-sm font-medium px-4 py-2 rounded-full mb-8">
-              <XCircle className="w-4 h-4" />
-              Cada mensaje sin respuesta es un cliente que se va con la competencia
+            <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium px-4 py-2 rounded-full mb-8">
+              <Zap className="w-4 h-4 shrink-0" />
+              Tu negocio, respondiendo solo — las 24 horas
             </div>
 
             <h1 className="text-6xl font-black text-gray-900 leading-[1.05] mb-6 tracking-tight">
@@ -174,9 +174,9 @@ export default function LandingPage() {
 
           <div className="max-w-sm mx-auto">
             <div className="card border-2 border-indigo-500 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-4 py-1 rounded-full">
-                  50 MENSAJES GRATIS PARA PROBAR
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-5 py-1.5 rounded-full shadow-md">
+                  🎁 50 mensajes gratis para probar
                 </span>
               </div>
 

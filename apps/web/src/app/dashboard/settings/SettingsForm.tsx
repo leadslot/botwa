@@ -17,6 +17,7 @@ export default function SettingsForm() {
   const [name, setName] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiEnabled, setAiEnabled] = useState(true)
+  const [responseDelay, setResponseDelay] = useState(0)
   const [priceList, setPriceList] = useState<PriceRow[]>([])
   const [excludedNumbers, setExcludedNumbers] = useState<string[]>([])
   const [newNumber, setNewNumber] = useState('')
@@ -32,6 +33,7 @@ export default function SettingsForm() {
       setName(business.name ?? '')
       setAiPrompt(business.ai_prompt ?? '')
       setAiEnabled(business.ai_enabled ?? true)
+      setResponseDelay(business.response_delay_seconds ?? 0)
       setPriceList(business.price_list ?? [])
       setExcludedNumbers(business.excluded_numbers ?? [])
       setReady(true)
@@ -59,6 +61,7 @@ export default function SettingsForm() {
         name,
         ai_prompt: aiPrompt,
         ai_enabled: aiEnabled,
+        response_delay_seconds: responseDelay,
         price_list: priceList.filter(r => r.name.trim()),
         excluded_numbers: excludedNumbers.filter(Boolean),
       }).eq('id', business.id)
@@ -254,6 +257,32 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
         <button onClick={() => setAiEnabled(!aiEnabled)}>
           {aiEnabled ? <ToggleRight className="w-10 h-10 text-indigo-500" /> : <ToggleLeft className="w-10 h-10 text-gray-300" />}
         </button>
+      </div>
+
+      {/* Delay de respuesta */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="font-semibold text-gray-900">Demora antes de responder</p>
+            <p className="text-sm text-gray-500">El bot espera este tiempo antes de enviar la respuesta — se ve más natural</p>
+          </div>
+          <span className="text-2xl font-black text-indigo-600 shrink-0 ml-4">
+            {responseDelay === 0 ? 'Inmediato' : `${responseDelay}s`}
+          </span>
+        </div>
+        <input
+          type="range" min={0} max={60} step={1}
+          value={responseDelay}
+          onChange={e => setResponseDelay(Number(e.target.value))}
+          className="w-full accent-indigo-500 mt-3"
+        />
+        <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <span>Inmediato</span>
+          <span>15s</span>
+          <span>30s</span>
+          <span>45s</span>
+          <span>1 min</span>
+        </div>
       </div>
 
       {/* Nombre del negocio */}

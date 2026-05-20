@@ -304,7 +304,7 @@ export const botManager = {
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
-          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list')
+          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds')
           .eq('id', businessId)
           .single()
 
@@ -345,6 +345,15 @@ export const botManager = {
         // ── GENERAR RESPUESTA ─────────────────────────────
         try {
           const response = await generateAIResponse(text, business)
+
+          // Aplicar delay configurado por el negocio
+          const delaySecs = business.response_delay_seconds || 0
+          if (delaySecs > 0) {
+            await sock.sendPresenceUpdate('composing', from)
+            await new Promise(r => setTimeout(r, delaySecs * 1000))
+            await sock.sendPresenceUpdate('paused', from)
+          }
+
           await sock.sendMessage(from, { text: response })
 
           // Actualizar contadores
