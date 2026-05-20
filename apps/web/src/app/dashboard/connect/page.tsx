@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react'
 import { RefreshCw, CheckCircle2, WifiOff, LogOut, QrCode } from 'lucide-react'
 
 export default function ConnectPage() {
-  const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting' | null>(() => {
+  type WAStatus = 'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting' | null
+  const [status, setStatus] = useState<WAStatus>(() => {
     if (typeof window !== 'undefined') {
-      const cached = sessionStorage.getItem('wa_status') as typeof status
-      return cached ?? null
+      return (sessionStorage.getItem('wa_status') as WAStatus) ?? null
     }
     return null
   })
