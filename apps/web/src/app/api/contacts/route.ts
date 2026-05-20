@@ -64,10 +64,11 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, saved: rows.length })
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolveLidsAsync(
   businessId: string,
   phones: string[],
-  adminClient: ReturnType<typeof createClient>
+  adminClient: any
 ) {
   const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
   try {
