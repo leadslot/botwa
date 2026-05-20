@@ -81,6 +81,8 @@ const reconnectAttempts = new Map()
 const chatsCache = new Map()
 // Contactos por sesión: businessId -> Map<jid, {name, number}>
 const contactsCache = new Map()
+// Mapa LID -> número real: businessId -> Map<lid_string, phone_string>
+const lidToNumber = new Map()
 // Human handoff: businessId -> Set<string> de números pausados
 const pausedContacts = new Map()
 // Sockets en proceso de conexión (antes de 'open'): businessId -> sock
@@ -152,24 +154,22 @@ export const botManager = {
       }, 10000)
     }
 
+    if (!lidToNumber.has(businessId)) lidToNumber.set(businessId, new Map())
+    const lidMap = lidToNumber.get(businessId)
+
     sock.ev.on('contacts.upsert', (newContacts) => {
       let changed = false
       for (const c of newContacts) {
         if (c.id.endsWith('@s.whatsapp.net')) {
           const number = c.id.replace('@s.whatsapp.net', '')
           const name = c.name || c.notify || c.verifiedName || ''
-          const lid = c.lid ? c.lid.replace('@lid', '') : undefined
-          if (name || !contacts.has(number)) {
-            contacts.set(number, { number, name, ...(lid ? { lid } : {}) })
-            changed = true
+          // Si el contacto tiene LID asociado, registrar el mapeo
+          if (c.lid) {
+            const lid = c.lid.replace('@lid', '')
+            lidMap.set(lid, number)
           }
-        } else if (c.id.endsWith('@lid')) {
-          // Guardar mapeo LID -> número si viene con notify/name y hay un número asociado
-          const lid = c.id.replace('@lid', '')
-          const phone = c.phone || c.notify
-          if (phone) {
-            const number = phone.replace(/\D/g, '')
-            contacts.set(number, { number, name: c.name || c.notify || '', lid })
+          if (name || !contacts.has(number)) {
+            contacts.set(number, { number, name })
             changed = true
           }
         }
@@ -184,8 +184,8 @@ export const botManager = {
         const number = c.id.replace('@s.whatsapp.net', '')
         const existing = contacts.get(number) || { number, name: '' }
         const name = c.name || c.notify || existing.name
-        const lid = c.lid ? c.lid.replace('@lid', '') : existing.lid
-        contacts.set(number, { ...existing, name, ...(lid ? { lid } : {}) })
+        if (c.lid) lidMap.set(c.lid.replace('@lid', ''), number)
+        contacts.set(number, { ...existing, name })
         changed = true
       }
       if (changed) scheduleContactsSave()
@@ -310,23 +310,16 @@ export const botManager = {
         if (!text) continue
 
         let from = msg.key.remoteJid
-        // Si el JID es un LID (@lid), resolverlo al número real via participant o contacts cache
+        // Si el JID es un LID (@lid), resolverlo al número real
         if (from?.endsWith('@lid')) {
-          const participant = msg.key.participant || msg.participant
-          if (participant && participant.endsWith('@s.whatsapp.net')) {
-            from = participant
+          const lid = from.replace('@lid', '')
+          const resolvedNumber = lidToNumber.get(businessId)?.get(lid)
+          if (resolvedNumber) {
+            from = `${resolvedNumber}@s.whatsapp.net`
           } else {
-            // Buscar en contacts cache por LID
-            const lid = from.replace('@lid', '')
-            const contactsMap = contactsCache.get(businessId)
-            let resolved = null
-            if (contactsMap) {
-              for (const [num, c] of contactsMap) {
-                if (c.lid === lid || c.number === lid) { resolved = `${num}@s.whatsapp.net`; break }
-              }
-            }
-            if (resolved) from = resolved
-            // Si no se pudo resolver, usar el pushName o dejar el LID (no ideal pero no se pierde el mensaje)
+            // fallback: usar pushName si está disponible, pero guardar el LID limpio como número
+            // para que al menos sea identificable
+            console.warn(`[${businessId}] LID sin resolver: ${lid} (pushName: ${msg.pushName})`)
           }
         }
         console.log(`[${businessId}] Mensaje de ${from}: ${text}`)
