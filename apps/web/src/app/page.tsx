@@ -532,9 +532,9 @@ export default function LandingPage() {
                   <div className="rounded-lg border border-slate-100 p-4 shadow-sm">
                     <p className="mb-4 text-sm font-black">Últimas conversaciones</p>
                     {[
-                      ['JP', 'Juan Pérez', 'Hola, ¿tenés disponibilidad?', 'Respondido hace 3 seg'],
-                      ['ML', 'María López', '¿Hacen envíos a todo el país?', 'Respondido hace 8 seg'],
-                      ['CG', 'Carlos Gómez', '¿Cuáles son los horarios?', 'Respondido hace 15 seg'],
+                      ['C1', 'Cliente 1', 'Hola, ¿tenés disponibilidad?', 'Respondido hace 3 seg'],
+                      ['C2', 'Cliente 2', '¿Hacen envíos a todo el país?', 'Respondido hace 8 seg'],
+                      ['C3', 'Cliente 3', '¿Cuáles son los horarios?', 'Respondido hace 15 seg'],
                     ].map(([initials, name, text, time]) => (
                       <div key={name} className="mb-3 flex items-center gap-3 last:mb-0">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] text-[10px] font-black text-white">
