@@ -31,7 +31,7 @@ export default function LoginPage() {
             <MessageCircle className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-black text-gray-900">Bienvenido de nuevo</h1>
-          <p className="text-gray-500 mt-1">Ingresá a tu panel de BotWA</p>
+          <p className="text-gray-500 mt-1">Ingresá a tu panel de Responbot</p>
         </div>
         <div className="card">
           {error && (

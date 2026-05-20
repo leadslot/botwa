@@ -156,7 +156,7 @@ export default function SettingsForm() {
   }, [ready])
 
   const downloadPromptTemplate = () => {
-    const template = `PLANTILLA BASE — BOTWA
+    const template = `PLANTILLA BASE — RESPONBOT
 Arquitectura: Universal + Módulo de categoría + Datos de tu negocio
 
 ──────────────────────────────────────────────

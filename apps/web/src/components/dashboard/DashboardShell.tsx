@@ -58,7 +58,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-200">
               <MessageCircle className="h-6 w-6 text-white" />
             </span>
-            <span className="text-2xl font-black tracking-tight text-slate-950">BotWA</span>
+            <span className="text-2xl font-black tracking-tight text-slate-950">Responbot</span>
           </Link>
         </div>
 
@@ -98,7 +98,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-200">
               <MessageCircle className="h-5 w-5 text-white" />
             </span>
-            <span className="text-xl font-black text-slate-950">BotWA</span>
+            <span className="text-xl font-black text-slate-950">Responbot</span>
           </Link>
 
           <nav className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white p-1 shadow-sm md:flex lg:hidden">

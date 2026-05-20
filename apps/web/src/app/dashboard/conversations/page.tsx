@@ -324,7 +324,7 @@ export default function ConversationsPage() {
                       <Send className="h-5 w-5" />
                     </button>
                   </div>
-                  <p className="mt-3 text-center text-xs text-slate-400">BotWA responde automáticamente desde nuestro servidor.</p>
+                  <p className="mt-3 text-center text-xs text-slate-400">Responbot responde automáticamente desde nuestro servidor.</p>
                 </div>
               </>
             ) : (
@@ -369,7 +369,7 @@ export default function ConversationsPage() {
               {([
                 ['Conversación iniciada', MessageSquare],
                 ['Pregunta sobre turnos', CheckCircle2],
-                ['BotWA respondió', Bot],
+                ['Responbot respondió', Bot],
               ] as [string, LucideIcon][]).map(([label, Icon]) => (
                 <div key={label} className="mb-3 flex items-center gap-3 rounded-2xl border border-slate-100 p-4 last:mb-0">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1EDFF] text-[#6C4DFF]">

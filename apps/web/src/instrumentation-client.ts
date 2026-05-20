@@ -16,7 +16,7 @@ try {
     const val = localStorage.getItem(key) ?? ''
     if (/[^\x00-\xFF]/.test(val)) {
       localStorage.removeItem(key)
-      console.warn('[BotWA] Removed corrupt Supabase session:', key)
+      console.warn('[Responbot] Removed corrupt Supabase session:', key)
     }
   }
 } catch {}

@@ -58,7 +58,7 @@ export default function HelpChat() {
                 <MessageCircle className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="text-white text-sm font-semibold">Asistente BotWA</p>
+                <p className="text-white text-sm font-semibold">Asistente Responbot</p>
                 <p className="text-white/70 text-[11px]">Ayuda 24/7</p>
               </div>
             </div>
@@ -73,7 +73,7 @@ export default function HelpChat() {
             {messages.length === 0 && (
               <div className="space-y-2">
                 <div className="bg-white rounded-2xl rounded-tl-sm px-3 py-2 shadow-sm border border-gray-100 text-xs text-gray-700 leading-relaxed">
-                  ¡Hola! Soy el asistente de BotWA 👋 Preguntame lo que necesites.
+                  ¡Hola! Soy el asistente de Responbot 👋 Preguntame lo que necesites.
                 </div>
                 <div className="space-y-1">
                   {HELP_SUGGESTED_QUESTIONS.map(q => (

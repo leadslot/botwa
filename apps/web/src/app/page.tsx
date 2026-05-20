@@ -68,7 +68,7 @@ const steps = [
   },
   {
     step: '03',
-    title: 'BotWA responde por vos',
+    title: 'Responbot responde por vos',
     text: 'El bot queda activo 24/7 en nuestro servidor, respondiendo al instante.',
     preview: 'chat',
   },
@@ -131,7 +131,7 @@ const faqs = [
   },
   {
     question: '¿Sirve para mandar campañas?',
-    answer: 'No. BotWA responde mensajes que llegan. No hace spam.',
+    answer: 'No. Responbot responde mensajes que llegan. No hace spam.',
   },
   {
     question: '¿Necesito saber de tecnología?',
@@ -268,11 +268,11 @@ export default function LandingPage() {
       <section id="inicio" className="relative bg-[#0F1424] text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(124,92,255,0.42),transparent_32%),radial-gradient(circle_at_12%_0%,rgba(108,77,255,0.18),transparent_34%)]" />
         <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
-          <Link href="/" className="flex items-center gap-3" aria-label="BotWA">
+          <Link href="/" className="flex items-center gap-3" aria-label="Responbot">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-950/40">
               <MessageCircle className="h-5 w-5" />
             </span>
-            <span className="text-xl font-black tracking-tight">BotWA</span>
+            <span className="text-xl font-black tracking-tight">Responbot</span>
           </Link>
 
           <nav className="hidden items-center gap-9 text-sm font-semibold text-white/82 lg:flex">
@@ -315,7 +315,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:text-[19px]">
-              BotWA responde automáticamente tus mensajes de WhatsApp, las 24 horas, con el tono de tu negocio.
+              Responbot responde automáticamente tus mensajes de WhatsApp, las 24 horas, con el tono de tu negocio.
             </p>
 
             <div className="mt-7 flex flex-col gap-4 sm:flex-row">
@@ -404,7 +404,7 @@ export default function LandingPage() {
               <span className="block text-[#7C5CFF]">tus clientes siguen escribiendo.</span>
             </h2>
             <p className="mt-6 max-w-md text-lg leading-8 text-slate-500">
-              BotWA se ocupa de responder primero, para que vos no pierdas la venta.
+              Responbot se ocupa de responder primero, para que vos no pierdas la venta.
             </p>
           </div>
 
@@ -423,7 +423,7 @@ export default function LandingPage() {
       <section id="como-funciona" className="border-b border-slate-200 bg-slate-50/50 py-12 lg:flex lg:min-h-screen lg:items-center lg:py-14">
         <div className="mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10">
           <h2 className="text-center text-3xl font-black tracking-tight text-slate-950">
-            Así funciona <span className="text-[#7C5CFF]">BotWA</span>
+            Así funciona <span className="text-[#7C5CFF]">Responbot</span>
           </h2>
 
           <div className="mt-8 grid gap-5 lg:grid-cols-3">
@@ -497,7 +497,7 @@ export default function LandingPage() {
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7C5CFF] text-white">
                     <MessageCircle className="h-4 w-4" />
                   </span>
-                  BotWA
+                  Responbot
                 </div>
                 {['Dashboard', 'Conversaciones', 'Estadísticas', 'Configuración'].map((item, index) => (
                   <div
@@ -560,7 +560,7 @@ export default function LandingPage() {
       <section className="border-b border-slate-200 bg-white py-8 lg:py-9">
         <div className="mx-auto grid max-w-7xl gap-6 px-5 sm:px-8 lg:grid-cols-[0.65fr_1.6fr] lg:px-10">
           <h2 className="text-2xl font-black leading-tight tracking-tight">
-            BotWA funciona para negocios que reciben consultas <span className="text-[#7C5CFF]">todos los días.</span>
+            Responbot funciona para negocios que reciben consultas <span className="text-[#7C5CFF]">todos los días.</span>
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             {industries.map(({ icon: Icon, title, question }) => (

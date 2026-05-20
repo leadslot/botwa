@@ -20,7 +20,7 @@ export async function POST() {
 
   const preference = {
     items: [{
-      title: 'BotWA - Primer mes',
+      title: 'Responbot - Primer mes',
       quantity: 1,
       unit_price: 40000,
       currency_id: 'ARS',
@@ -28,12 +28,12 @@ export async function POST() {
     payer: { email: session.user.email },
     external_reference: business.id,
     back_urls: {
-      success: 'https://botwa-app.vercel.app/dashboard/billing?pago=ok',
-      failure: 'https://botwa-app.vercel.app/dashboard/billing?pago=error',
-      pending: 'https://botwa-app.vercel.app/dashboard/billing?pago=pendiente',
+      success: 'https://responbot.vercel.app/dashboard/billing?pago=ok',
+      failure: 'https://responbot.vercel.app/dashboard/billing?pago=error',
+      pending: 'https://responbot.vercel.app/dashboard/billing?pago=pendiente',
     },
     auto_return: 'approved',
-    notification_url: 'https://botwa-app.vercel.app/api/mp/webhook',
+    notification_url: 'https://responbot.vercel.app/api/mp/webhook',
   }
 
   const res = await fetch('https://api.mercadopago.com/checkout/preferences', {

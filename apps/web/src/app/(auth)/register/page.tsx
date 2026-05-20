@@ -35,7 +35,7 @@ export default function RegisterPage() {
       password: form.password,
       options: {
         data: { full_name: form.name },
-        emailRedirectTo: 'https://botwa-app.vercel.app/auth/callback',
+        emailRedirectTo: 'https://responbot.vercel.app/auth/callback',
       }
     })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }

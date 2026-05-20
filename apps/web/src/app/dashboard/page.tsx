@@ -87,7 +87,7 @@ export default function DashboardPage() {
     <div className="flex min-h-[70vh] items-center justify-center">
       <SectionCard className="max-w-md p-8 text-center">
         <h2 className="text-2xl font-black text-slate-950">Completá tu configuración</h2>
-        <p className="mt-2 text-slate-500">Necesitamos algunos datos de tu negocio para activar BotWA.</p>
+        <p className="mt-2 text-slate-500">Necesitamos algunos datos de tu negocio para activar Responbot.</p>
         <Link href="/dashboard/onboarding" className="mt-6 inline-flex rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200">
           Configurar ahora
         </Link>
