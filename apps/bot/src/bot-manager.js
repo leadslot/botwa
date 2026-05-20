@@ -157,13 +157,24 @@ export const botManager = {
     if (!lidToNumber.has(businessId)) lidToNumber.set(businessId, new Map())
     const lidMap = lidToNumber.get(businessId)
 
+    sock.ev.on('messaging-history.set', ({ contacts: histContacts }) => {
+      if (!histContacts) return
+      for (const c of histContacts) {
+        if (c.id?.endsWith('@s.whatsapp.net') && c.lid) {
+          const number = c.id.replace('@s.whatsapp.net', '')
+          const lid = c.lid.replace('@lid', '')
+          lidMap.set(lid, number)
+        }
+      }
+      console.log(`[${businessId}] LID map poblado desde historial: ${lidMap.size} entradas`)
+    })
+
     sock.ev.on('contacts.upsert', (newContacts) => {
       let changed = false
       for (const c of newContacts) {
-        if (c.id.endsWith('@s.whatsapp.net')) {
+        if (c.id?.endsWith('@s.whatsapp.net')) {
           const number = c.id.replace('@s.whatsapp.net', '')
           const name = c.name || c.notify || c.verifiedName || ''
-          // Si el contacto tiene LID asociado, registrar el mapeo
           if (c.lid) {
             const lid = c.lid.replace('@lid', '')
             lidMap.set(lid, number)
@@ -171,6 +182,14 @@ export const botManager = {
           if (name || !contacts.has(number)) {
             contacts.set(number, { number, name })
             changed = true
+          }
+        } else if (c.id?.endsWith('@lid')) {
+          // Baileys puede enviar contactos donde el id mismo es el LID
+          const lid = c.id.replace('@lid', '')
+          const phoneJid = c.phone || c.jid
+          if (phoneJid) {
+            const num = phoneJid.replace('@s.whatsapp.net', '').replace(/\D/g, '')
+            if (num.length > 6) lidMap.set(lid, num)
           }
         }
       }
@@ -313,13 +332,25 @@ export const botManager = {
         // Si el JID es un LID (@lid), resolverlo al número real
         if (from?.endsWith('@lid')) {
           const lid = from.replace('@lid', '')
-          const resolvedNumber = lidToNumber.get(businessId)?.get(lid)
+          const resolvedNumber = lidMap.get(lid)
           if (resolvedNumber) {
             from = `${resolvedNumber}@s.whatsapp.net`
           } else {
-            // fallback: usar pushName si está disponible, pero guardar el LID limpio como número
-            // para que al menos sea identificable
-            console.warn(`[${businessId}] LID sin resolver: ${lid} (pushName: ${msg.pushName})`)
+            // Fallback: msg.key.participant a veces trae el JID real en grupos/lid
+            const participant = msg.key.participant
+            if (participant?.endsWith('@s.whatsapp.net')) {
+              from = participant
+            } else {
+              // Intentar de nuevo en 2s — contacts.upsert puede llegar justo después
+              console.warn(`[${businessId}] LID sin resolver: ${lid} (pushName: ${msg.pushName}), reintentando en 2s`)
+              await new Promise(r => setTimeout(r, 2000))
+              const retried = lidMap.get(lid)
+              if (retried) {
+                from = `${retried}@s.whatsapp.net`
+              } else {
+                console.warn(`[${businessId}] LID ${lid} sigue sin resolver tras retry, usando LID como identificador`)
+              }
+            }
           }
         }
         console.log(`[${businessId}] Mensaje de ${from}: ${text}`)
