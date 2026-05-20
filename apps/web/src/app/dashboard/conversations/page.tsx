@@ -114,7 +114,7 @@ export default function ConversationsPage() {
                 <div key={number} className="relative group">
                 <button
                   onClick={() => setSelected(number)}
-                  className={`w-full text-left px-3 py-3 rounded-xl flex items-center gap-3 transition-all ${
+                  className={`w-full text-left pl-3 pr-8 py-3 rounded-xl flex items-center gap-3 transition-all ${
                     isActive
                       ? 'bg-indigo-50 border border-indigo-200'
                       : 'bg-white border border-gray-100 hover:border-indigo-100 hover:bg-gray-50'
@@ -144,8 +144,8 @@ export default function ConversationsPage() {
                   </span>
                 </button>
                 <button
-                  onClick={() => deleteConversation(number)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+                  onClick={e => { e.stopPropagation(); deleteConversation(number) }}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all z-10"
                   title="Eliminar conversación"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

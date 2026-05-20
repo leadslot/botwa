@@ -26,6 +26,7 @@ export default function SettingsForm() {
   const [contactsLoading, setContactsLoading] = useState(false)
   const [contactSearch, setContactSearch] = useState('')
   const csvRef = useRef<HTMLInputElement>(null)
+  const contactsCsvRef = useRef<HTMLInputElement>(null)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -127,6 +128,28 @@ export default function SettingsForm() {
     } finally {
       setContactsLoading(false)
     }
+  }
+
+  const handleContactsCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const text = ev.target?.result as string
+      const rows = text.split('\n').slice(0).map(line => {
+        const parts = line.split(/[,;	]/)
+        const name = (parts[0] ?? '').replace(/"/g, '').trim()
+        const raw = (parts[1] ?? parts[0] ?? '').replace(/"/g, '').trim()
+        const number = raw.replace(/\D/g, '')
+        return { name, number }
+      }).filter(r => r.number.length >= 8)
+      if (rows.length > 0) {
+        setWaContacts(rows)
+        setContactsLoaded(true)
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
   }
 
   const downloadPromptTemplate = () => {
@@ -397,7 +420,9 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
             ))}
           </div>
         )}
-        <p className="text-xs text-gray-400 mt-3">Podés importar directo desde Excel: Archivo → Guardar como → CSV.</p>
+        {priceList.length === 0 && (
+          <p className="text-xs text-gray-400 mt-3">Podés importar directo desde Excel: Archivo → Guardar como → CSV.</p>
+        )}
       </div>
 
       {/* Contactos excluidos */}
@@ -407,15 +432,24 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
             <UserX className="w-4 h-4 text-gray-500" />
             <p className="font-semibold text-gray-900">Contactos excluidos</p>
           </div>
-          <button type="button" onClick={loadWAContacts} disabled={contactsLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all disabled:opacity-60">
-            {contactsLoading
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando...</>
-              : <><Plus className="w-3.5 h-3.5" /> Cargar desde WhatsApp</>
-            }
-          </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => contactsCsvRef.current?.click()}
+              disabled={contactsLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all disabled:opacity-60">
+              <Upload className="w-3.5 h-3.5" /> Subir lista CSV
+            </button>
+            <input ref={contactsCsvRef} type="file" accept=".csv,.tsv,.txt" className="hidden" onChange={handleContactsCSV} />
+            <button type="button" onClick={loadWAContacts} disabled={contactsLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-60">
+              {contactsLoading
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando...</>
+                : <><Plus className="w-3.5 h-3.5" /> Desde WhatsApp</>
+              }
+            </button>
+          </div>
         </div>
-        <p className="text-sm text-gray-500 mb-4">El bot ignora completamente estos números.</p>
+        <p className="text-sm text-gray-500 mb-2">El bot ignora completamente estos números.</p>
+        <p className="text-xs text-gray-400 mb-4">CSV: columna A = nombre, columna B = número. O subí solo números sin encabezado.</p>
 
         {(contactsLoaded || contactsLoading) && (
           <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden">

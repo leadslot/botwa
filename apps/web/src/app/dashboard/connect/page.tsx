@@ -3,7 +3,13 @@ import { useState, useEffect } from 'react'
 import { RefreshCw, CheckCircle2, WifiOff, LogOut, QrCode } from 'lucide-react'
 
 export default function ConnectPage() {
-  const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting' | null>(null)
+  const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting' | null>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('wa_status') as typeof status
+      return cached ?? null
+    }
+    return null
+  })
   const [qr, setQR] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -57,6 +63,7 @@ export default function ConnectPage() {
         const res = await fetch('/api/whatsapp/status')
         const data = await res.json()
         setStatus(data.status)
+        if (data.status) sessionStorage.setItem('wa_status', data.status)
         setQR(data.qr)
         if (data.status === 'connected') {
           if (interval) { clearInterval(interval); interval = null }
