@@ -42,7 +42,7 @@ export default function BillingPage() {
   const trialPct = Math.min(100, Math.round((messagesUsed / 50) * 100))
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-7xl max-h-[calc(100vh-64px-40px)] overflow-y-auto space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-4xl font-black tracking-tight text-slate-950">Suscripción</h1>

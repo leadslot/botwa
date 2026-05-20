@@ -146,13 +146,14 @@ export default function SettingsForm() {
 
   // Cargar contactos existentes desde Supabase al abrir settings
   useEffect(() => {
+    if (!ready) return
     fetch('/api/contacts').then(r => r.json()).then(({ contacts }) => {
       if (contacts?.length > 0) {
         setWaContacts(contacts.map((c: { name: string; phone: string }) => ({ number: c.phone, name: c.name })))
         setContactsLoaded(true)
       }
     }).catch(() => {})
-  }, [])
+  }, [ready])
 
   const downloadPromptTemplate = () => {
     const template = `PLANTILLA BASE — BOTWA

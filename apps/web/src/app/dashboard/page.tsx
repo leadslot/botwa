@@ -100,7 +100,7 @@ export default function DashboardPage() {
   const messagesUsed = business.messages_used ?? 0
 
   return (
-    <div className="space-y-5">
+    <div className="h-[calc(100vh-64px-40px)] overflow-y-auto space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-950">Hola 👋</h1>

@@ -116,7 +116,7 @@ export default function ConnectPage() {
   const connected = status === 'connected'
 
   return (
-    <div className="space-y-5">
+    <div className="max-h-[calc(100vh-64px-40px)] overflow-y-auto space-y-5">
       <div>
         <h1 className="text-3xl font-black tracking-tight text-slate-950">Conectar WhatsApp</h1>
         <div className="mt-3 h-1.5 w-14 rounded-full bg-gradient-to-r from-[#6C4DFF] to-[#A855F7]" />
