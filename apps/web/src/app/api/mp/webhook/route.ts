@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createHmac } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 const admin = createClient(
@@ -6,9 +7,29 @@ const admin = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 )
 
+function verifySignature(req: NextRequest, rawBody: string): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET
+  if (!secret) return true // sin secret, no verificar
+  const xSignature = req.headers.get('x-signature')
+  const xRequestId = req.headers.get('x-request-id')
+  const url = new URL(req.url)
+  const dataId = url.searchParams.get('data.id') || url.searchParams.get('id') || ''
+  if (!xSignature) return false
+  const parts = Object.fromEntries(xSignature.split(',').map(p => p.split('=')))
+  const ts = parts['ts']
+  const v1 = parts['v1']
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+  const hash = createHmac('sha256', secret).update(manifest).digest('hex')
+  return hash === v1
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const rawBody = await req.text()
+    if (!verifySignature(req, rawBody)) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+    const body = JSON.parse(rawBody)
     const { type, data } = body
 
     // Suscripción recurrente aprobada
