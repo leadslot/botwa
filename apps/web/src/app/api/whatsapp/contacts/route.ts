@@ -20,11 +20,26 @@ export async function GET() {
     .from('businesses').select('id').eq('user_id', session.user.id).single()
   if (!business) return NextResponse.json({ contacts: [] })
 
+  // Intentar obtener del bot con timeout de 5s
   try {
-    const res = await fetch(`${BOT_URL}/session/contacts/${business.id}`)
+    const res = await fetch(`${BOT_URL}/session/contacts/${business.id}`, {
+      signal: AbortSignal.timeout(5000)
+    })
     const data = await res.json()
-    return NextResponse.json(data)
-  } catch {
-    return NextResponse.json({ contacts: [] })
-  }
+    if (data.contacts?.length) return NextResponse.json(data)
+  } catch {}
+
+  // Fallback: leer contactos guardados en Supabase
+  try {
+    const { data: session_row } = await admin
+      .from('whatsapp_sessions')
+      .select('contacts_data')
+      .eq('business_id', business.id)
+      .single()
+    if (session_row?.contacts_data?.length) {
+      return NextResponse.json({ contacts: session_row.contacts_data })
+    }
+  } catch {}
+
+  return NextResponse.json({ contacts: [] })
 }

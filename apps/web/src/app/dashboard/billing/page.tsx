@@ -47,7 +47,7 @@ export default function BillingPage() {
       </div>
 
       {isLifetime ? (
-        <div className="card border-2 border-emerald-500 mb-6">
+        <div className="card border-2 border-emerald-500 mb-6 relative">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
               <InfinityIcon className="w-5 h-5 text-emerald-600" />
@@ -61,7 +61,7 @@ export default function BillingPage() {
         </div>
       ) : isPaid ? (
         <div className="card border-2 border-indigo-500 mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
               <Zap className="w-5 h-5 text-indigo-600" />
             </div>
@@ -69,6 +69,14 @@ export default function BillingPage() {
               <p className="font-bold text-gray-900">Plan Activo</p>
               <p className="text-gray-500 text-sm">Mensajes ilimitados · Bot activo 24/7</p>
             </div>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600">
+            <p className="font-semibold text-gray-800 mb-1">¿Querés cancelar?</p>
+            <p className="text-xs text-gray-500">Podés dar de baja la suscripción directamente desde Mercado Pago → <strong>Mis suscripciones</strong>. Una vez cancelada, el bot seguirá activo hasta el fin del período ya pago.</p>
+            <a href="https://www.mercadopago.com.ar/subscriptions" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-2 text-xs text-indigo-600 hover:underline font-medium">
+              Ir a Mis suscripciones en MP →
+            </a>
           </div>
         </div>
       ) : (

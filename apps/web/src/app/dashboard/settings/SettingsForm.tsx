@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Save, Loader2, ToggleLeft, ToggleRight, Wand2, ChevronDown, ChevronUp, Plus, Trash2, Upload, UserX } from 'lucide-react'
+import { Save, Loader2, ToggleLeft, ToggleRight, Wand2, ChevronDown, ChevronUp, Plus, Trash2, Upload, UserX, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useDashboard } from '../DashboardContext'
 import SetupWizard, { parseWizardDataFromPrompt } from './SetupWizard'
@@ -22,6 +22,7 @@ export default function SettingsForm() {
   const [newNumber, setNewNumber] = useState('')
   const [waContacts, setWaContacts] = useState<{number:string;name:string}[]>([])
   const [contactsLoaded, setContactsLoaded] = useState(false)
+  const [contactsLoading, setContactsLoading] = useState(false)
   const [contactSearch, setContactSearch] = useState('')
   const csvRef = useRef<HTMLInputElement>(null)
   const [ready, setReady] = useState(false)
@@ -114,10 +115,82 @@ export default function SettingsForm() {
   }
 
   const loadWAContacts = async () => {
-    const res = await fetch('/api/whatsapp/contacts')
-    const { contacts } = await res.json()
-    setWaContacts(contacts || [])
-    setContactsLoaded(true)
+    setContactsLoading(true)
+    try {
+      const res = await fetch('/api/whatsapp/contacts')
+      const { contacts } = await res.json()
+      setWaContacts(contacts || [])
+      setContactsLoaded(true)
+    } finally {
+      setContactsLoading(false)
+    }
+  }
+
+  const downloadPromptTemplate = () => {
+    const template = `PROMPT MAESTRO — BOTWA
+
+Respondé como representante de [NOMBRE_NEGOCIO] por WhatsApp.
+
+No digas que sos un bot.
+No digas que sos inteligencia artificial.
+No hables en tercera persona.
+No expliques de más.
+Respondé de forma breve, clara, humana y natural.
+
+DATOS DEL NEGOCIO
+Nombre del negocio: [NOMBRE_NEGOCIO]
+Rubro: [RUBRO]
+Persona o identidad que responde: [IDENTIDAD_RESPUESTA]
+Tono de respuesta: [TONO — ej: informal y amigable / profesional / directo]
+Ubicación / zona: [UBICACION]
+Horario de atención: [HORARIO]
+Servicios o productos principales: [SERVICIOS]
+Medios de pago: [MEDIOS_PAGO]
+Forma de reserva / compra / contratación: [FORMA_RESERVA_COMPRA]
+Links importantes: [LINKS]
+
+PREGUNTAS FRECUENTES
+[Pregunta 1]: [Respuesta 1]
+[Pregunta 2]: [Respuesta 2]
+
+COSAS QUE EL BOT NO DEBE HACER
+[Ej: No dar precios sin consultar el diseño]
+[Ej: No confirmar turnos sin disponibilidad real]
+
+CUÁNDO DERIVAR A UNA PERSONA
+[Ej: Cuando el cliente está enojado]
+[Ej: Cuando la consulta requiere presupuesto personalizado]
+
+OBJETIVO DEL BOT
+Responder rápido, ordenar la consulta del cliente, pedir la información mínima necesaria
+y dejar la conversación encaminada para vender, reservar, informar o derivar a una persona real.
+
+REGLAS GENERALES
+- Respondé solo al último mensaje del cliente, usando el contexto anterior.
+- No repitas el saludo si la conversación ya empezó.
+- No hagas más de una pregunta por mensaje.
+- No inventes precios, turnos, diagnósticos ni disponibilidad.
+- No mandes textos largos salvo que el cliente pida detalles.
+- No presiones al cliente.
+
+APERTURA
+Si es el primer mensaje y el cliente escribe algo corto como "hola", "info", "precio":
+Responder: "Hola, ¿cómo estás? Te habla [IDENTIDAD_RESPUESTA] de [NOMBRE_NEGOCIO]. ¿En qué te puedo ayudar?"
+
+DERIVACIÓN HUMANA
+Cuando el cliente está enojado, pide hablar con alguien, o la consulta supera lo que el bot puede responder:
+"Perfecto, te dejo la consulta encaminada y ahora lo revisa una persona para responderte bien."
+
+REGLA FINAL
+La mejor respuesta es la más corta posible que haga avanzar la conversación.`
+
+    const blob = new Blob([template], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'prompt-base-botwa.txt'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const hasWizardData = aiPrompt.includes('<!-- WIZARD_DATA:')
@@ -194,7 +267,13 @@ export default function SettingsForm() {
         )}
         {promptExpanded && (
           <div className="mt-4 border-t border-gray-100 pt-4">
-            <p className="text-xs text-gray-400 mb-3">Podés pegar un prompt propio o editarlo directamente.</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400">Podés pegar un prompt propio o editarlo directamente.</p>
+              <button type="button" onClick={downloadPromptTemplate}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-all">
+                <Download className="w-3 h-3" /> Descargar plantilla
+              </button>
+            </div>
             <textarea value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
               rows={14} placeholder="Ej: Sos el asistente de Centro Vital. Atendemos de lunes a viernes de 9 a 18hs..."
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none font-mono" />
@@ -265,9 +344,12 @@ export default function SettingsForm() {
             <UserX className="w-4 h-4 text-gray-500" />
             <p className="font-semibold text-gray-900">Contactos excluidos</p>
           </div>
-          <button type="button" onClick={loadWAContacts}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all">
-            <Plus className="w-3.5 h-3.5" /> Cargar desde WhatsApp
+          <button type="button" onClick={loadWAContacts} disabled={contactsLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-all disabled:opacity-60">
+            {contactsLoading
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando...</>
+              : <><Plus className="w-3.5 h-3.5" /> Cargar desde WhatsApp</>
+            }
           </button>
         </div>
         <p className="text-sm text-gray-500 mb-4">El bot ignora completamente estos números.</p>
