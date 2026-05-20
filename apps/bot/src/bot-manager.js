@@ -155,12 +155,23 @@ export const botManager = {
     sock.ev.on('contacts.upsert', (newContacts) => {
       let changed = false
       for (const c of newContacts) {
-        if (!c.id.endsWith('@s.whatsapp.net')) continue
-        const number = c.id.replace('@s.whatsapp.net', '')
-        const name = c.name || c.notify || c.verifiedName || ''
-        if (name || !contacts.has(number)) {
-          contacts.set(number, { number, name })
-          changed = true
+        if (c.id.endsWith('@s.whatsapp.net')) {
+          const number = c.id.replace('@s.whatsapp.net', '')
+          const name = c.name || c.notify || c.verifiedName || ''
+          const lid = c.lid ? c.lid.replace('@lid', '') : undefined
+          if (name || !contacts.has(number)) {
+            contacts.set(number, { number, name, ...(lid ? { lid } : {}) })
+            changed = true
+          }
+        } else if (c.id.endsWith('@lid')) {
+          // Guardar mapeo LID -> número si viene con notify/name y hay un número asociado
+          const lid = c.id.replace('@lid', '')
+          const phone = c.phone || c.notify
+          if (phone) {
+            const number = phone.replace(/\D/g, '')
+            contacts.set(number, { number, name: c.name || c.notify || '', lid })
+            changed = true
+          }
         }
       }
       if (changed) scheduleContactsSave()
@@ -173,7 +184,8 @@ export const botManager = {
         const number = c.id.replace('@s.whatsapp.net', '')
         const existing = contacts.get(number) || { number, name: '' }
         const name = c.name || c.notify || existing.name
-        contacts.set(number, { ...existing, name })
+        const lid = c.lid ? c.lid.replace('@lid', '') : existing.lid
+        contacts.set(number, { ...existing, name, ...(lid ? { lid } : {}) })
         changed = true
       }
       if (changed) scheduleContactsSave()
@@ -297,7 +309,26 @@ export const botManager = {
 
         if (!text) continue
 
-        const from = msg.key.remoteJid
+        let from = msg.key.remoteJid
+        // Si el JID es un LID (@lid), resolverlo al número real via participant o contacts cache
+        if (from?.endsWith('@lid')) {
+          const participant = msg.key.participant || msg.participant
+          if (participant && participant.endsWith('@s.whatsapp.net')) {
+            from = participant
+          } else {
+            // Buscar en contacts cache por LID
+            const lid = from.replace('@lid', '')
+            const contactsMap = contactsCache.get(businessId)
+            let resolved = null
+            if (contactsMap) {
+              for (const [num, c] of contactsMap) {
+                if (c.lid === lid || c.number === lid) { resolved = `${num}@s.whatsapp.net`; break }
+              }
+            }
+            if (resolved) from = resolved
+            // Si no se pudo resolver, usar el pushName o dejar el LID (no ideal pero no se pierde el mensaje)
+          }
+        }
         console.log(`[${businessId}] Mensaje de ${from}: ${text}`)
 
         // Guardar mensaje en Supabase
