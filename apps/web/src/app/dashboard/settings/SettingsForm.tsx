@@ -3,7 +3,9 @@ import { useState, useEffect, useRef } from 'react'
 import { Save, Loader2, ToggleLeft, ToggleRight, Wand2, ChevronDown, ChevronUp, Plus, Trash2, Upload, UserX, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useDashboard } from '../DashboardContext'
-import SetupWizard, { parseWizardDataFromPrompt } from './SetupWizard'
+import dynamic from 'next/dynamic'
+import { parseWizardDataFromPrompt } from './SetupWizard'
+const SetupWizard = dynamic(() => import('./SetupWizard'), { ssr: false })
 
 type PriceRow = { name: string; price: string }
 
