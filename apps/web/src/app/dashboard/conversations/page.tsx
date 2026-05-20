@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useDashboard } from '../DashboardContext'
-import { MessageSquare, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { MessageSquare, ArrowUpRight, ArrowDownLeft, Trash2 } from 'lucide-react'
 
 type Msg = {
   id: string
@@ -65,6 +65,17 @@ export default function ConversationsPage() {
   const activeContact = contacts.find(c => c.number === selected)
   const totalMsgs = contacts.reduce((s, c) => s + c.messages.length, 0)
 
+  const deleteConversation = async (number: string) => {
+    if (!confirm(`¿Eliminar toda la conversación con +${number}?`)) return
+    await fetch('/api/conversations', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number }),
+    })
+    setContacts(prev => prev.filter(c => c.number !== number))
+    if (selected === number) setSelected(null)
+  }
+
   if (bizLoading || loading) return (
     <div className="p-8 animate-pulse">
       <div className="h-8 bg-gray-200 rounded-xl w-48 mb-2" />
@@ -100,8 +111,8 @@ export default function ConversationsPage() {
               const isActive = selected === number
               const isOut = lastMsg.direction === 'outbound'
               return (
+                <div key={number} className="relative group">
                 <button
-                  key={number}
                   onClick={() => setSelected(number)}
                   className={`w-full text-left px-3 py-3 rounded-xl flex items-center gap-3 transition-all ${
                     isActive
@@ -132,6 +143,14 @@ export default function ConversationsPage() {
                     {messages.length}
                   </span>
                 </button>
+                <button
+                  onClick={() => deleteConversation(number)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+                  title="Eliminar conversación"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                </div>
               )
             })}
           </div>

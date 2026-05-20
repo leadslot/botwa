@@ -44,6 +44,12 @@ export function setupRoutes(app, botManager) {
     res.json({ contacts })
   })
 
+  // Obtener chats (individuales) de la sesión activa
+  app.get('/session/chats/:businessId', async (req, res) => {
+    const chats = await botManager.getChats(req.params.businessId)
+    res.json({ chats })
+  })
+
   // Enviar mensaje manual desde el panel
   app.post('/message/send', async (req, res) => {
     const { businessId, to, text } = req.body

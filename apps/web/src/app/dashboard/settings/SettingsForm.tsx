@@ -277,8 +277,32 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
         )}
         {promptExpanded && (
           <div className="mt-4 border-t border-gray-100 pt-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm">
+              <p className="font-semibold text-amber-900 mb-2">¿No sabés qué escribir?</p>
+              <p className="text-amber-700 text-xs mb-3">Copiá este mensaje, pegalo en ChatGPT o en tu IA favorita, completá los datos y pegá el resultado acá:</p>
+              <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs text-gray-700 font-mono whitespace-pre-wrap mb-3">{`Necesito que me escribas un prompt para un bot de WhatsApp de mi negocio. Incluí esta info:
+
+- Nombre del negocio y rubro
+- Horario de atención
+- Servicios o productos que ofrezco (con precios si los tenés)
+- Cómo querés que suene el bot (formal, amigable, rioplatense, etc.)
+- Qué preguntas frecuentes suele recibir
+- Qué NO debe hacer el bot (ej: no dar presupuestos exactos, no dar turnos)
+
+El prompt debe ser en primera persona, como si el bot fuera un empleado de mi negocio.`}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  const txt = `Necesito que me escribas un prompt para un bot de WhatsApp de mi negocio. Incluí esta info:\n\n- Nombre del negocio y rubro\n- Horario de atención\n- Servicios o productos que ofrezco (con precios si los tenés)\n- Cómo querés que suene el bot (formal, amigable, rioplatense, etc.)\n- Qué preguntas frecuentes suele recibir\n- Qué NO debe hacer el bot (ej: no dar presupuestos exactos, no dar turnos)\n\nEl prompt debe ser en primera persona, como si el bot fuera un empleado de mi negocio.`
+                  navigator.clipboard.writeText(txt)
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-300 text-xs font-semibold text-amber-800 hover:bg-amber-200 transition-all"
+              >
+                <Download className="w-3 h-3" /> Copiar instrucciones para IA
+              </button>
+            </div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400">Podés pegar un prompt propio o editarlo directamente.</p>
+              <p className="text-xs text-gray-400">O editá el prompt directamente.</p>
               <button type="button" onClick={downloadPromptTemplate}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-all">
                 <Download className="w-3 h-3" /> Descargar plantilla
@@ -344,7 +368,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
             ))}
           </div>
         )}
-        <p className="text-xs text-gray-400 mt-3">Formato CSV: columna 1 = nombre, columna 2 = precio. Podés exportar desde Excel como CSV.</p>
+        <p className="text-xs text-gray-400 mt-3">Podés importar directo desde Excel: Archivo → Guardar como → CSV.</p>
       </div>
 
       {/* Contactos excluidos */}
@@ -364,7 +388,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
         </div>
         <p className="text-sm text-gray-500 mb-4">El bot ignora completamente estos números.</p>
 
-        {contactsLoaded && (
+        {(contactsLoaded || contactsLoading) && (
           <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
               <input
@@ -375,9 +399,17 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
               />
             </div>
             <div className="max-h-60 overflow-y-auto divide-y divide-gray-50">
-              {waContacts.length === 0 ? (
+              {contactsLoading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
+                  <svg className="animate-spin w-4 h-4 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                  Cargando chats de WhatsApp...
+                </div>
+              ) : waContacts.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-6">
-                  No se encontraron contactos. Los contactos aparecen a medida que el bot recibe mensajes.
+                  WhatsApp todavía no sincronizó chats. Probá nuevamente en unos segundos o enviá/recibí un mensaje.
                 </p>
               ) : (
                 waContacts

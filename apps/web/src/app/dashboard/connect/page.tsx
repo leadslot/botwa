@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { MessageCircle, RefreshCw, CheckCircle2, WifiOff, LogOut, QrCode } from 'lucide-react'
+import { RefreshCw, CheckCircle2, WifiOff, LogOut, QrCode } from 'lucide-react'
 
 export default function ConnectPage() {
-  const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting'>('disconnected')
+  const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting' | null>(null)
   const [qr, setQR] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -84,6 +84,13 @@ export default function ConnectPage() {
       </div>
 
       <div className="card text-center">
+        {status === null && (
+          <div className="py-8">
+            <RefreshCw className="w-7 h-7 text-indigo-300 animate-spin mx-auto mb-3" />
+            <p className="text-gray-400 text-sm">Verificando conexión...</p>
+          </div>
+        )}
+
         {status === 'connected' && (
           <div className="py-8">
             <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -95,6 +102,7 @@ export default function ConnectPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               En línea
             </div>
+            <p className="text-xs text-gray-400 mb-4">Al recargar la página puede tardar unos segundos en confirmar la conexión.</p>
             <button
               onClick={disconnectBot}
               disabled={disconnecting}
@@ -144,7 +152,7 @@ export default function ConnectPage() {
           </div>
         )}
 
-        {(status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr','reconnecting'].includes(status))) && (
+        {status !== null && (status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr','reconnecting'].includes(status as string))) && (
           <div className="py-8">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <WifiOff className="w-7 h-7 text-gray-400" />

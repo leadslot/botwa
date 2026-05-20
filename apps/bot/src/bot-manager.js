@@ -77,8 +77,22 @@ const activeSessions = new Map()
 const pendingQRs = new Map()
 // Contador de reintentos: businessId -> número
 const reconnectAttempts = new Map()
+// Cache de chats: businessId -> Map<number, {number, name, lastMessage, isGroup}>
+const chatsCache = new Map()
 // Contactos por sesión: businessId -> Map<jid, {name, number}>
 const contactsCache = new Map()
+
+function parseChat(chat) {
+  const jid = chat.id || ''
+  if (!jid.endsWith('@s.whatsapp.net')) return null
+  const number = jid.replace('@s.whatsapp.net', '')
+  if (!number || number === 'status') return null
+  const name = chat.name || chat.pushname || chat.verifiedName || ''
+  const lastMessage = chat.conversationTimestamp
+    ? new Date(Number(chat.conversationTimestamp) * 1000).toISOString()
+    : null
+  return { number, name, lastMessage, isGroup: false, source: 'whatsapp_chat' }
+}
 
 export const botManager = {
 
@@ -157,6 +171,49 @@ export const botManager = {
         changed = true
       }
       if (changed) scheduleContactsSave()
+    })
+
+    // ── Chats cache ──────────────────────────────────────────
+    if (!chatsCache.has(businessId)) {
+      chatsCache.set(businessId, new Map())
+    }
+    const chats = chatsCache.get(businessId)
+
+    let saveChatsTimer = null
+    const scheduleChatsSave = () => {
+      clearTimeout(saveChatsTimer)
+      saveChatsTimer = setTimeout(async () => {
+        const list = Array.from(chats.values())
+        await supabase.from('whatsapp_sessions')
+          .upsert({ business_id: businessId, chats_data: list }, { onConflict: 'business_id' })
+        console.log(`[${businessId}] Chats guardados en Supabase: ${list.length}`)
+      }, 10000)
+    }
+
+    sock.ev.on('chats.set', ({ chats: incoming }) => {
+      let count = 0
+      for (const chat of (incoming || [])) {
+        const parsed = parseChat(chat)
+        if (!parsed) continue
+        chats.set(parsed.number, parsed)
+        count++
+      }
+      if (count > 0) {
+        console.log(`[${businessId}] chats.set: ${count} chats individuales cargados`)
+        scheduleChatsSave()
+      }
+    })
+
+    sock.ev.on('chats.upsert', (incoming) => {
+      let count = 0
+      for (const chat of (incoming || [])) {
+        const parsed = parseChat(chat)
+        if (!parsed) continue
+        const existing = chats.get(parsed.number) || {}
+        chats.set(parsed.number, { ...existing, ...parsed })
+        count++
+      }
+      if (count > 0) scheduleChatsSave()
     })
 
     sock.ev.on('connection.update', async (update) => {
@@ -378,6 +435,29 @@ export const botManager = {
           if (b.name) return 1
           return a.number.localeCompare(b.number)
         })
+      }
+    } catch {}
+    return []
+  },
+
+  async getChats(businessId) {
+    const map = chatsCache.get(businessId)
+    if (map && map.size > 0) {
+      return Array.from(map.values()).sort((a, b) => {
+        if (a.lastMessage && b.lastMessage) return b.lastMessage.localeCompare(a.lastMessage)
+        if (a.lastMessage) return -1
+        if (b.lastMessage) return 1
+        return (a.name || a.number).localeCompare(b.name || b.number, 'es')
+      })
+    }
+    // Fallback: Supabase
+    try {
+      const { data } = await supabase
+        .from('whatsapp_sessions').select('chats_data').eq('business_id', businessId).single()
+      if (data?.chats_data?.length) {
+        if (!chatsCache.has(businessId)) chatsCache.set(businessId, new Map())
+        for (const c of data.chats_data) chatsCache.get(businessId).set(c.number, c)
+        return data.chats_data
       }
     } catch {}
     return []
