@@ -1,0 +1,10 @@
+name: Keepalive Bot
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render bot
+        run: curl -fs https://botwa-bot.onrender.com/health || true
