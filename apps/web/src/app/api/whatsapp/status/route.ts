@@ -30,7 +30,6 @@ export async function GET() {
     if (data.status === 'connected') {
       admin.from('whatsapp_sessions')
         .upsert({ business_id: business.id, status: 'connected', qr_code: null }, { onConflict: 'business_id' })
-        .then(() => {}).catch(() => {})
       return NextResponse.json({ status: 'connected', qr: null })
     }
 
