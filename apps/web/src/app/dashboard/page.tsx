@@ -46,7 +46,7 @@ const TRIAL_LIMIT = 50
 export default function DashboardPage() {
   const { business, loading } = useDashboard()
   const [waStatus, setWaStatus] = useState<'connected' | 'disconnected' | 'reconnecting' | null>(null)
-  const [recentContacts, setRecentContacts] = useState<{number:string;msg:string;time:string}[]>([])
+  const [recentContacts, setRecentContacts] = useState<{number:string;msg:string;time:string;pushName?:string}[]>([])
   const [statDays, setStatDays] = useState<{label:string;inbound:number;outbound:number}[]>([])
 
   useEffect(() => {
@@ -58,10 +58,11 @@ export default function DashboardPage() {
       .then(r => r.json())
       .then(({ messages }) => {
         if (!messages?.length) return
-        const map: Record<string, {msg:string;time:string}> = {}
+        const map: Record<string, {msg:string;time:string;pushName?:string}> = {}
         for (const m of messages) {
           const n = m.from_number.replace(/@[^@]+$/, '').replace(/[^0-9+]/g, '')
-          if (!map[n]) map[n] = { msg: m.message, time: m.created_at }
+          if (!map[n]) map[n] = { msg: m.message, time: m.created_at, pushName: m.push_name ?? undefined }
+          else if (!map[n].pushName && m.push_name) map[n].pushName = m.push_name
         }
         setRecentContacts(Object.entries(map).slice(0, 4).map(([number, v]) => ({ number, ...v })))
       })
@@ -265,19 +266,21 @@ export default function DashboardPage() {
           <div className="divide-y divide-slate-100">
             {recentContacts.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-400">Sin conversaciones todavía</p>
-            ) : recentContacts.map(({ number, msg, time }) => {
+            ) : recentContacts.map(({ number, msg, time, pushName }) => {
               const d = new Date(time)
               const today = new Date()
               const timeLabel = d.toDateString() === today.toDateString()
                 ? d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
                 : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+              const isLid = number.replace(/\D/g, '').length > 13
+              const displayName = isLid ? (pushName ?? 'Cliente') : `+${number}`
               return (
                 <div key={number} className="flex items-center gap-4 py-3">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-emerald-100 text-sm font-black text-[#6C4DFF]">
                     {number.slice(-2)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-black text-slate-950">+{number}</p>
+                    <p className="truncate font-black text-slate-950">{displayName}</p>
                     <p className="truncate text-sm text-slate-500">{msg}</p>
                   </div>
                   <p className="text-xs font-semibold text-slate-500">{timeLabel}</p>

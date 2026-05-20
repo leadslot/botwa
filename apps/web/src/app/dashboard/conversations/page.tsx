@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDashboard } from '../DashboardContext'
 import {
+  Ban,
   Bot,
   CheckCircle2,
   Clock3,
@@ -116,6 +117,17 @@ export default function ConversationsPage() {
     })
   }
 
+  const blockContact = async (number: string) => {
+    if (!confirm(`¿Bloquear este contacto? El bot no volverá a responderle.`)) return
+    await fetch('/api/conversations/block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number }),
+    })
+    setContacts(prev => prev.filter(c => c.number !== number))
+    if (selected === number) setSelected(null)
+  }
+
   const deleteConversation = async (number: string) => {
     if (!confirm(`¿Eliminar toda la conversación con +${number}?`)) return
     await fetch('/api/conversations', {
@@ -201,6 +213,13 @@ export default function ConversationsPage() {
                       </div>
                     </button>
                     <button
+                      onClick={e => { e.stopPropagation(); blockContact(number) }}
+                      className="absolute right-10 top-3 rounded-xl p-2 text-slate-300 opacity-0 transition hover:bg-orange-50 hover:text-orange-500 group-hover:opacity-100"
+                      title="Bloquear contacto (el bot no responderá)"
+                    >
+                      <Ban className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={e => { e.stopPropagation(); deleteConversation(number) }}
                       className="absolute right-3 top-3 rounded-xl p-2 text-slate-300 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
                       title="Eliminar conversación"
@@ -249,6 +268,13 @@ export default function ConversationsPage() {
                         ? <Play className="h-4 w-4" />
                         : <Pause className="h-4 w-4" />
                       }
+                    </button>
+                    <button
+                      onClick={() => { if (activeContact) blockContact(activeContact.number) }}
+                      className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-400 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-500 transition"
+                      title="Bloquear contacto"
+                    >
+                      <Ban className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => { if (activeContact) { if (!confirm(`¿Eliminar conversación con +${activeContact.number}?`)) return; deleteConversation(activeContact.number) }}}
