@@ -13,6 +13,7 @@ type Business = {
   daily_messages_count: number
   price_list: { name: string; price: string }[] | null
   excluded_numbers: string[] | null
+  response_delay_seconds: number | null
 }
 
 type DashboardData = {
