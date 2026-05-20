@@ -42,6 +42,17 @@ export default function SettingsForm() {
     }
   }, [loading, business, ready])
 
+  // ── Cargar contactos existentes — DEBE estar antes del early return (Rules of Hooks)
+  useEffect(() => {
+    if (!ready) return
+    fetch('/api/contacts').then(r => r.json()).then(({ contacts }) => {
+      if (contacts?.length > 0) {
+        setWaContacts(contacts.map((c: { name: string; phone: string }) => ({ number: c.phone, name: c.name })))
+        setContactsLoaded(true)
+      }
+    }).catch(() => {})
+  }, [ready])
+
   if (!ready) return (
     <div className="space-y-4">
       <div className="animate-pulse space-y-4">
@@ -145,17 +156,6 @@ export default function SettingsForm() {
     reader.readAsText(file)
     e.target.value = ''
   }
-
-  // Cargar contactos existentes desde Supabase al abrir settings
-  useEffect(() => {
-    if (!ready) return
-    fetch('/api/contacts').then(r => r.json()).then(({ contacts }) => {
-      if (contacts?.length > 0) {
-        setWaContacts(contacts.map((c: { name: string; phone: string }) => ({ number: c.phone, name: c.name })))
-        setContactsLoaded(true)
-      }
-    }).catch(() => {})
-  }, [ready])
 
   const downloadPromptTemplate = () => {
     const template = `PLANTILLA BASE — RESPONBOT
