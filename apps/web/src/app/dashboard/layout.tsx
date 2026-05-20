@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { MessageCircle, LayoutDashboard, Wifi, Settings, MessageSquare, LogOut, CreditCard } from 'lucide-react'
 import { DashboardProvider } from './DashboardContext'
-import HelpChat from '@/components/HelpChat'
+import dynamic from 'next/dynamic'
+
+const HelpChat = dynamic(() => import('@/components/HelpChat'), { ssr: false })
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Inicio' },

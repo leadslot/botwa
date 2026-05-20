@@ -46,22 +46,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const json = await res.json()
       if (json.business) {
         setBusiness(json.business)
-      } else {
-        // Solo redirigir a onboarding si el usuario está autenticado
-        // pero definitivamente no tiene negocio (respuesta 200 con business: null)
-        // Verificar primero que no sea un error de sesión
-        const checkAuth = await fetch('/api/business').then(r => r.json()).catch(() => null)
-        if (checkAuth?.business) {
-          // Segunda llamada sí devolvió negocio (era timing) — usar ese
-          setBusiness(checkAuth.business)
-        } else if (checkAuth !== null) {
-          // Dos llamadas confirmaron que no hay negocio → onboarding
-          if (!window.location.pathname.includes('/onboarding')) {
-            window.location.replace('/dashboard/onboarding')
-          }
-        }
-        // Si checkAuth === null hubo error de red — no redirigir
       }
+      // Si business es null: no redirigir automáticamente.
+      // Puede ser error transitorio de sesión o de red.
+      // El usuario verá el dashboard vacío y podrá navegar normalmente.
     } catch (e) {
       // Error de red — NO redirigir, mantener estado anterior
       console.error('DashboardContext error:', e)
