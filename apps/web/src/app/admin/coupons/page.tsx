@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Tag, Copy, Check } from 'lucide-react'
+import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Tag, Copy, Check, ArrowLeft } from 'lucide-react'
 
 function generateCode() {
   const words = ['GABY', 'VALE', 'AMIGO', 'VIP', 'BETA', 'EARLY', 'PRO', 'LAUNCH']
@@ -69,6 +69,9 @@ export default function CouponsPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto">
 
+        <a href="/admin" className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-6">
+          <ArrowLeft className="w-4 h-4" /> Volver al panel
+        </a>
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black text-gray-900">Códigos de activación</h1>
