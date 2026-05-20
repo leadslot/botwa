@@ -24,10 +24,17 @@ export function setupRoutes(app, botManager) {
     res.json({ status })
   })
 
-  // Desconectar
+  // Desconectar (mantiene credenciales para reconexión automática)
   app.post('/session/disconnect', async (req, res) => {
     const { businessId } = req.body
     await botManager.disconnect(businessId)
+    res.json({ ok: true })
+  })
+
+  // Reset total: borra credenciales y fuerza QR nuevo
+  app.post('/session/reset', async (req, res) => {
+    const { businessId } = req.body
+    await botManager.resetSession(businessId)
     res.json({ ok: true })
   })
 

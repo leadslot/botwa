@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { MessageCircle, RefreshCw, CheckCircle2, WifiOff } from 'lucide-react'
+import { MessageCircle, RefreshCw, CheckCircle2, WifiOff, LogOut, QrCode } from 'lucide-react'
 
 export default function ConnectPage() {
   const [status, setStatus] = useState<'disconnected' | 'waiting_qr' | 'connected' | 'reconnecting'>('disconnected')
   const [qr, setQR] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
 
   const startConnection = async () => {
     setLoading(true)
@@ -14,6 +16,31 @@ export default function ConnectPage() {
       ;(window as any).__startWAPolling?.()
     } finally {
       setLoading(false)
+    }
+  }
+
+  const resetAndConnect = async () => {
+    setResetting(true)
+    try {
+      await fetch('/api/whatsapp/reset', { method: 'POST' })
+      setStatus('disconnected')
+      setQR(null)
+      // Esperar un momento y luego iniciar conexión fresh
+      setTimeout(() => startConnection(), 1000)
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  const disconnectBot = async () => {
+    if (!confirm('¿Desconectar el bot? Dejará de responder mensajes.')) return
+    setDisconnecting(true)
+    try {
+      await fetch('/api/whatsapp/disconnect', { method: 'POST' })
+      setStatus('disconnected')
+      setQR(null)
+    } finally {
+      setDisconnecting(false)
     }
   }
 
@@ -34,7 +61,6 @@ export default function ConnectPage() {
         if (data.status === 'connected') {
           if (interval) { clearInterval(interval); interval = null }
         } else if (data.status === 'reconnecting' || data.status === 'waiting_qr') {
-          // Auto-poll hasta que conecte
           if (!interval) startPolling()
         }
       } catch {}
@@ -65,10 +91,18 @@ export default function ConnectPage() {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">¡WhatsApp conectado!</h2>
             <p className="text-gray-500 mb-4">Tu bot está activo y respondiendo mensajes.</p>
-            <div className="badge-green mx-auto w-fit">
+            <div className="badge-green mx-auto w-fit mb-6">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               En línea
             </div>
+            <button
+              onClick={disconnectBot}
+              disabled={disconnecting}
+              className="btn-secondary text-sm text-red-500 hover:text-red-600 flex items-center gap-2 mx-auto"
+            >
+              <LogOut className="w-4 h-4" />
+              {disconnecting ? 'Desconectando...' : 'Pausar bot'}
+            </button>
           </div>
         )}
 
@@ -97,7 +131,16 @@ export default function ConnectPage() {
           <div className="py-8">
             <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
             <h2 className="text-lg font-bold text-gray-900 mb-2">Reconectando...</h2>
-            <p className="text-gray-500 text-sm">El bot está levantando tu sesión automáticamente.</p>
+            <p className="text-gray-500 text-sm mb-6">El bot está levantando tu sesión automáticamente.</p>
+            <p className="text-xs text-gray-400 mb-3">¿Desvinculaste el dispositivo desde tu teléfono?</p>
+            <button
+              onClick={resetAndConnect}
+              disabled={resetting}
+              className="btn-secondary text-sm flex items-center gap-2 mx-auto"
+            >
+              <QrCode className="w-4 h-4" />
+              {resetting ? 'Reiniciando...' : 'Conectar con nuevo QR'}
+            </button>
           </div>
         )}
 

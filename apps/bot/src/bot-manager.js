@@ -75,6 +75,8 @@ async function useSupabaseAuthState(businessId) {
 const activeSessions = new Map()
 // Mapa de QR pendientes: businessId -> qrBase64
 const pendingQRs = new Map()
+// Contador de reintentos: businessId -> número
+const reconnectAttempts = new Map()
 // Contactos por sesión: businessId -> Map<jid, {name, number}>
 const contactsCache = new Map()
 
@@ -170,6 +172,7 @@ export const botManager = {
       }
 
       if (connection === 'open') {
+        reconnectAttempts.delete(businessId)
         activeSessions.set(businessId, sock)
         pendingQRs.delete(businessId)
         await supabase
@@ -191,17 +194,27 @@ export const botManager = {
           : undefined
 
         if (code !== DisconnectReason.loggedOut) {
-          console.log(`[${businessId}] Reconectando...`)
-          // Marcar como 'reconnecting' para que un posible restart también lo restaure
-          await supabase
-            .from('whatsapp_sessions')
-            .upsert({ business_id: businessId, status: 'reconnecting' }, { onConflict: 'business_id' })
-          setTimeout(() => this.startSession(businessId), 3000)
+          const attempts = (reconnectAttempts.get(businessId) || 0) + 1
+          reconnectAttempts.set(businessId, attempts)
+          if (attempts >= 5) {
+            // Demasiados reintentos fallidos → limpiar sesión para que el usuario haga QR nuevo
+            console.log(`[${businessId}] Demasiados reintentos, limpiando sesión`)
+            reconnectAttempts.delete(businessId)
+            await supabase.from('whatsapp_sessions')
+              .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
+          } else {
+            console.log(`[${businessId}] Reconectando (intento ${attempts}/5)...`)
+            await supabase
+              .from('whatsapp_sessions')
+              .upsert({ business_id: businessId, status: 'reconnecting' }, { onConflict: 'business_id' })
+            setTimeout(() => this.startSession(businessId), 3000)
+          }
         } else {
           // Logout explícito — limpiar credenciales guardadas
+          reconnectAttempts.delete(businessId)
           await supabase
             .from('whatsapp_sessions')
-            .upsert({ business_id: businessId, status: 'disconnected', session_data: null })
+            .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
         }
       }
     })
@@ -320,9 +333,24 @@ export const botManager = {
   async disconnect(businessId) {
     const sock = activeSessions.get(businessId)
     if (sock) {
-      await sock.logout()
+      try { await sock.logout() } catch {}
       activeSessions.delete(businessId)
     }
+    pendingQRs.delete(businessId)
+    await supabase.from('whatsapp_sessions')
+      .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
+  },
+
+  async resetSession(businessId) {
+    // Fuerza desconexión y borra credenciales → próximo start pedirá QR nuevo
+    const sock = activeSessions.get(businessId)
+    if (sock) {
+      try { sock.end(undefined) } catch {}
+      activeSessions.delete(businessId)
+    }
+    pendingQRs.delete(businessId)
+    await supabase.from('whatsapp_sessions')
+      .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
   },
 
   async getContacts(businessId) {
