@@ -599,5 +599,9 @@ export const botManager = {
         await this.startSession(row.business_id)
       }
     }
+  },
+
+  _getSocket(businessId) {
+    return activeSessions.get(businessId) || pendingSockets.get(businessId) || null
   }
 }

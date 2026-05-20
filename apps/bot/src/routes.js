@@ -50,6 +50,25 @@ export function setupRoutes(app, botManager) {
     res.json({ chats })
   })
 
+  // Resolver LID de una lista de números de teléfono
+  app.post('/session/resolve-lids', async (req, res) => {
+    const { businessId, phones } = req.body
+    if (!businessId || !Array.isArray(phones)) return res.status(400).json({ error: 'businessId y phones[] requeridos' })
+    const s = botManager._getSocket(businessId)
+    if (!s) return res.status(400).json({ error: 'Bot no conectado' })
+    const results = []
+    for (const phone of phones) {
+      const clean = phone.replace(/\D/g, '')
+      try {
+        const [result] = await s.onWhatsApp(`${clean}@s.whatsapp.net`)
+        results.push({ phone: clean, lid: result?.lid || null, exists: !!result?.exists })
+      } catch {
+        results.push({ phone: clean, lid: null, exists: false })
+      }
+    }
+    res.json({ results })
+  })
+
   // Pausar/reanudar bot para un contacto específico
   app.post('/session/pause', (req, res) => {
     const { businessId, number, paused } = req.body

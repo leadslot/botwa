@@ -121,23 +121,38 @@ export default function SettingsForm() {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = ev => {
+    reader.onload = async ev => {
       const text = ev.target?.result as string
-      const rows = text.split('\n').slice(0).map(line => {
+      const rows = text.split('\n').map(line => {
         const parts = line.split(/[,;	]/)
         const name = (parts[0] ?? '').replace(/"/g, '').trim()
         const raw = (parts[1] ?? parts[0] ?? '').replace(/"/g, '').trim()
-        const number = raw.replace(/\D/g, '')
-        return { name, number }
-      }).filter(r => r.number.length >= 8)
-      if (rows.length > 0) {
-        setWaContacts(rows)
-        setContactsLoaded(true)
-      }
+        const phone = raw.replace(/\D/g, '')
+        return { name, phone }
+      }).filter(r => r.phone.length >= 8)
+      if (rows.length === 0) return
+      // Guardar en Supabase y disparar resolución de LIDs
+      await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contacts: rows }),
+      })
+      setWaContacts(rows.map(r => ({ number: r.phone, name: r.name })))
+      setContactsLoaded(true)
     }
     reader.readAsText(file)
     e.target.value = ''
   }
+
+  // Cargar contactos existentes desde Supabase al abrir settings
+  useEffect(() => {
+    fetch('/api/contacts').then(r => r.json()).then(({ contacts }) => {
+      if (contacts?.length > 0) {
+        setWaContacts(contacts.map((c: { name: string; phone: string }) => ({ number: c.phone, name: c.name })))
+        setContactsLoaded(true)
+      }
+    }).catch(() => {})
+  }, [])
 
   const downloadPromptTemplate = () => {
     const template = `PLANTILLA BASE — BOTWA
