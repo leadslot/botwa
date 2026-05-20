@@ -28,6 +28,7 @@ type Msg = {
   message: string
   direction: 'inbound' | 'outbound'
   created_at: string
+  push_name?: string | null
 }
 
 type Contact = {
@@ -37,6 +38,16 @@ type Contact = {
 }
 
 const cleanNumber = (n: string) => n.replace(/@[^@]+$/, '').replace(/[^0-9+]/g, '')
+
+// Detecta si es un LID irresolvible (no es un número de teléfono real)
+const isLid = (n: string) => n.includes('@lid') || n.replace(/\D/g,'').length > 14
+
+// Muestra nombre o número según lo que esté disponible
+function contactLabel(number: string, msgs: Msg[]): string {
+  if (!isLid(number)) return `+${number}`
+  const name = msgs.find(m => m.direction === 'inbound' && m.push_name)?.push_name
+  return name || 'Cliente'
+}
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString('es-AR', {
@@ -179,7 +190,7 @@ export default function ConversationsPage() {
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="truncate font-black text-slate-950">+{number}</p>
+                            <p className="truncate font-black text-slate-950">{contactLabel(number, messages)}</p>
                             <span className="text-xs font-semibold text-slate-500">{formatTimeShort(lastMsg.created_at)}</span>
                           </div>
                           <p className="mt-1 truncate text-sm text-slate-500">{lastMsg.message}</p>
@@ -217,7 +228,7 @@ export default function ConversationsPage() {
                       <UserRound className="h-7 w-7" />
                     </span>
                     <div>
-                      <p className="text-xl font-black text-slate-950">+{activeContact.number}</p>
+                      <p className="text-xl font-black text-slate-950">{contactLabel(activeContact.number, activeContact.messages)}</p>
                       <div className="mt-1 flex items-center gap-3">
                         <span className="text-sm text-slate-500">{activeContact.messages.length} mensajes</span>
                         <StatusPill tone="green">En línea</StatusPill>
@@ -315,7 +326,7 @@ export default function ConversationsPage() {
                 <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#F1EDFF] text-[#6C4DFF]">
                   <UserRound className="h-10 w-10" />
                 </span>
-                <p className="mt-4 text-xl font-black text-slate-950">+{activeContact?.number}</p>
+                <p className="mt-4 text-xl font-black text-slate-950">{activeContact ? contactLabel(activeContact.number, activeContact.messages) : ''}</p>
                 <p className="mt-1 text-sm text-slate-500">Cliente desde mayo 2025</p>
                 <div className="mt-5 divide-y divide-slate-100 text-sm">
                   <div className="flex justify-between py-3"><span className="text-slate-500">Mensajes totales</span><span className="font-black">{activeContact?.messages.length ?? 0}</span></div>

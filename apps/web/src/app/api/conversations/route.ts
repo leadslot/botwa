@@ -64,7 +64,7 @@ export async function GET() {
 
     const { data: messages } = await adminClient
       .from('whatsapp_messages')
-      .select('id, from_number, message, direction, created_at')
+      .select('id, from_number, message, direction, created_at, push_name')
       .eq('business_id', business.id)
       .order('created_at', { ascending: false })
       .limit(200)

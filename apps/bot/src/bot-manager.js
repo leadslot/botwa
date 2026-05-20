@@ -329,28 +329,37 @@ export const botManager = {
         if (!text) continue
 
         let from = msg.key.remoteJid
+        const pushName = msg.pushName || ''
+
         // Si el JID es un LID (@lid), resolverlo al número real
         if (from?.endsWith('@lid')) {
-          const lid = from.replace('@lid', '')
-          const resolvedNumber = lidMap.get(lid)
-          if (resolvedNumber) {
-            from = `${resolvedNumber}@s.whatsapp.net`
+          const lid = from // mantener con @lid para las APIs de Baileys
+          const lidClean = from.replace('@lid', '')
+
+          // 1. lidMap local (de contacts.upsert / messaging-history.set)
+          let resolved = lidMap.get(lidClean)
+
+          // 2. signalRepository interno de Baileys v7
+          if (!resolved) {
+            try {
+              const pn = sock.signalRepository?.lidMapping?.getPNForLID?.(lid)
+              if (pn) resolved = pn.replace('@s.whatsapp.net', '')
+            } catch {}
+          }
+
+          // 3. msg.key.participant (suele estar en grupos o en algunas versiones)
+          if (!resolved && msg.key.participant?.endsWith('@s.whatsapp.net')) {
+            resolved = msg.key.participant.replace('@s.whatsapp.net', '')
+          }
+
+          if (resolved) {
+            from = `${resolved}@s.whatsapp.net`
+            // Guardar para futuros mensajes
+            lidMap.set(lidClean, resolved)
           } else {
-            // Fallback: msg.key.participant a veces trae el JID real en grupos/lid
-            const participant = msg.key.participant
-            if (participant?.endsWith('@s.whatsapp.net')) {
-              from = participant
-            } else {
-              // Intentar de nuevo en 2s — contacts.upsert puede llegar justo después
-              console.warn(`[${businessId}] LID sin resolver: ${lid} (pushName: ${msg.pushName}), reintentando en 2s`)
-              await new Promise(r => setTimeout(r, 2000))
-              const retried = lidMap.get(lid)
-              if (retried) {
-                from = `${retried}@s.whatsapp.net`
-              } else {
-                console.warn(`[${businessId}] LID ${lid} sigue sin resolver tras retry, usando LID como identificador`)
-              }
-            }
+            // No se pudo resolver: guardar el LID limpio con el pushName como contexto
+            console.warn(`[${businessId}] LID irresolvible: ${lidClean} pushName="${pushName}"`)
+            // Usamos el LID como identificador — el bot igual puede responder con el LID
           }
         }
         console.log(`[${businessId}] Mensaje de ${from}: ${text}`)
@@ -361,6 +370,7 @@ export const botManager = {
           from_number: from,
           message: text,
           direction: 'inbound',
+          push_name: pushName || null,
         })
 
         // Human handoff check
