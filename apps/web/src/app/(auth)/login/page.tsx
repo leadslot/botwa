@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { MessageCircle, Eye, EyeOff, Loader2 } from 'lucide-react'
+import Image from 'next/image'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
@@ -27,9 +28,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <MessageCircle className="w-6 h-6 text-white" />
-          </div>
+          <Image src="/logo.svg" alt="Responbot" width={48} height={48} className="mx-auto mb-4 rounded-2xl shadow-lg" />
           <h1 className="text-2xl font-black text-gray-900">Bienvenido de nuevo</h1>
           <p className="text-gray-500 mt-1">Ingresá a tu panel de Responbot</p>
         </div>

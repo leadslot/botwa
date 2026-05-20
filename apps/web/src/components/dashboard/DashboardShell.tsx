@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 import {
   Bell,
   CreditCard,
   Home,
   LogOut,
-  MessageCircle,
   MessageSquare,
   Settings,
   Wifi,
@@ -55,9 +55,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur-xl lg:flex">
         <div className="flex h-20 items-center px-7">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-200">
-              <MessageCircle className="h-6 w-6 text-white" />
-            </span>
+            <Image src="/logo.svg" alt="Responbot" width={44} height={44} className="rounded-2xl shadow-lg shadow-violet-200" />
             <span className="text-2xl font-black tracking-tight text-slate-950">Responbot</span>
           </Link>
         </div>
@@ -95,9 +93,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <div className="lg:pl-[264px]">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200/70 bg-[#F7F8FB]/85 px-5 backdrop-blur-xl sm:px-8 lg:px-8">
           <Link href="/dashboard" className="flex items-center gap-3 lg:hidden">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-200">
-              <MessageCircle className="h-5 w-5 text-white" />
-            </span>
+            <Image src="/logo.svg" alt="Responbot" width={40} height={40} className="rounded-2xl shadow-lg shadow-violet-200" />
             <span className="text-xl font-black text-slate-950">Responbot</span>
           </Link>
 
