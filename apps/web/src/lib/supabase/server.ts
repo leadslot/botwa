@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 function extractAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): string | null {
   const all = cookieStore.getAll()
@@ -31,12 +31,26 @@ function extractAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): s
   } catch { return null }
 }
 
-/** Devuelve el usuario verificado contra Supabase usando JWT de cookie directamente */
+/** Devuelve el usuario verificado contra Supabase.
+ *  Intenta en orden: Authorization header → cookies */
 export async function getVerifiedUser() {
+  const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+
+  // 1. Authorization: Bearer <token> (localStorage-based sessions)
+  try {
+    const headerStore = await headers()
+    const auth = headerStore.get('authorization') ?? headerStore.get('Authorization')
+    if (auth?.startsWith('Bearer ')) {
+      const token = auth.slice(7)
+      const { data: { user }, error } = await admin.auth.getUser(token)
+      if (!error && user) return user
+    }
+  } catch { /* headers() no disponible en este contexto */ }
+
+  // 2. Cookies (cookie-based sessions)
   const cookieStore = await cookies()
   const token = extractAccessToken(cookieStore)
   if (!token) return null
-  const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
   const { data: { user }, error } = await admin.auth.getUser(token)
   if (error || !user) return null
   return user

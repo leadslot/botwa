@@ -1,24 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getVerifiedUser } from '@/lib/supabase/server'
 import { botFetch } from '@/lib/bot-fetch'
 
 export async function POST(req: Request) {
-  const cookieStore = await cookies()
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
-  const { data: { user } } = await authClient.auth.getUser()
+  const user = await getVerifiedUser()
   if (!user) return NextResponse.json({ error: 'No auth' }, { status: 401 })
 
-  const adminClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  )
-  const { data: business } = await adminClient
+  const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  const { data: business } = await admin
     .from('businesses').select('id').eq('user_id', user.id).single()
   if (!business) return NextResponse.json({ error: 'No business' }, { status: 404 })
 

@@ -23,6 +23,13 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { useDashboard } from '../DashboardContext'
+import { createClient as createSupabaseClient } from '@/lib/supabase/client'
+
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await createSupabaseClient().auth.getSession()
+  if (session?.access_token) return { Authorization: `Bearer ${session.access_token}` }
+  return {}
+}
 import { SectionCard, StatusPill } from '@/components/dashboard/ui'
 import { CHANNELS, ChannelId, PLAN_ORDER, PLANS, normalizePlan, planAllows } from '@/lib/plans'
 
@@ -154,7 +161,7 @@ export default function ConnectPage() {
 
     const checkStatus = async () => {
       try {
-        const res = await fetch('/api/whatsapp/status')
+        const res = await fetch('/api/whatsapp/status', { headers: await getAuthHeaders() })
         const data = await res.json()
         setStatus(data.status)
         if (data.status) sessionStorage.setItem('wa_status', data.status)
@@ -181,7 +188,7 @@ export default function ConnectPage() {
   const startConnection = async () => {
     setLoading(true)
     try {
-      await fetch('/api/whatsapp/start', { method: 'POST' })
+      await fetch('/api/whatsapp/start', { method: 'POST', headers: await getAuthHeaders() })
       ;(window as WindowWithPolling).__startWAPolling?.()
     } finally {
       setLoading(false)
@@ -191,7 +198,7 @@ export default function ConnectPage() {
   const resetAndConnect = async () => {
     setResetting(true)
     try {
-      await fetch('/api/whatsapp/reset', { method: 'POST' })
+      await fetch('/api/whatsapp/reset', { method: 'POST', headers: await getAuthHeaders() })
       setStatus('disconnected')
       setQR(null)
       setTimeout(() => startConnection(), 1000)
@@ -208,7 +215,7 @@ export default function ConnectPage() {
     try {
       const res = await fetch('/api/whatsapp/pair-code', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
         body: JSON.stringify({ phone: pairPhone.replace(/\D/g, '') }),
       })
       const data = await res.json()
@@ -227,7 +234,7 @@ export default function ConnectPage() {
     if (!confirm('Desconectar el bot? Dejara de responder mensajes.')) return
     setDisconnecting(true)
     try {
-      await fetch('/api/whatsapp/disconnect', { method: 'POST' })
+      await fetch('/api/whatsapp/disconnect', { method: 'POST', headers: await getAuthHeaders() })
       setStatus('disconnected')
       setQR(null)
     } finally {
@@ -236,7 +243,7 @@ export default function ConnectPage() {
   }
 
   async function reloadChannels() {
-    const res = await fetch('/api/channels')
+    const res = await fetch('/api/channels', { headers: await getAuthHeaders() })
     const data = await res.json()
     setChannels(data.channels ?? [])
   }
@@ -297,7 +304,7 @@ export default function ConnectPage() {
     setWaApiLoading(true)
     setWaApiError(null)
     try {
-      const setupRes = await fetch('/api/whatsapp-business/connect')
+      const setupRes = await fetch('/api/whatsapp-business/connect', { headers: await getAuthHeaders() })
       const setup = await setupRes.json()
       if (!setupRes.ok) {
         setWaApiError(setup.error || 'Falta configurar WhatsApp oficial')
@@ -340,7 +347,7 @@ export default function ConnectPage() {
 
       const res = await fetch('/api/whatsapp-business/connect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
         body: JSON.stringify({
           code: authCode,
           phoneNumberId: signupData?.phone_number_id,
@@ -367,7 +374,7 @@ export default function ConnectPage() {
     setWaApiLoading(true)
     setWaApiError(null)
     try {
-      await fetch('/api/whatsapp-business/connect', { method: 'DELETE' })
+      await fetch('/api/whatsapp-business/connect', { method: 'DELETE', headers: await getAuthHeaders() })
       await reloadChannels()
     } finally {
       setWaApiLoading(false)
