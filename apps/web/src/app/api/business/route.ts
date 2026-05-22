@@ -52,6 +52,8 @@ export async function GET() {
     const accessToken = extractAccessToken(cookieStore)
 
     if (!accessToken) {
+      const all = cookieStore.getAll()
+      console.log('[api/business] No token found. Cookies:', all.map(c => `${c.name}=${c.value.slice(0,30)}`).join(' | '))
       return NextResponse.json({ business: null }, { status: 401 })
     }
 
