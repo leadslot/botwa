@@ -6,6 +6,8 @@ import type { ConnectionMetadata } from '@/lib/email/types'
 import { refreshGmailToken, sendGmailDraft } from '@/lib/email/gmail'
 import { refreshOutlookToken, sendOutlookDraft } from '@/lib/email/outlook'
 import { sendICloudDraft } from '@/lib/email/icloud'
+import { sendImapSmtp } from '@/lib/email/imap'
+import type { ImapConfig } from '@/lib/email/imap'
 
 async function getAuth() {
   const cookieStore = await cookies()
@@ -93,6 +95,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
       } else if (draft.provider === 'icloud' && meta?.email && meta?.app_password) {
         await sendICloudDraft(meta.email, meta.app_password, draft.from_email, draft.subject, draft.draft_body)
+      } else if (draft.provider === 'imap' && meta?.email && meta?.app_password && meta?.imap_host && meta?.smtp_host) {
+        const cfg: ImapConfig = {
+          email: meta.email,
+          password: meta.app_password,
+          imap_host: meta.imap_host,
+          imap_port: meta.imap_port ?? 993,
+          smtp_host: meta.smtp_host,
+          smtp_port: meta.smtp_port ?? 587,
+        }
+        await sendImapSmtp(cfg, draft.from_email, draft.subject, draft.draft_body)
       } else {
         return NextResponse.json({ error: 'No hay conexion activa para enviar' }, { status: 400 })
       }

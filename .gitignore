@@ -9,3 +9,4 @@ build/
 Thumbs.db
 apps/bot/sessions/
 apps/bot/auth_info_baileys/
+supabase/.temp/

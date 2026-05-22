@@ -32,6 +32,7 @@ export async function DELETE(req: NextRequest) {
   if (provider === 'gmail') query = query.like('external_id', 'gmail:%')
   if (provider === 'outlook') query = query.like('external_id', 'outlook:%')
   if (provider === 'icloud') query = query.like('external_id', 'icloud:%')
+  if (provider === 'imap') query = query.like('external_id', 'imap:%')
 
   const { error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -46,6 +47,39 @@ export async function POST(req: NextRequest) {
   const provider = String(body.provider || '').toLowerCase()
   const email = String(body.email || '').trim().toLowerCase()
   const appPassword = String(body.appPassword || '').trim()
+
+  // Generic IMAP/SMTP provider
+  if (provider === 'imap') {
+    const imapHost = String(body.imapHost || '').trim()
+    const imapPort = Number(body.imapPort) || 993
+    const smtpHost = String(body.smtpHost || '').trim()
+    const smtpPort = Number(body.smtpPort) || 587
+    const password = String(body.password || '').trim()
+    if (!email || !password || !imapHost || !smtpHost) {
+      return NextResponse.json({ error: 'Faltan campos: email, password, imapHost, smtpHost' }, { status: 400 })
+    }
+    const { error } = await auth.adminClient.from('channel_connections').upsert({
+      business_id: auth.businessId,
+      channel: 'email',
+      status: 'active',
+      external_id: `imap:${email}`,
+      display_name: `${email}`,
+      metadata: {
+        provider: 'imap',
+        email,
+        app_password: password,
+        imap_host: imapHost,
+        imap_port: imapPort,
+        smtp_host: smtpHost,
+        smtp_port: smtpPort,
+        mode: 'drafts_first',
+        auto_send_enabled: false,
+      },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'business_id,channel,external_id' })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
 
   if (provider !== 'icloud') return NextResponse.json({ error: 'proveedor no soportado' }, { status: 400 })
   if (!email.endsWith('@icloud.com') && !email.endsWith('@me.com') && !email.endsWith('@mac.com')) {

@@ -16,6 +16,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 )
 
+async function isChannelPaused(businessId, channel) {
+  try {
+    const { data } = await supabase
+      .from('channel_connections')
+      .select('status')
+      .eq('business_id', businessId)
+      .eq('channel', channel)
+      .eq('status', 'paused')
+      .limit(1)
+      .maybeSingle()
+    return Boolean(data)
+  } catch {
+    return false
+  }
+}
+
 // ─── Supabase-backed auth state (persiste credenciales aunque Railway se reinicie)
 async function useSupabaseAuthState(businessId) {
   const read = async () => {
@@ -377,6 +393,11 @@ export const botManager = {
         const fromClean = from.replace(/@[^@]+$/, '')
         if (this.isPaused(businessId, fromClean)) {
           console.log(`[${businessId}] Bot pausado para ${fromClean}`)
+          continue
+        }
+
+        if (await isChannelPaused(businessId, 'whatsapp')) {
+          console.log(`[${businessId}] WhatsApp pausado por canal`)
           continue
         }
 

@@ -83,6 +83,13 @@ export default function ConnectPage() {
   const [emailError, setEmailError] = useState<string | null>(null)
   const [icloudEmail, setIcloudEmail] = useState('')
   const [icloudPassword, setIcloudPassword] = useState('')
+  const [imapEmail, setImapEmail] = useState('')
+  const [imapPassword, setImapPassword] = useState('')
+  const [imapHost, setImapHost] = useState('')
+  const [imapPort, setImapPort] = useState('993')
+  const [smtpHost, setSmtpHost] = useState('')
+  const [smtpPort, setSmtpPort] = useState('587')
+  const [imapPreset, setImapPreset] = useState('')
   const [copiedWidget, setCopiedWidget] = useState<string | null>(null)
   const [activeTool, setActiveTool] = useState<ChannelId>('whatsapp')
 
@@ -414,7 +421,7 @@ export default function ConnectPage() {
     }
   }
 
-  const disconnectEmail = async (provider?: 'gmail' | 'outlook' | 'icloud') => {
+  const disconnectEmail = async (provider?: 'gmail' | 'outlook' | 'icloud' | 'imap') => {
     setEmailLoading(provider ?? 'all')
     setEmailError(null)
     try {
@@ -442,6 +449,58 @@ export default function ConnectPage() {
       }
       setIcloudEmail('')
       setIcloudPassword('')
+      await reloadChannels()
+    } finally {
+      setEmailLoading(null)
+    }
+  }
+
+  const IMAP_PRESETS: Record<string, { label: string; imap_host: string; imap_port: string; smtp_host: string; smtp_port: string }> = {
+    yahoo: { label: 'Yahoo Mail', imap_host: 'imap.mail.yahoo.com', imap_port: '993', smtp_host: 'smtp.mail.yahoo.com', smtp_port: '465' },
+    zoho: { label: 'Zoho Mail', imap_host: 'imap.zoho.com', imap_port: '993', smtp_host: 'smtp.zoho.com', smtp_port: '465' },
+    titan: { label: 'Titan Mail', imap_host: 'imap.titan.email', imap_port: '993', smtp_host: 'smtp.titan.email', smtp_port: '465' },
+    hostinger: { label: 'Hostinger Mail', imap_host: 'imap.hostinger.com', imap_port: '993', smtp_host: 'smtp.hostinger.com', smtp_port: '465' },
+    custom: { label: 'Dominio propio / otro', imap_host: '', imap_port: '993', smtp_host: '', smtp_port: '587' },
+  }
+
+  const applyImapPreset = (key: string) => {
+    setImapPreset(key)
+    const p = IMAP_PRESETS[key]
+    if (p) {
+      setImapHost(p.imap_host)
+      setImapPort(p.imap_port)
+      setSmtpHost(p.smtp_host)
+      setSmtpPort(p.smtp_port)
+    }
+  }
+
+  const connectImap = async () => {
+    setEmailLoading('imap')
+    setEmailError(null)
+    try {
+      const res = await fetch('/api/email/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'imap',
+          email: imapEmail,
+          password: imapPassword,
+          imapHost,
+          imapPort: Number(imapPort),
+          smtpHost,
+          smtpPort: Number(smtpPort),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setEmailError(data.error || 'No se pudo conectar')
+        return
+      }
+      setImapEmail('')
+      setImapPassword('')
+      setImapHost('')
+      setSmtpHost('')
+      setImapPreset('')
       await reloadChannels()
     } finally {
       setEmailLoading(null)
@@ -725,7 +784,7 @@ export default function ConnectPage() {
         <SectionCard className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">Email: Gmail, Outlook e iCloud</h2>
+              <h2 className="text-lg font-semibold text-slate-950">Email: Gmail, Outlook, iCloud y cualquier proveedor</h2>
               <p className="mt-1 max-w-2xl text-sm text-slate-500">
                 Conecta casillas para leer, clasificar, detectar prioridad y preparar borradores. Por seguridad, el envio automatico queda apagado hasta definir reglas.
               </p>
@@ -735,7 +794,7 @@ export default function ConnectPage() {
             </StatusPill>
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <div className="mt-4 grid gap-3 lg:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -779,6 +838,53 @@ export default function ConnectPage() {
                 </button>
               </div>
             </div>
+
+            <div className="rounded-2xl border border-violet-100 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-slate-950">Otro correo (IMAP)</h3>
+                  <p className="mt-1 text-sm text-slate-500">Yahoo, Zoho, dominio propio, Titan, Hostinger y mas.</p>
+                </div>
+                <Mail className="h-5 w-5 text-[#6C4DFF]" />
+              </div>
+              <div className="mt-4 space-y-2">
+                <select value={imapPreset} onChange={e => applyImapPreset(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400 bg-white">
+                  <option value="">-- Elegir proveedor --</option>
+                  {Object.entries(IMAP_PRESETS).map(([key, p]) => (
+                    <option key={key} value={key}>{p.label}</option>
+                  ))}
+                </select>
+                <input value={imapEmail} onChange={e => setImapEmail(e.target.value)} placeholder="tu@dominio.com" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
+                <input value={imapPassword} onChange={e => setImapPassword(e.target.value)} type="password" placeholder="Contrasena (o contrasena de app)" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <p className="mb-1 text-xs text-slate-400">IMAP Host</p>
+                    <input value={imapHost} onChange={e => setImapHost(e.target.value)} placeholder="imap.dominio.com" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
+                  </div>
+                  <div className="w-20">
+                    <p className="mb-1 text-xs text-slate-400">Puerto</p>
+                    <input value={imapPort} onChange={e => setImapPort(e.target.value)} placeholder="993" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <p className="mb-1 text-xs text-slate-400">SMTP Host</p>
+                    <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.dominio.com" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
+                  </div>
+                  <div className="w-20">
+                    <p className="mb-1 text-xs text-slate-400">Puerto</p>
+                    <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
+                  </div>
+                </div>
+                <button
+                  onClick={connectImap}
+                  disabled={emailLoading === 'imap' || !imapEmail.trim() || !imapPassword.trim() || !imapHost.trim() || !smtpHost.trim()}
+                  className="w-full rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {emailLoading === 'imap' ? 'Conectando...' : 'Conectar'}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="mt-4 rounded-2xl border border-violet-200 bg-[#F8F5FF] p-4">
@@ -799,7 +905,7 @@ export default function ConnectPage() {
               </div>
               <div className="space-y-2">
                 {emailConnections.map(connection => {
-                  const provider = connection.external_id?.startsWith('gmail:') ? 'gmail' : connection.external_id?.startsWith('outlook:') ? 'outlook' : connection.external_id?.startsWith('icloud:') ? 'icloud' : undefined
+                  const provider = connection.external_id?.startsWith('gmail:') ? 'gmail' : connection.external_id?.startsWith('outlook:') ? 'outlook' : connection.external_id?.startsWith('icloud:') ? 'icloud' : connection.external_id?.startsWith('imap:') ? 'imap' : undefined
                   return (
                     <div key={connection.id} className="flex flex-col gap-2 rounded-xl bg-white px-3 py-3 text-sm md:flex-row md:items-center md:justify-between">
                       <div>

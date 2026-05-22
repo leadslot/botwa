@@ -1,4 +1,4 @@
-export type EmailProvider = 'gmail' | 'outlook' | 'icloud'
+export type EmailProvider = 'gmail' | 'outlook' | 'icloud' | 'imap'
 
 export type EmailMessage = {
   messageId: string

@@ -1,10 +1,28 @@
 name: Keepalive Bot
 on:
   schedule:
+    # GitHub Actions minimum is every 5 min — run 3 jobs offset by ~1-2 min each
+    # to simulate a ping every ~1-2 minutes and survive GitHub's scheduling delays
     - cron: '*/5 * * * *'
+    - cron: '1-59/5 * * * *'
+    - cron: '2-59/5 * * * *'
+  workflow_dispatch:
+
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Ping Render bot
-        run: curl -fs https://botwa-bot.onrender.com/health || true
+      - name: Ping Render bot (health)
+        run: |
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://botwa-bot.onrender.com/health)
+            echo "Intento $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Bot activo!"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Bot no respondio en 3 intentos"
+          exit 0

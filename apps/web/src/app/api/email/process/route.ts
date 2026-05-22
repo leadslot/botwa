@@ -6,6 +6,8 @@ import type { ChannelConnection, ConnectionMetadata } from '@/lib/email/types'
 import { refreshGmailToken, getUnreadGmailMessages, createGmailDraft, sendGmailDraft, markGmailRead } from '@/lib/email/gmail'
 import { refreshOutlookToken, getUnreadOutlookMessages, createOutlookDraft, sendOutlookDraft, markOutlookRead } from '@/lib/email/outlook'
 import { getUnreadICloudMessages, createICloudDraft, sendICloudDraft, markICloudRead } from '@/lib/email/icloud'
+import { getUnreadImapMessages, createImapDraft, sendImapSmtp, markImapRead } from '@/lib/email/imap'
+import type { ImapConfig } from '@/lib/email/imap'
 import { generateChannelResponse } from '@/lib/ai-response'
 
 async function getAuth() {
@@ -218,6 +220,60 @@ export async function POST() {
             business_id: business.id,
             connection_id: conn.id,
             provider: 'icloud',
+            message_id: msg.messageId,
+            subject: msg.subject,
+            from_email: msg.fromEmail,
+            from_name: msg.fromName,
+            original_snippet: msg.snippet,
+            draft_body: draftBody,
+            draft_provider_id: draftProviderId,
+            status,
+            auto_sent: autoSend,
+          })
+          totalDrafts++
+        }
+      } else if (meta.provider === 'imap' && meta.email && meta.app_password && meta.imap_host && meta.smtp_host) {
+        const cfg: ImapConfig = {
+          email: meta.email,
+          password: meta.app_password,
+          imap_host: meta.imap_host,
+          imap_port: meta.imap_port ?? 993,
+          smtp_host: meta.smtp_host,
+          smtp_port: meta.smtp_port ?? 587,
+        }
+        const messages = await getUnreadImapMessages(cfg, 5)
+
+        for (const msg of messages) {
+          const { data: existing } = await adminClient
+            .from('email_drafts')
+            .select('id')
+            .eq('business_id', business.id)
+            .eq('provider', 'imap')
+            .eq('message_id', msg.messageId)
+            .single()
+          if (existing) continue
+
+          const draftBody = await generateChannelResponse(
+            `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`,
+            business,
+            'email'
+          )
+
+          let draftProviderId: string | null = null
+          let status = 'pending'
+
+          if (autoSend) {
+            await sendImapSmtp(cfg, msg.fromEmail, msg.subject, draftBody)
+            status = 'auto_sent'
+          } else {
+            draftProviderId = await createImapDraft(cfg, msg.fromEmail, msg.subject, draftBody)
+          }
+
+          await markImapRead(cfg, [msg.messageId])
+          await adminClient.from('email_drafts').insert({
+            business_id: business.id,
+            connection_id: conn.id,
+            provider: 'imap',
             message_id: msg.messageId,
             subject: msg.subject,
             from_email: msg.fromEmail,
