@@ -22,58 +22,85 @@ type Business = {
 type DashboardData = {
   business: Business | null
   loading: boolean
+  loadError: boolean
   reload: () => void
 }
 
-const DashboardContext = createContext<DashboardData>({ business: null, loading: true, reload: () => {} })
+const DashboardContext = createContext<DashboardData>({ business: null, loading: true, loadError: false, reload: () => {} })
 
 export function useDashboard() {
   return useContext(DashboardContext)
 }
 
+const RETRY_DELAYS = [1000, 3000] // 2 reintentos: 1s y 3s
+
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const fetched = useRef(false)
 
-  const fetchBusiness = async () => {
+  const fetchBusiness = async (attempt = 0) => {
     if (fetched.current) return
     fetched.current = true
     try {
       const res = await fetch('/api/business')
-      if (!res.ok) {
-        // Error de red o server — NO redirigir, solo loggear
-        console.error('DashboardContext: /api/business returned', res.status)
+
+      // 401 = sin sesión, estado esperado para usuario no logueado
+      if (res.status === 401) {
         setLoading(false)
         return
       }
+
+      // 5xx = error de servidor → reintentar automáticamente
+      if (res.status >= 500) {
+        if (attempt < RETRY_DELAYS.length) {
+          console.warn(`DashboardContext: error ${res.status}, reintentando en ${RETRY_DELAYS[attempt]}ms`)
+          fetched.current = false
+          setTimeout(() => fetchBusiness(attempt + 1), RETRY_DELAYS[attempt])
+          return
+        }
+        // Agotamos reintentos — mostrar error real, no onboarding falso
+        console.error('DashboardContext: /api/business falló después de reintentos')
+        setLoadError(true)
+        setLoading(false)
+        return
+      }
+
       const json = await res.json()
       if (json.business) {
         setBusiness(json.business)
+        setLoadError(false)
       }
-      // Si business es null: no redirigir automáticamente.
-      // Puede ser error transitorio de sesión o de red.
-      // El usuario verá el dashboard vacío y podrá navegar normalmente.
+      // business: null con 200 = usuario sin negocio configurado (estado real)
     } catch (e) {
-      // Error de red — NO redirigir, mantener estado anterior
-      console.error('DashboardContext error:', e)
+      // Error de red — reintentar si hay intentos disponibles
+      if (attempt < RETRY_DELAYS.length) {
+        fetched.current = false
+        setTimeout(() => fetchBusiness(attempt + 1), RETRY_DELAYS[attempt])
+        return
+      }
+      console.error('DashboardContext error de red:', e)
+      setLoadError(true)
     } finally {
-      setLoading(false)
+      if (attempt === 0 || fetched.current) setLoading(false)
     }
   }
 
   const reload = () => {
     fetched.current = false
+    setLoadError(false)
     setBusiness(prev => prev) // mantener datos actuales mientras recarga
     fetchBusiness()
   }
 
   useEffect(() => {
     fetchBusiness()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
-    <DashboardContext.Provider value={{ business, loading, reload }}>
+    <DashboardContext.Provider value={{ business, loading, loadError, reload }}>
       {children}
     </DashboardContext.Provider>
   )

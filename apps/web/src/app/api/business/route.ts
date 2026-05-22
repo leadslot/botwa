@@ -11,23 +11,30 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
     )
-    // getSession lee del cookie local — sin network call, no falla
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) return NextResponse.json({ business: null })
+    const { data: { user }, error: authError } = await authClient.auth.getUser()
+    // Sin sesión → 401 (no es error de servidor, es estado esperado)
+    if (authError || !user) return NextResponse.json({ business: null }, { status: 401 })
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_KEY!
     )
-    const { data } = await adminClient
+    const { data, error: dbError } = await adminClient
       .from('businesses')
-      .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds')
+      .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds, context_messages')
       .eq('user_id', user.id)
       .single()
 
+    if (dbError && dbError.code !== 'PGRST116') {
+      // PGRST116 = no rows found (negocio nuevo, no es error)
+      console.error('/api/business DB error:', dbError)
+      return NextResponse.json({ error: 'db_error' }, { status: 500 })
+    }
+
     return NextResponse.json({ business: data ?? null })
   } catch (e) {
+    // Error inesperado → 500 para que el cliente pueda distinguirlo de "sin datos"
     console.error('/api/business error:', e)
-    return NextResponse.json({ business: null })
+    return NextResponse.json({ error: 'server_error' }, { status: 500 })
   }
 }

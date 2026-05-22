@@ -46,7 +46,7 @@ function RealChart({ days }: { days: { label: string; inbound: number; outbound:
 }
 
 export default function DashboardPage() {
-  const { business, loading } = useDashboard()
+  const { business, loading, loadError } = useDashboard()
   const [waStatus, setWaStatus] = useState<'connected' | 'disconnected' | 'reconnecting' | null>(null)
   const [recentContacts, setRecentContacts] = useState<{ number: string; msg: string; time: string; pushName?: string }[]>([])
   const [statDays, setStatDays] = useState<{ label: string; inbound: number; outbound: number }[]>([])
@@ -90,6 +90,22 @@ export default function DashboardPage() {
         {[1, 2, 3, 4].map(i => <div key={i} className="h-24 rounded-2xl border border-slate-200 bg-white" />)}
       </div>
       <div className="h-32 rounded-2xl border border-slate-200 bg-white" />
+    </div>
+  )
+
+  // Error de servidor (5xx o red) — NO mostrar onboarding, mostrar error real
+  if (loadError) return (
+    <div className="flex min-h-[70vh] items-center justify-center">
+      <SectionCard className="max-w-md p-6 text-center border-red-100 bg-red-50">
+        <h2 className="text-xl font-semibold text-red-800">Error al cargar datos</h2>
+        <p className="mt-2 text-sm text-red-600">Hubo un problema al conectar con el servidor. Tus datos están intactos.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-5 inline-flex rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-semibold text-white"
+        >
+          Reintentar
+        </button>
+      </SectionCard>
     </div>
   )
 
