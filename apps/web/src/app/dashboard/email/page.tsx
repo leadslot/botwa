@@ -6,14 +6,26 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  FileText,
   Mail,
+  Pencil,
   Play,
+  Plus,
   RefreshCw,
   Send,
   Trash2,
+  X,
   Zap,
 } from 'lucide-react'
 import { SectionCard, StatusPill } from '@/components/dashboard/ui'
+
+type Template = {
+  id: string
+  title: string
+  body: string
+  keywords: string[]
+  channel: string
+}
 
 type EmailDraft = {
   id: string
@@ -74,21 +86,69 @@ export default function EmailPage() {
   const [expandedDraft, setExpandedDraft] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
+  // Templates
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
+  const [newTemplate, setNewTemplate] = useState<{ title: string; body: string; keywords: string } | null>(null)
+  const [savingTemplate, setSavingTemplate] = useState(false)
+
   async function load() {
     setLoading(true)
-    const [chRes, drRes] = await Promise.all([
+    const [chRes, drRes, tplRes] = await Promise.all([
       fetch('/api/channels'),
       fetch('/api/email/drafts'),
+      fetch('/api/templates'),
     ])
     const chData = await chRes.json()
     const drData = await drRes.json()
+    const tplData = await tplRes.json()
     const emailConns = (chData.channels ?? []).filter((c: EmailConnection) => c.status !== 'disconnected' && c.external_id?.includes(':'))
     setConnections(emailConns)
     setDrafts(drData.drafts ?? [])
+    setTemplates((tplData.templates ?? []).filter((t: Template) => t.channel === 'all' || t.channel === 'email'))
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
+
+  async function saveNewTemplate() {
+    if (!newTemplate?.title.trim() || !newTemplate.body.trim()) return
+    setSavingTemplate(true)
+    const keywords = newTemplate.keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean)
+    await fetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTemplate.title, body: newTemplate.body, keywords, channel: 'email' }),
+    })
+    setNewTemplate(null)
+    setSavingTemplate(false)
+    load()
+  }
+
+  async function saveEditTemplate() {
+    if (!editingTemplate) return
+    setSavingTemplate(true)
+    await fetch(`/api/templates/${editingTemplate.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: editingTemplate.title,
+        body: editingTemplate.body,
+        keywords: typeof editingTemplate.keywords === 'string'
+          ? (editingTemplate.keywords as unknown as string).split(',').map((k: string) => k.trim().toLowerCase()).filter(Boolean)
+          : editingTemplate.keywords,
+      }),
+    })
+    setEditingTemplate(null)
+    setSavingTemplate(false)
+    load()
+  }
+
+  async function deleteTemplate(id: string) {
+    if (!confirm('¿Eliminar esta plantilla?')) return
+    await fetch(`/api/templates/${id}`, { method: 'DELETE' })
+    load()
+  }
 
   async function processEmails() {
     setProcessing(true)
@@ -211,6 +271,131 @@ export default function EmailPage() {
             })}
           </div>
         )}
+      </SectionCard>
+
+      {/* Templates */}
+      <SectionCard className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-950">Plantillas de respuesta</h2>
+            <p className="text-xs text-slate-500">El bot usa estas plantillas cuando detecta la palabra clave en el correo.</p>
+          </div>
+          {!newTemplate && (
+            <button
+              onClick={() => setNewTemplate({ title: '', body: '', keywords: '' })}
+              className="flex items-center gap-1.5 rounded-xl bg-[#6C4DFF] px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 transition"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nueva plantilla
+            </button>
+          )}
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {/* Formulario nueva plantilla */}
+          {newTemplate && (
+            <div className="grid gap-3 p-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <input
+                  value={newTemplate.title}
+                  onChange={e => setNewTemplate(t => t ? { ...t, title: e.target.value } : t)}
+                  placeholder="Título (ej: Info cabañas, Reclamos, Políticas...)"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                />
+                <input
+                  value={newTemplate.keywords}
+                  onChange={e => setNewTemplate(t => t ? { ...t, keywords: e.target.value } : t)}
+                  placeholder="Palabras clave separadas por coma (ej: reserva, consulta, precio)"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={newTemplate.body}
+                  onChange={e => setNewTemplate(t => t ? { ...t, body: e.target.value } : t)}
+                  rows={5}
+                  placeholder="Pegá el texto del mail que mandás normalmente..."
+                  className="w-full flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setNewTemplate(null)} className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition">
+                    <X className="h-3.5 w-3.5" /> Cancelar
+                  </button>
+                  <button onClick={saveNewTemplate} disabled={savingTemplate} className="flex items-center gap-1 rounded-lg bg-[#6C4DFF] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-violet-700 transition">
+                    {savingTemplate ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Lista de plantillas */}
+          {templates.length === 0 && !newTemplate ? (
+            <div className="px-4 py-8 text-center">
+              <FileText className="mx-auto mb-2 h-8 w-8 text-slate-300" />
+              <p className="text-sm text-slate-500">Sin plantillas todavía. Creá una para que el bot la use automáticamente.</p>
+            </div>
+          ) : templates.map(t => (
+            <div key={t.id}>
+              {editingTemplate?.id === t.id ? (
+                <div className="grid gap-3 p-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <input
+                      value={editingTemplate.title}
+                      onChange={e => setEditingTemplate(et => et ? { ...et, title: e.target.value } : et)}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none"
+                    />
+                    <input
+                      value={Array.isArray(editingTemplate.keywords) ? editingTemplate.keywords.join(', ') : editingTemplate.keywords}
+                      onChange={e => setEditingTemplate(et => et ? { ...et, keywords: e.target.value as unknown as string[] } : et)}
+                      placeholder="Palabras clave separadas por coma"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      value={editingTemplate.body}
+                      onChange={e => setEditingTemplate(et => et ? { ...et, body: e.target.value } : et)}
+                      rows={5}
+                      className="w-full flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-violet-400 focus:outline-none"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setEditingTemplate(null)} className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition">
+                        <X className="h-3.5 w-3.5" /> Cancelar
+                      </button>
+                      <button onClick={saveEditTemplate} disabled={savingTemplate} className="flex items-center gap-1 rounded-lg bg-[#6C4DFF] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 transition">
+                        {savingTemplate ? 'Guardando...' : 'Guardar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 px-4 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-900 text-sm">{t.title}</p>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {t.keywords.slice(0, 5).map(k => (
+                        <span key={k} className="rounded-full bg-violet-50 px-2 py-0.5 text-xs text-violet-600">{k}</span>
+                      ))}
+                      {t.keywords.length === 0 && <span className="text-xs text-slate-400">Sin palabras clave</span>}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 line-clamp-2">{t.body}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button onClick={() => { setEditingTemplate(t); setNewTemplate(null) }} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => deleteTemplate(t.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 transition">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </SectionCard>
 
       {/* Pending drafts */}
