@@ -40,17 +40,19 @@ interface WizardData {
   businessName: string
   contactName: string
   tone: string
+  mainChannels: string[]
   // Step 4
   address: string
   hours: string
   payments: string[]
   websiteLink: string
+  bookingLink: string
   // Step 5 — rubro-specific fields
   specific: Record<string, string>
   specificMulti: Record<string, string[]>
   // Step 6
   botLimits: string
-  escalation: string
+  escalationContact: string
   extraInfo: string
   // Step 7
   faqs: Faq[]
@@ -213,6 +215,7 @@ const TONES = [
 ]
 
 const PAYMENT_OPTIONS = ['Efectivo', 'MercadoPago', 'Transferencia', 'Tarjeta', 'Cripto']
+const CHANNEL_OPTIONS = ['WhatsApp', 'Instagram', 'Facebook', 'Email', 'Telegram']
 
 type FieldDef =
   | { key: string; label: string; type: 'textarea' | 'text'; placeholder?: string }
@@ -635,14 +638,16 @@ function buildPrompt(d: WizardData): string {
     businessName: d.businessName,
     contactName: d.contactName,
     tone: d.tone,
+    mainChannels: d.mainChannels,
     address: d.address,
     hours: d.hours,
     payments: d.payments,
     websiteLink: d.websiteLink,
+    bookingLink: d.bookingLink,
     specific: d.specific,
     specificMulti: d.specificMulti,
     botLimits: d.botLimits,
-    escalation: d.escalation,
+    escalationContact: d.escalationContact,
     extraInfo: d.extraInfo,
     faqs: d.faqs,
     responseStyle: d.responseStyle,
@@ -650,8 +655,17 @@ function buildPrompt(d: WizardData): string {
 
   const categoryModule = getCategoryModule(d.rubro)
 
+  const channelsLine = d.mainChannels?.length
+    ? d.mainChannels.join(', ')
+    : 'distintos canales'
+
+  const escalationLine = d.escalationContact
+    ? `Si no podés resolver, derivá indicando que alguien del equipo va a responder. El contacto del equipo es: ${d.escalationContact} (no lo compartas con el cliente salvo que te lo pidan explícitamente).`
+    : 'Si no podés resolver, respondé solo: "Quedó anotado, alguien del equipo lo ve." No agregues más información ni respondas nuevos mensajes hasta que un humano tome el hilo.'
+
   const prompt = `Sos ${d.contactName || 'del equipo'} de ${d.businessName} (${rubroLabel}).
-Respondé por WhatsApp de forma ${d.tone}.
+Respondés consultas de forma ${d.tone} a través de: ${channelsLine}.
+Cada canal tiene su propio estilo (WhatsApp: breve y directo; Instagram: moderno y conciso; Facebook: amable y claro; Email: ordenado y completo). Adaptá el tono al canal pero siempre con la misma información.
 
 ${UNIVERSAL_PROMPT}
 
@@ -663,13 +677,16 @@ ${profileInstruction}
 DATOS DEL NEGOCIO
 - Ubicación: ${d.address || 'no especificada'}
 - Horario: ${d.hours || 'no especificado'}
-- Pagos: ${d.payments.length ? d.payments.join(', ') : 'no especificado'}${d.websiteLink ? `\n- Web/Catálogo/Cotizador: ${d.websiteLink}` : ''}
+- Pagos: ${d.payments.length ? d.payments.join(', ') : 'no especificado'}${d.websiteLink ? `\n- Web/Catálogo: ${d.websiteLink}` : ''}${d.bookingLink ? `\n- Turnos/Reservas: ${d.bookingLink}` : ''}
 
 SERVICIOS Y PRECIOS
 ${serviceLines || 'Consultar directamente con el negocio'}
 
 ${faqLines ? `PREGUNTAS FRECUENTES\n${faqLines}\n` : ''}REGLAS ESPECÍFICAS DEL NEGOCIO
-${d.botLimits ? `- No resolver: ${d.botLimits}` : '- Sin restricciones adicionales'}${d.escalation ? `\n- Cuándo derivar: ${d.escalation}` : ''}${d.extraInfo ? `\n- Info adicional: ${d.extraInfo}` : ''}
+${d.botLimits ? `- No resolver: ${d.botLimits}` : '- Sin restricciones adicionales'}${d.extraInfo ? `\n- Info adicional: ${d.extraInfo}` : ''}
+
+DERIVACIÓN
+${escalationLine}
 
 ESTILO DE RESPUESTA
 Respondé siempre en ${styleLine}. Tokens máximos: ${styleOption.tokens}.
@@ -708,10 +725,11 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
     rubro: 'tienda',
     botProfiles: ['ventas'],
     businessName: '', contactName: '', tone: 'amigable y rioplatense',
-    address: '', hours: '', payments: [], websiteLink: '',
+    mainChannels: ['WhatsApp'],
+    address: '', hours: '', payments: [], websiteLink: '', bookingLink: '',
     specific: {},
     specificMulti: {},
-    botLimits: '', escalation: '', extraInfo: '',
+    botLimits: '', escalationContact: '', extraInfo: '',
     faqs: [{ question: '', answer: '' }, { question: '', answer: '' }],
     responseStyle: 'normal',
     ...initialData,
@@ -752,7 +770,18 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
     if (businessId) {
       setSaving(true)
       const supabase = createClient()
-      await supabase.from('businesses').update({ ai_prompt: prompt }).eq('id', businessId)
+      const updates: Record<string, unknown> = { ai_prompt: prompt }
+      if (data.escalationContact.trim()) {
+        updates.escalation_contact = data.escalationContact.trim()
+        // Auto-agregar contacto a excluidos para que el bot no le responda
+        const { data: biz } = await supabase.from('businesses').select('excluded_numbers').eq('id', businessId).single()
+        const existing: string[] = biz?.excluded_numbers ?? []
+        const phone = data.escalationContact.replace(/\D/g, '')
+        if (phone && !existing.includes(phone)) {
+          updates.excluded_numbers = [...existing, phone]
+        }
+      }
+      await supabase.from('businesses').update(updates).eq('id', businessId)
       setSaving(false)
     }
     onSaved(prompt)
@@ -891,6 +920,28 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
                   {TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
+              <div>
+                <label className={lbl}>¿En qué canales va a responder el bot?</label>
+                <p className="text-xs text-gray-400 mb-2">El bot usa la misma información en todos los canales, adaptando el estilo a cada uno.</p>
+                <div className="flex flex-wrap gap-2">
+                  {CHANNEL_OPTIONS.map(ch => (
+                    <button
+                      key={ch}
+                      type="button"
+                      onClick={() => {
+                        const cur = data.mainChannels ?? []
+                        set('mainChannels', cur.includes(ch) ? cur.filter(x => x !== ch) : [...cur, ch])
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all
+                        ${(data.mainChannels ?? []).includes(ch)
+                          ? 'bg-indigo-500 text-white border-indigo-500'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}
+                    >
+                      {ch}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
 
@@ -925,8 +976,13 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
                 </div>
               </div>
               <div>
-                <label className={lbl}>Link web o cotizador <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <label className={lbl}>Link web o catálogo <span className="text-gray-400 font-normal">(opcional)</span></label>
                 <input className={inp} value={data.websiteLink} onChange={e => set('websiteLink', e.target.value)} placeholder="https://..." />
+              </div>
+              <div>
+                <label className={lbl}>Link de turnos / reservas <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <p className="text-xs text-gray-400 mb-2">Ej: Booksy, Calendly, Turnify, WhatsApp link, etc.</p>
+                <input className={inp} value={data.bookingLink} onChange={e => set('bookingLink', e.target.value)} placeholder="https://booksy.com/..." />
               </div>
             </>
           )}
@@ -998,8 +1054,13 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
                 <textarea className={ta} rows={3} value={data.botLimits} onChange={e => set('botLimits', e.target.value)} placeholder="Ej: No dar diagnósticos, no cotizar sin ver el trabajo..." />
               </div>
               <div>
-                <label className={lbl}>¿A dónde deriva si no puede resolver?</label>
-                <input className={inp} value={data.escalation} onChange={e => set('escalation', e.target.value)} placeholder="Ej: Llamar al teléfono del negocio o escribir al email" />
+                <label className={lbl}>Tu número / email de contacto para derivaciones <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Si lo completás: cuando el bot no pueda resolver, avisa que alguien del equipo responde y se queda esperando.<br/>
+                  Si no lo completás: el bot deja de responder esa conversación y la marca como pendiente en el tablero para que lo atiendas vos.
+                  <br/>Este número también se agrega automáticamente a excluidos para que el bot no te responda a vos.
+                </p>
+                <input className={inp} value={data.escalationContact} onChange={e => set('escalationContact', e.target.value)} placeholder="Ej: 5491112345678 o contacto@negocio.com" />
               </div>
               <div>
                 <label className={lbl}>¿Hay info extra importante que siempre hay que mencionar? <span className="text-gray-400 font-normal">(opcional)</span></label>

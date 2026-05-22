@@ -9,7 +9,7 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom'
 import { createClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
-import { generateAIResponse } from './ai.js'
+import { generateAIResponse, needsEscalation } from './ai.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -414,7 +414,7 @@ export const botManager = {
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
-          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds')
+          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact')
           .eq('id', businessId)
           .single()
 
@@ -465,7 +465,25 @@ export const botManager = {
 
         // ── GENERAR RESPUESTA ─────────────────────────────
         try {
-          const response = await generateAIResponse(text, business, history)
+          // Detección de escalación antes de llamar a la IA
+          let response = null
+          if (needsEscalation(text)) {
+            if (business.escalation_contact) {
+              response = 'Gracias por escribir. Alguien del equipo te va a responder personalmente.'
+            } else {
+              // Sin contacto configurado: no responder, dejar marcado como pendiente
+              console.log(`[${businessId}] Escalación sin contacto configurado. Conversación pendiente.`)
+              await supabase.from('whatsapp_messages').insert({
+                business_id: businessId,
+                from_number: from,
+                message: text,
+                direction: 'inbound_escalated',
+              }).catch(() => {})
+              continue
+            }
+          } else {
+            response = await generateAIResponse(text, business, history)
+          }
 
           // Aplicar delay configurado por el negocio
           const delaySecs = business.response_delay_seconds || 0

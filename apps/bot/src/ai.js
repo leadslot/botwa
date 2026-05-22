@@ -47,6 +47,18 @@ async function getPool() {
 // Keys bloqueadas temporalmente (rate limit). Se resetean solos al reiniciar.
 const blockedUntil = {}
 
+const ESCALATION_KEYWORDS = [
+  'reclamo', 'queja', 'problema grave', 'estafa', 'denuncia', 'robo', 'fraude',
+  'devolucion', 'devolución', 'reembolso', 'no funciona', 'no me respondieron',
+  'muy enojad', 'estoy harto', 'pesimo', 'pésimo', 'horrible', 'vergonzoso',
+  'hablar con una persona', 'quiero hablar con alguien', 'atencion humana',
+]
+
+export function needsEscalation(text) {
+  const lower = text.toLowerCase()
+  return ESCALATION_KEYWORDS.some(k => lower.includes(k))
+}
+
 export async function generateAIResponse(userMessage, business, history = []) {
   // Inyectar lista de precios si existe
   let priceBlock = ''

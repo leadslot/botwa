@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
           const { data: business } = await adminClient
             .from('businesses')
-            .select('id, name, ai_prompt, ai_enabled, price_list')
+            .select('id, name, ai_prompt, ai_enabled, price_list, escalation_contact')
             .eq('id', businessId)
             .single()
 
@@ -124,14 +124,33 @@ export async function POST(req: NextRequest) {
             raw: message,
           })
 
-          let reply: string
+          let reply: string | null
           if (business.ai_enabled === false) {
             reply = 'Gracias por escribir. En breve te respondemos.'
           } else if (needsEscalation(text)) {
-            reply = 'Entiendo, esto lo veo directamente con alguien del equipo para darte la mejor respuesta.'
+            reply = business.escalation_contact
+              ? 'Gracias por escribir. Alguien del equipo te va a responder personalmente.'
+              : null
           } else {
             const history = conversation?.id ? await getConversationHistory(adminClient, conversation.id) : []
             reply = await generateChannelResponse(text, business, 'whatsapp_api', history)
+          }
+
+          // Si reply es null → marcar como pendiente y no enviar nada
+          if (reply === null) {
+            if (conversation?.id) {
+              await adminClient.from('channel_conversations')
+                .update({ status: 'escalated', escalated_at: new Date().toISOString() })
+                .eq('id', conversation.id)
+            }
+            continue
+          }
+
+          // Si hubo escalation con mensaje → también marcar la conversación
+          if (needsEscalation(text) && conversation?.id) {
+            await adminClient.from('channel_conversations')
+              .update({ status: 'escalated', escalated_at: new Date().toISOString() })
+              .eq('id', conversation.id)
           }
 
           await adminClient.from('channel_messages').insert({
@@ -184,7 +203,7 @@ export async function POST(req: NextRequest) {
 
         const { data: business } = await adminClient
           .from('businesses')
-          .select('id, name, ai_prompt, ai_enabled, price_list')
+          .select('id, name, ai_prompt, ai_enabled, price_list, escalation_contact')
           .eq('id', businessId)
           .single()
 
@@ -213,14 +232,32 @@ export async function POST(req: NextRequest) {
           raw: event,
         })
 
-        let reply: string
+        let reply: string | null
         if (business.ai_enabled === false) {
           reply = 'Gracias por escribir. En breve te respondemos.'
         } else if (needsEscalation(text)) {
-          reply = 'Entiendo, esto lo veo directamente con alguien del equipo para darte la mejor respuesta.'
+          reply = business.escalation_contact
+            ? 'Gracias por escribir. Alguien del equipo te va a responder personalmente.'
+            : null
         } else {
           const history = conversation?.id ? await getConversationHistory(adminClient, conversation.id) : []
           reply = await generateChannelResponse(text, business, channel, history)
+        }
+
+        // Si reply es null → marcar pendiente y no enviar
+        if (reply === null) {
+          if (conversation?.id) {
+            await adminClient.from('channel_conversations')
+              .update({ status: 'escalated', escalated_at: new Date().toISOString() })
+              .eq('id', conversation.id)
+          }
+          continue
+        }
+
+        if (needsEscalation(text) && conversation?.id) {
+          await adminClient.from('channel_conversations')
+            .update({ status: 'escalated', escalated_at: new Date().toISOString() })
+            .eq('id', conversation.id)
         }
 
         await adminClient.from('channel_messages').insert({

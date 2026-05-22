@@ -4,6 +4,7 @@ type BusinessPrompt = {
   name?: string | null
   ai_prompt?: string | null
   price_list?: { name?: string | null; price?: string | null }[] | null
+  escalation_contact?: string | null
 }
 
 export type HistoryEntry = { direction: 'inbound' | 'outbound'; message: string }
