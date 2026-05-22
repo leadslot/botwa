@@ -125,10 +125,34 @@ export function needsEscalation(text: string): boolean {
   return ESCALATION_KEYWORDS.some(k => lower.includes(k))
 }
 
+// ── Matching de plantillas ───────────────────────────────────────────────────
+async function findMatchingTemplate(businessId: string, text: string, channel: string) {
+  try {
+    const { data: templates } = await adminClient()
+      .from('business_templates')
+      .select('title, body, keywords, channel')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: true })
+
+    if (!templates?.length) return null
+
+    const lower = text.toLowerCase()
+    for (const t of templates) {
+      // Filtrar por canal si está especificado
+      if (t.channel !== 'all' && t.channel !== channel) continue
+      // Si no tiene keywords definidas, no se auto-dispara
+      if (!t.keywords?.length) continue
+      // Si alguna keyword matchea, usar esta plantilla
+      if (t.keywords.some((k: string) => lower.includes(k))) return t
+    }
+  } catch {}
+  return null
+}
+
 // ── Funcion principal ────────────────────────────────────────────────────────
 export async function generateChannelResponse(
   userMessage: string,
-  business: BusinessPrompt,
+  business: BusinessPrompt & { id?: string },
   channel: string,
   history: HistoryEntry[] = []
 ) {
@@ -152,6 +176,15 @@ REGLAS GENERALES:
 - Si te preguntan si sos un bot, respondé con honestidad de forma natural: "Soy el asistente de [negocio], te ayudo con las consultas."
 - No repitas el saludo si la conversacion ya empezo (hay historial previo).
 - Si el cliente esta enojado o reclama algo serio, respondé con empatia y deriva: "Entiendo, esto lo veo directamente con alguien del equipo para darte la mejor respuesta."`
+
+  // Chequear plantillas antes de llamar a la IA
+  if (business.id) {
+    const template = await findMatchingTemplate(business.id, userMessage, channel)
+    if (template) {
+      console.log(`[AI:${channel}] Plantilla matched: "${template.title}"`)
+      return template.body
+    }
+  }
 
   const pool = await getPool()
   for (const entry of pool) {
