@@ -458,9 +458,25 @@ export const botManager = {
         // ── LOOP DETECTION ───────────────────────────────
         if (isLoopMessage(businessId, from, text)) continue
 
+        // ── HISTORIAL DE CONVERSACIÓN ────────────────────
+        const contextLimit = business.context_messages ?? 10
+        let history = []
+        if (contextLimit > 0) {
+          const { data: histRows } = await supabase
+            .from('whatsapp_messages')
+            .select('direction, message')
+            .eq('business_id', businessId)
+            .eq('from_number', from)
+            .order('created_at', { ascending: false })
+            .limit(contextLimit)
+          if (histRows?.length) {
+            history = histRows.reverse() // cronológico: más antiguo primero
+          }
+        }
+
         // ── GENERAR RESPUESTA ─────────────────────────────
         try {
-          const response = await generateAIResponse(text, business)
+          const response = await generateAIResponse(text, business, history)
 
           // Aplicar delay configurado por el negocio
           const delaySecs = business.response_delay_seconds || 0

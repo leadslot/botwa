@@ -47,7 +47,7 @@ async function getPool() {
 // Keys bloqueadas temporalmente (rate limit). Se resetean solos al reiniciar.
 const blockedUntil = {}
 
-export async function generateAIResponse(userMessage, business) {
+export async function generateAIResponse(userMessage, business, history = []) {
   // Inyectar lista de precios si existe
   let priceBlock = ''
   if (business.price_list && business.price_list.length > 0) {
@@ -87,8 +87,8 @@ export async function generateAIResponse(userMessage, business) {
     }
 
     try {
-      console.log(`[AI] Usando ${entry.label}`)
-      const response = await callProvider(entry, userMessage, systemPrompt, maxTokens)
+      console.log(`[AI] Usando ${entry.label} | historial: ${history.length} msgs`)
+      const response = await callProvider(entry, userMessage, systemPrompt, maxTokens, history)
       return response
     } catch (err) {
       if (isRateLimit(err)) {
@@ -108,16 +108,33 @@ export async function generateAIResponse(userMessage, business) {
 // LLAMADAS POR PROVEEDOR
 // ============================================
 
-async function callProvider(entry, message, systemPrompt, maxTokens = 250) {
+async function callProvider(entry, message, systemPrompt, maxTokens = 250, history = []) {
   switch (entry.provider) {
-    case 'gemini': return callGemini(entry, message, systemPrompt, maxTokens)
-    case 'groq':   return callGroq(entry, message, systemPrompt, maxTokens)
-    case 'openai': return callOpenAI(entry, message, systemPrompt, maxTokens)
+    case 'gemini': return callGemini(entry, message, systemPrompt, maxTokens, history)
+    case 'groq':   return callGroq(entry, message, systemPrompt, maxTokens, history)
+    case 'openai': return callOpenAI(entry, message, systemPrompt, maxTokens, history)
     default: throw new Error(`Proveedor desconocido: ${entry.provider}`)
   }
 }
 
-async function callGemini({ key, model }, message, systemPrompt, maxTokens = 250) {
+// Convierte historial [{direction, message}] a array de mensajes multi-turn
+function buildMessages(systemPrompt, history, currentMessage) {
+  const msgs = [{ role: 'system', content: systemPrompt }]
+  for (const h of history) {
+    msgs.push({ role: h.direction === 'inbound' ? 'user' : 'assistant', content: h.message })
+  }
+  msgs.push({ role: 'user', content: currentMessage })
+  return msgs
+}
+
+async function callGemini({ key, model }, message, systemPrompt, maxTokens = 250, history = []) {
+  // Gemini usa formato contents con roles alternados
+  const contents = []
+  for (const h of history) {
+    contents.push({ role: h.direction === 'inbound' ? 'user' : 'model', parts: [{ text: h.message }] })
+  }
+  contents.push({ role: 'user', parts: [{ text: message }] })
+
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
     {
@@ -125,7 +142,7 @@ async function callGemini({ key, model }, message, systemPrompt, maxTokens = 250
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: message }] }],
+        contents,
         generationConfig: { temperature: 0.7, maxOutputTokens: maxTokens }
       })
     }
@@ -136,13 +153,13 @@ async function callGemini({ key, model }, message, systemPrompt, maxTokens = 250
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No pude procesar tu mensaje.'
 }
 
-async function callGroq({ key, model }, message, systemPrompt, maxTokens = 250) {
+async function callGroq({ key, model }, message, systemPrompt, maxTokens = 250, history = []) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
+      messages: buildMessages(systemPrompt, history, message),
       temperature: 0.7,
       max_tokens: maxTokens,
     })
@@ -153,13 +170,13 @@ async function callGroq({ key, model }, message, systemPrompt, maxTokens = 250) 
   return data.choices?.[0]?.message?.content || 'No pude procesar tu mensaje.'
 }
 
-async function callOpenAI({ key, model }, message, systemPrompt, maxTokens = 250) {
+async function callOpenAI({ key, model }, message, systemPrompt, maxTokens = 250, history = []) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
+      messages: buildMessages(systemPrompt, history, message),
       temperature: 0.7,
       max_tokens: maxTokens,
     })

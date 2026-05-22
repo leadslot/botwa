@@ -20,6 +20,7 @@ export default function SettingsForm() {
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiEnabled, setAiEnabled] = useState(true)
   const [responseDelay, setResponseDelay] = useState(0)
+  const [contextMessages, setContextMessages] = useState(10)
   const [priceList, setPriceList] = useState<PriceRow[]>([])
   const [excludedNumbers, setExcludedNumbers] = useState<string[]>([])
   const [newNumber, setNewNumber] = useState('')
@@ -36,6 +37,7 @@ export default function SettingsForm() {
       setAiPrompt(business.ai_prompt ?? '')
       setAiEnabled(business.ai_enabled ?? true)
       setResponseDelay(business.response_delay_seconds ?? 0)
+      setContextMessages(business.context_messages ?? 10)
       setPriceList(business.price_list ?? [])
       setExcludedNumbers(business.excluded_numbers ?? [])
       setReady(true)
@@ -75,6 +77,7 @@ export default function SettingsForm() {
         ai_prompt: aiPrompt,
         ai_enabled: aiEnabled,
         response_delay_seconds: responseDelay,
+        context_messages: contextMessages,
         price_list: priceList.filter(r => r.name.trim()),
         excluded_numbers: excludedNumbers.filter(Boolean),
       }).eq('id', business.id)
@@ -310,6 +313,32 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
           <span>30s</span>
           <span>45s</span>
           <span>1 min</span>
+        </div>
+      </div>
+
+      {/* Memoria de conversación */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="font-semibold text-gray-900">Memoria de conversación</p>
+            <p className="text-sm text-gray-500">Cuántos mensajes previos recuerda el bot al responder. Más memoria = más contexto, mayor costo por mensaje.</p>
+          </div>
+          <span className="ml-4 shrink-0 text-xl font-black text-[#6C4DFF]">
+            {contextMessages === 0 ? 'Sin memoria' : contextMessages === 100 ? 'Ilimitada' : `${contextMessages} msgs`}
+          </span>
+        </div>
+        <input
+          type="range" min={0} max={100} step={5}
+          value={contextMessages}
+          onChange={e => setContextMessages(Number(e.target.value))}
+          className="mt-2 w-full accent-[#6C4DFF]"
+        />
+        <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <span>Sin memoria</span>
+          <span>10</span>
+          <span>25</span>
+          <span>50</span>
+          <span>Ilimitada</span>
         </div>
       </div>
 
