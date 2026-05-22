@@ -1,22 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-
-async function getAuthContext() {
-  const cookieStore = await cookies()
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
-  const { data: { user } } = await authClient.auth.getUser()
-  if (!user) return null
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
-  const { data: business } = await admin.from('businesses').select('id').eq('user_id', user.id).single()
-  if (!business) return null
-  return { admin, businessId: business.id as string }
-}
+import { getAuthContext } from '@/lib/supabase/server'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext()
@@ -33,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     : []
   if (channel !== undefined) updates.channel = channel
 
-  const { data, error } = await ctx.admin
+  const { data, error } = await ctx.adminClient
     .from('business_templates')
     .update(updates)
     .eq('id', id)
@@ -50,7 +33,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!ctx) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const { id } = await params
-  await ctx.admin
+  await ctx.adminClient
     .from('business_templates')
     .delete()
     .eq('id', id)

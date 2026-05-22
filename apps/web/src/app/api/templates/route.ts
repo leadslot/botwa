@@ -1,28 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-
-async function getAuthContext() {
-  const cookieStore = await cookies()
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
-  const { data: { user } } = await authClient.auth.getUser()
-  if (!user) return null
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
-  const { data: business } = await admin.from('businesses').select('id').eq('user_id', user.id).single()
-  if (!business) return null
-  return { admin, businessId: business.id as string }
-}
+import { getAuthContext } from '@/lib/supabase/server'
 
 export async function GET() {
   const ctx = await getAuthContext()
   if (!ctx) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const { data } = await ctx.admin
+  const { data } = await ctx.adminClient
     .from('business_templates')
     .select('*')
     .eq('business_id', ctx.businessId)
@@ -40,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Título y cuerpo son requeridos' }, { status: 400 })
   }
 
-  const { data, error } = await ctx.admin
+  const { data, error } = await ctx.adminClient
     .from('business_templates')
     .insert({
       business_id: ctx.businessId,

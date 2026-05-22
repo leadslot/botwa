@@ -1,18 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { getVerifiedUser } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 async function getAuth() {
-  const cookieStore = await cookies()
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
-  const { data: { user } } = await authClient.auth.getUser()
+  const user = await getVerifiedUser()
   if (!user) return null
-  const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  const adminClient = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
   const { data: business } = await adminClient
     .from('businesses')
     .select('id, enabled_channels, plan_tier')

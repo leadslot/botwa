@@ -1,6 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { ChannelConnection, ConnectionMetadata } from '@/lib/email/types'
 import { refreshGmailToken, getUnreadGmailMessages, createGmailDraft, sendGmailDraft, markGmailRead } from '@/lib/email/gmail'
@@ -10,16 +7,13 @@ import { getUnreadImapMessages, createImapDraft, sendImapSmtp, markImapRead } fr
 import type { ImapConfig } from '@/lib/email/imap'
 import { generateChannelResponse, needsEscalation } from '@/lib/ai-response'
 
+import { getVerifiedUser } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
+
 async function getAuth() {
-  const cookieStore = await cookies()
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
-  const { data: { user } } = await authClient.auth.getUser()
+  const user = await getVerifiedUser()
   if (!user) return null
-  const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  const adminClient = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
   const { data: business } = await adminClient
     .from('businesses')
     .select('id, name, ai_prompt, price_list, escalation_contact')

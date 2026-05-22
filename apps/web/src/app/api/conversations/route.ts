@@ -1,28 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/supabase/server'
 
 export async function DELETE(req: NextRequest) {
   try {
     const { number } = await req.json()
     if (!number) return NextResponse.json({ error: 'number requerido' }, { status: 400 })
 
-    const cookieStore = await cookies()
-    const authClient = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-    )
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'sin sesión' }, { status: 401 })
+    const ctx = await getAuthContext()
+    if (!ctx) return NextResponse.json({ error: 'sin sesión' }, { status: 401 })
 
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    )
-    const { data: business } = await adminClient.from('businesses').select('id').eq('user_id', user.id).single()
-    if (!business) return NextResponse.json({ error: 'negocio no encontrado' }, { status: 404 })
+    const adminClient = ctx.adminClient
+    const business = { id: ctx.businessId }
 
     await adminClient
       .from('whatsapp_messages')
@@ -54,28 +42,11 @@ export async function DELETE(req: NextRequest) {
 
 export async function GET() {
   try {
-    const cookieStore = await cookies()
-    const authClient = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-    )
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) return NextResponse.json({ messages: [] })
+    const ctx = await getAuthContext()
+    if (!ctx) return NextResponse.json({ messages: [] })
 
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    )
-
-    // Get business_id for this user
-    const { data: business } = await adminClient
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!business) return NextResponse.json({ messages: [] })
+    const adminClient = ctx.adminClient
+    const business = { id: ctx.businessId }
 
     const { data: whatsappMessages } = await adminClient
       .from('whatsapp_messages')

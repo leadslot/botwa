@@ -1,20 +1,16 @@
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getVerifiedUser } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
   const appId = process.env.META_APP_ID
   const configId = process.env.META_CONFIG_ID
   if (!appId) return NextResponse.json({ error: 'META_APP_ID no configurado' }, { status: 500 })
 
-  const cookieStore = await cookies()
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
-  const { data: { user } } = await authClient.auth.getUser()
+  const user = await getVerifiedUser()
   if (!user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
+
+  const cookieStore = await cookies()
 
   const origin = req.nextUrl.origin
   const redirectUri = `${origin}/api/meta/connect/callback`

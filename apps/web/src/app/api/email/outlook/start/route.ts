@@ -1,20 +1,15 @@
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getVerifiedUser } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
   const clientId = process.env.MICROSOFT_CLIENT_ID
   if (!clientId) return NextResponse.json({ error: 'MICROSOFT_CLIENT_ID no configurado' }, { status: 500 })
 
-  const cookieStore = await cookies()
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-  )
-  const { data: { user } } = await authClient.auth.getUser()
+  const user = await getVerifiedUser()
   if (!user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
 
+  const cookieStore = await cookies()
   const state = crypto.randomUUID()
   cookieStore.set('outlook_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
 

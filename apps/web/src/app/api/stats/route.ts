@@ -1,31 +1,13 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/supabase/server'
 
 export async function GET() {
   try {
-    const cookieStore = await cookies()
-    const authClient = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
-    )
-    const { data: { user } } = await authClient.auth.getUser()
-    if (!user) return NextResponse.json({ days: [] })
+    const ctx = await getAuthContext()
+    if (!ctx) return NextResponse.json({ days: [] })
 
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    )
-
-    const { data: business } = await adminClient
-      .from('businesses')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!business) return NextResponse.json({ days: [] })
+    const adminClient = ctx.adminClient
+    const business = { id: ctx.businessId }
 
     const since = new Date()
     since.setDate(since.getDate() - 6)
