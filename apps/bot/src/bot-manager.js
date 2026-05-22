@@ -307,21 +307,16 @@ export const botManager = {
         if (code !== DisconnectReason.loggedOut) {
           const attempts = (reconnectAttempts.get(businessId) || 0) + 1
           reconnectAttempts.set(businessId, attempts)
-          if (attempts >= 5) {
-            // Demasiados reintentos fallidos → limpiar sesión para que el usuario haga QR nuevo
-            console.log(`[${businessId}] Demasiados reintentos, limpiando sesión`)
-            reconnectAttempts.delete(businessId)
-            await supabase.from('whatsapp_sessions')
-              .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
-          } else {
-            console.log(`[${businessId}] Reconectando (intento ${attempts}/5)...`)
-            await supabase
-              .from('whatsapp_sessions')
-              .upsert({ business_id: businessId, status: 'reconnecting' }, { onConflict: 'business_id' })
-            setTimeout(() => this.startSession(businessId), 3000)
-          }
+          // Backoff exponencial: 3s, 6s, 12s, 24s, 48s... máximo 5 minutos
+          const delayMs = Math.min(3000 * Math.pow(2, attempts - 1), 5 * 60 * 1000)
+          console.log(`[${businessId}] Reconectando (intento ${attempts}) en ${delayMs / 1000}s...`)
+          // NUNCA borrar session_data — las credenciales se conservan siempre
+          await supabase
+            .from('whatsapp_sessions')
+            .upsert({ business_id: businessId, status: 'reconnecting', qr_code: null }, { onConflict: 'business_id' })
+          setTimeout(() => this.startSession(businessId), delayMs)
         } else {
-          // Logout explícito — limpiar credenciales guardadas
+          // Logout explícito del dispositivo — ahí sí limpiar credenciales
           reconnectAttempts.delete(businessId)
           await supabase
             .from('whatsapp_sessions')
