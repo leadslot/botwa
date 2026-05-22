@@ -222,9 +222,9 @@ export default function CRMPage() {
     return [...fromCrm, ...fromConversations]
   }, [contacts, crmContacts])
 
-  const rows = realContacts.length ? realContacts : demoContacts
+  const rows = realContacts
   const selectedContact = rows.find(contact => contact.id === selectedId) ?? rows[0]
-  const usingDemo = !loading && realContacts.length === 0
+  const usingDemo = false
   const hotLeads = rows.filter(contact => contact.score >= 70).length
   const totalValue = rows.reduce((sum, contact) => sum + contact.value, 0)
   const channels = new Set(rows.map(contact => contact.channel)).size

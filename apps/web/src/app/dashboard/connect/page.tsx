@@ -541,29 +541,28 @@ export default function ConnectPage() {
         <StatusPill tone="violet">{PLANS[currentPlan].name} - {PLANS[currentPlan].priceLabel}</StatusPill>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[1fr_360px]">
-        <SectionCard className="p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-950">Incluidos en tu plan</h2>
-            <span className="text-xs text-slate-500">{includedChannels.length} canales</span>
-          </div>
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {includedChannels.map(channel => <ChannelButton key={channel} channel={channel} />)}
-          </div>
-        </SectionCard>
-
-        <SectionCard className="p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-950">Desbloqueos</h2>
-            {nextPlan && <Link href="/dashboard/billing" className="text-xs font-semibold text-[#6C4DFF]">Ver planes</Link>}
-          </div>
-          <div className="space-y-2">
-            {lockedChannels.length === 0 ? (
-              <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">Tenes todos los canales del roadmap habilitados.</p>
-            ) : lockedChannels.map(channel => <ChannelButton key={channel} channel={channel} locked />)}
-          </div>
-        </SectionCard>
-      </div>
+      <SectionCard className="p-3">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-950">Incluidos en tu plan</h2>
+          <span className="text-xs text-slate-500">{includedChannels.length} canales</span>
+        </div>
+        <div className="grid gap-2 grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+          {includedChannels.map(channel => <ChannelButton key={channel} channel={channel} />)}
+        </div>
+        {lockedChannels.length > 0 && (
+          <>
+            <div className="my-3 flex items-center gap-2">
+              <div className="h-px flex-1 bg-slate-100" />
+              <span className="text-xs text-slate-400 font-medium">Disponibles en planes superiores</span>
+              <div className="h-px flex-1 bg-slate-100" />
+              {nextPlan && <Link href="/dashboard/billing" className="text-xs font-semibold text-[#6C4DFF] shrink-0">Ver planes →</Link>}
+            </div>
+            <div className="grid gap-2 grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {lockedChannels.map(channel => <ChannelButton key={channel} channel={channel} locked />)}
+            </div>
+          </>
+        )}
+      </SectionCard>
 
       {metaError && <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">{metaError}</p>}
       {copiedWidget && <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">Widget copiado: {copiedWidget === 'link' ? 'link directo' : 'codigo embebido'}</p>}

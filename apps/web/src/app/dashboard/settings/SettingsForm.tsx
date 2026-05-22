@@ -32,14 +32,14 @@ export default function SettingsForm() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (!loading && business && !ready) {
-      setName(business.name ?? '')
-      setAiPrompt(business.ai_prompt ?? '')
-      setAiEnabled(business.ai_enabled ?? true)
-      setResponseDelay(business.response_delay_seconds ?? 0)
-      setContextMessages(business.context_messages ?? 10)
-      setPriceList(business.price_list ?? [])
-      setExcludedNumbers(business.excluded_numbers ?? [])
+    if (!loading && !ready) {
+      setName(business?.name ?? '')
+      setAiPrompt(business?.ai_prompt ?? '')
+      setAiEnabled(business?.ai_enabled ?? true)
+      setResponseDelay(business?.response_delay_seconds ?? 0)
+      setContextMessages(business?.context_messages ?? 10)
+      setPriceList(business?.price_list ?? [])
+      setExcludedNumbers(business?.excluded_numbers ?? [])
       setReady(true)
     }
   }, [loading, business, ready])
