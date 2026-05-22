@@ -12,8 +12,8 @@ export async function GET() {
       { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
     )
     // getSession lee del cookie local — sin network call, no falla
-    const { data: { session } } = await authClient.auth.getSession()
-    if (!session?.user) return NextResponse.json({ business: null })
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) return NextResponse.json({ business: null })
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,7 +22,7 @@ export async function GET() {
     const { data } = await adminClient
       .from('businesses')
       .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .single()
 
     return NextResponse.json({ business: data ?? null })

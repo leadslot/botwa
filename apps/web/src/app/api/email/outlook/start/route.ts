@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
-  const { data: { session } } = await authClient.auth.getSession()
-  if (!session?.user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
 
   const state = crypto.randomUUID()
   cookieStore.set('outlook_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })

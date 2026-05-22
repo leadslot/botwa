@@ -10,13 +10,13 @@ async function getAuth() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
-  const { data: { session } } = await authClient.auth.getSession()
-  if (!session?.user) return null
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return null
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
   const { data: business } = await adminClient
     .from('businesses')
     .select('id')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single()
   return business ? { adminClient, businessId: business.id } : null
 }

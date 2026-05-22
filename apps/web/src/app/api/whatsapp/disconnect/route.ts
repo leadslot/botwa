@@ -5,7 +5,7 @@ import { botFetch } from '@/lib/bot-fetch'
 
 export async function POST() {
   const supabase = await createClient()
-  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
+  const { data: { user } } = await supabase.auth.getUser(); 
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const { data: business } = await supabase

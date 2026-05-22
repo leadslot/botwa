@@ -10,15 +10,15 @@ export async function POST(req: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
-  const { data: { session } } = await authClient.auth.getSession()
-  if (!session?.user) return NextResponse.json({ error: 'No auth' }, { status: 401 })
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No auth' }, { status: 401 })
 
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!
   )
   const { data: business } = await adminClient
-    .from('businesses').select('id').eq('user_id', session.user.id).single()
+    .from('businesses').select('id').eq('user_id', user.id).single()
   if (!business) return NextResponse.json({ error: 'No business' }, { status: 404 })
 
   const { number, paused } = await req.json()

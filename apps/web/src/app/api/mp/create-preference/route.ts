@@ -10,12 +10,12 @@ export async function POST() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
   const { data: business } = await admin
-    .from('businesses').select('id, name').eq('user_id', session.user.id).single()
+    .from('businesses').select('id, name').eq('user_id', user.id).single()
   if (!business) return NextResponse.json({ error: 'Sin negocio' }, { status: 400 })
 
   const preference = {
@@ -25,7 +25,7 @@ export async function POST() {
       unit_price: 49000,
       currency_id: 'ARS',
     }],
-    payer: { email: session.user.email },
+    payer: { email: user.email },
     external_reference: business.id,
     back_urls: {
       success: 'https://responbot.vercel.app/dashboard/billing?pago=ok',

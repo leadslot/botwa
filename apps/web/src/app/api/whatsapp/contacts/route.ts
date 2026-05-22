@@ -12,12 +12,12 @@ export async function GET() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return NextResponse.json({ contacts: [] })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ contacts: [] })
 
   const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
   const { data: business } = await admin
-    .from('businesses').select('id').eq('user_id', session.user.id).single()
+    .from('businesses').select('id').eq('user_id', user.id).single()
   if (!business) return NextResponse.json({ contacts: [] })
 
   // 1) Intentar chats (más confiable que contacts en WA Web)

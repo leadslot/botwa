@@ -14,14 +14,14 @@ export async function DELETE(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
     )
-    const { data: { session } } = await authClient.auth.getSession()
-    if (!session?.user) return NextResponse.json({ error: 'sin sesión' }, { status: 401 })
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'sin sesión' }, { status: 401 })
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_KEY!
     )
-    const { data: business } = await adminClient.from('businesses').select('id').eq('user_id', session.user.id).single()
+    const { data: business } = await adminClient.from('businesses').select('id').eq('user_id', user.id).single()
     if (!business) return NextResponse.json({ error: 'negocio no encontrado' }, { status: 404 })
 
     await adminClient
@@ -60,8 +60,8 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
     )
-    const { data: { session } } = await authClient.auth.getSession()
-    if (!session?.user) return NextResponse.json({ messages: [] })
+    const { data: { user } } = await authClient.auth.getUser()
+    if (!user) return NextResponse.json({ messages: [] })
 
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,7 +72,7 @@ export async function GET() {
     const { data: business } = await adminClient
       .from('businesses')
       .select('id')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (!business) return NextResponse.json({ messages: [] })

@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
-  const { data: { session } } = await authClient.auth.getSession()
-  if (!session?.user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
 
   const origin = req.nextUrl.origin
   const redirectUri = `${origin}/api/meta/connect/callback`
