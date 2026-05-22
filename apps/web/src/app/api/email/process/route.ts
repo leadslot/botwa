@@ -8,7 +8,7 @@ import { refreshOutlookToken, getUnreadOutlookMessages, createOutlookDraft, send
 import { getUnreadICloudMessages, createICloudDraft, sendICloudDraft, markICloudRead } from '@/lib/email/icloud'
 import { getUnreadImapMessages, createImapDraft, sendImapSmtp, markImapRead } from '@/lib/email/imap'
 import type { ImapConfig } from '@/lib/email/imap'
-import { generateChannelResponse } from '@/lib/ai-response'
+import { generateChannelResponse, needsEscalation } from '@/lib/ai-response'
 
 async function getAuth() {
   const cookieStore = await cookies()
@@ -17,13 +17,13 @@ async function getAuth() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { cookies: { getAll() { return cookieStore.getAll() }, setAll() {} } }
   )
-  const { data: { session } } = await authClient.auth.getSession()
-  if (!session?.user) return null
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return null
   const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
   const { data: business } = await adminClient
     .from('businesses')
     .select('id, name, ai_prompt, price_list')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single()
   return business ? { adminClient, business } : null
 }
@@ -103,20 +103,36 @@ export async function POST() {
             .single()
           if (existing) continue
 
-          const draftBody = await generateChannelResponse(
-            `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`,
-            business,
-            'email'
-          )
+          const fullText = `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`
+          const escalate = needsEscalation(fullText)
+
+          // Historial del thread (últimos 6 mails del mismo thread)
+          const threadHistory = msg.threadId ? await (async () => {
+            const { data: prev } = await adminClient.from('email_drafts')
+              .select('draft_body, from_email')
+              .eq('business_id', business.id)
+              .eq('thread_id', msg.threadId)
+              .order('created_at', { ascending: true })
+              .limit(6)
+            return (prev ?? []).flatMap(r => [
+              { direction: 'inbound' as const, message: `De: ${r.from_email}` },
+              { direction: 'outbound' as const, message: r.draft_body },
+            ])
+          })() : []
+
+          const draftBody = escalate
+            ? `Hola ${msg.fromName || ''},\n\nGracias por escribirnos. Tu consulta fue recibida y un miembro del equipo te va a responder a la brevedad.\n\nSaludos,\n${business.name}`
+            : await generateChannelResponse(fullText, business, 'email', threadHistory)
 
           let draftProviderId: string | null = null
           let status = 'pending'
 
           if (autoSend) {
             await sendGmailDraft(token, await createGmailDraft(token, msg.fromEmail, msg.subject, draftBody, msg.threadId))
-            status = 'auto_sent'
+            status = escalate ? 'escalated' : 'auto_sent'
           } else {
             draftProviderId = await createGmailDraft(token, msg.fromEmail, msg.subject, draftBody, msg.threadId)
+            if (escalate) status = 'escalated'
           }
 
           await markGmailRead(token, msg.messageId)
@@ -151,11 +167,25 @@ export async function POST() {
             .single()
           if (existing) continue
 
-          const draftBody = await generateChannelResponse(
-            `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`,
-            business,
-            'email'
-          )
+          const fullTextOut = `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`
+          const escalateOut = needsEscalation(fullTextOut)
+
+          const threadHistoryOut = msg.threadId ? await (async () => {
+            const { data: prev } = await adminClient.from('email_drafts')
+              .select('draft_body, from_email')
+              .eq('business_id', business.id)
+              .eq('thread_id', msg.threadId)
+              .order('created_at', { ascending: true })
+              .limit(6)
+            return (prev ?? []).flatMap(r => [
+              { direction: 'inbound' as const, message: `De: ${r.from_email}` },
+              { direction: 'outbound' as const, message: r.draft_body },
+            ])
+          })() : []
+
+          const draftBody = escalateOut
+            ? `Hola ${msg.fromName || ''},\n\nGracias por escribirnos. Tu consulta fue recibida y un miembro del equipo te va a responder a la brevedad.\n\nSaludos,\n${business.name}`
+            : await generateChannelResponse(fullTextOut, business, 'email', threadHistoryOut)
 
           let draftProviderId: string | null = null
           let status = 'pending'
@@ -163,9 +193,10 @@ export async function POST() {
           if (autoSend) {
             const did = await createOutlookDraft(token, msg.fromEmail, msg.subject, draftBody, msg.threadId)
             await sendOutlookDraft(token, did)
-            status = 'auto_sent'
+            status = escalateOut ? 'escalated' : 'auto_sent'
           } else {
             draftProviderId = await createOutlookDraft(token, msg.fromEmail, msg.subject, draftBody, msg.threadId)
+            if (escalateOut) status = 'escalated'
           }
 
           await markOutlookRead(token, msg.messageId)
@@ -199,20 +230,21 @@ export async function POST() {
             .single()
           if (existing) continue
 
-          const draftBody = await generateChannelResponse(
-            `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`,
-            business,
-            'email'
-          )
+          const fullTextIC = `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`
+          const escalateIC = needsEscalation(fullTextIC)
+          const draftBody = escalateIC
+            ? `Hola ${msg.fromName || ''},\n\nGracias por escribirnos. Tu consulta fue recibida y un miembro del equipo te va a responder a la brevedad.\n\nSaludos,\n${business.name}`
+            : await generateChannelResponse(fullTextIC, business, 'email')
 
           let draftProviderId: string | null = null
           let status = 'pending'
 
           if (autoSend) {
             await sendICloudDraft(meta.email, meta.app_password, msg.fromEmail, msg.subject, draftBody)
-            status = 'auto_sent'
+            status = escalateIC ? 'escalated' : 'auto_sent'
           } else {
             draftProviderId = await createICloudDraft(meta.email, meta.app_password, msg.fromEmail, msg.subject, draftBody)
+            if (escalateIC) status = 'escalated'
           }
 
           await markICloudRead(meta.email, meta.app_password, [msg.messageId])
@@ -253,20 +285,21 @@ export async function POST() {
             .single()
           if (existing) continue
 
-          const draftBody = await generateChannelResponse(
-            `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`,
-            business,
-            'email'
-          )
+          const fullTextIM = `De: ${msg.fromName} <${msg.fromEmail}>\nAsunto: ${msg.subject}\n\n${msg.bodyText || msg.snippet}`
+          const escalateIM = needsEscalation(fullTextIM)
+          const draftBody = escalateIM
+            ? `Hola ${msg.fromName || ''},\n\nGracias por escribirnos. Tu consulta fue recibida y un miembro del equipo te va a responder a la brevedad.\n\nSaludos,\n${business.name}`
+            : await generateChannelResponse(fullTextIM, business, 'email')
 
           let draftProviderId: string | null = null
           let status = 'pending'
 
           if (autoSend) {
             await sendImapSmtp(cfg, msg.fromEmail, msg.subject, draftBody)
-            status = 'auto_sent'
+            status = escalateIM ? 'escalated' : 'auto_sent'
           } else {
             draftProviderId = await createImapDraft(cfg, msg.fromEmail, msg.subject, draftBody)
+            if (escalateIM) status = 'escalated'
           }
 
           await markImapRead(cfg, [msg.messageId])

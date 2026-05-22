@@ -1,7 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateChannelResponse } from '@/lib/ai-response'
+import { generateChannelResponse, needsEscalation } from '@/lib/ai-response'
 import { createHmac, timingSafeEqual } from 'crypto'
+
+const HISTORY_LIMIT = 10
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getConversationHistory(adminClient: any, conversationId: string) {
+  const { data } = await adminClient
+    .from('channel_messages')
+    .select('direction, message')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: false })
+    .limit(HISTORY_LIMIT)
+  return data ? data.reverse() : []
+}
 
 function verifyMetaSignature(rawBody: string, signature: string | null): boolean {
   const appSecret = process.env.META_APP_SECRET
@@ -111,9 +124,15 @@ export async function POST(req: NextRequest) {
             raw: message,
           })
 
-          const reply = business.ai_enabled === false
-            ? 'Gracias por escribir. En breve te respondemos.'
-            : await generateChannelResponse(text, business, 'whatsapp_api')
+          let reply: string
+          if (business.ai_enabled === false) {
+            reply = 'Gracias por escribir. En breve te respondemos.'
+          } else if (needsEscalation(text)) {
+            reply = 'Entiendo, esto lo veo directamente con alguien del equipo para darte la mejor respuesta.'
+          } else {
+            const history = conversation?.id ? await getConversationHistory(adminClient, conversation.id) : []
+            reply = await generateChannelResponse(text, business, 'whatsapp_api', history)
+          }
 
           await adminClient.from('channel_messages').insert({
             business_id: businessId,
@@ -194,9 +213,15 @@ export async function POST(req: NextRequest) {
           raw: event,
         })
 
-        const reply = business.ai_enabled === false
-          ? 'Gracias por escribir. En breve te respondemos.'
-          : await generateChannelResponse(text, business, channel)
+        let reply: string
+        if (business.ai_enabled === false) {
+          reply = 'Gracias por escribir. En breve te respondemos.'
+        } else if (needsEscalation(text)) {
+          reply = 'Entiendo, esto lo veo directamente con alguien del equipo para darte la mejor respuesta.'
+        } else {
+          const history = conversation?.id ? await getConversationHistory(adminClient, conversation.id) : []
+          reply = await generateChannelResponse(text, business, channel, history)
+        }
 
         await adminClient.from('channel_messages').insert({
           business_id: businessId,
