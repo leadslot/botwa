@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   }
 
   const accountsUrl = new URL('https://graph.facebook.com/v20.0/me/accounts')
-  accountsUrl.searchParams.set('fields', 'id,name,access_token,instagram_business_account{id,username}')
+  accountsUrl.searchParams.set('fields', 'id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}')
   accountsUrl.searchParams.set('access_token', tokenData.access_token)
   const accountsRes = await fetch(accountsUrl)
   const accountsData = await accountsRes.json()
@@ -77,7 +77,9 @@ export async function GET(req: NextRequest) {
 
     await subscribePage(page.id, page.access_token)
 
-    const instagram = page.instagram_business_account
+    // Intentar con instagram_business_account primero, luego connected_instagram_account
+    const pageData = page as MetaPage & { connected_instagram_account?: { id: string; username?: string } }
+    const instagram = page.instagram_business_account ?? pageData.connected_instagram_account
     if (instagram?.id) {
       await auth.adminClient.from('channel_connections').upsert({
         business_id: auth.businessId,
@@ -93,6 +95,34 @@ export async function GET(req: NextRequest) {
         },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'business_id,channel,external_id' })
+    } else {
+      // Fallback: buscar vía /me/instagram_accounts con el user token
+      try {
+        const igUrl = new URL(`https://graph.facebook.com/v20.0/${page.id}`)
+        igUrl.searchParams.set('fields', 'instagram_accounts{id,username}')
+        igUrl.searchParams.set('access_token', page.access_token)
+        const igRes = await fetch(igUrl)
+        const igData = await igRes.json()
+        const igAccount = igData.instagram_accounts?.data?.[0]
+        if (igAccount?.id) {
+          await auth.adminClient.from('channel_connections').upsert({
+            business_id: auth.businessId,
+            channel: 'instagram',
+            status: 'active',
+            external_id: igAccount.id,
+            display_name: igAccount.username ? `@${igAccount.username}` : 'Instagram',
+            metadata: {
+              instagram_id: igAccount.id,
+              username: igAccount.username,
+              page_id: page.id,
+              page_access_token: page.access_token,
+            },
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'business_id,channel,external_id' })
+        }
+      } catch (e) {
+        console.error('Instagram fallback lookup failed:', e)
+      }
     }
   }
 
@@ -105,7 +135,7 @@ async function subscribePage(pageId: string, pageAccessToken: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        subscribed_fields: ['messages', 'messaging_postbacks'],
+        subscribed_fields: ['messages', 'messaging_postbacks', 'instagram_messages'],
         access_token: pageAccessToken,
       }),
     })

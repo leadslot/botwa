@@ -1,7 +1,19 @@
+const BOT_SECRET = process.env.BOT_SECRET
+
+function authMiddleware(req, res, next) {
+  if (!BOT_SECRET) return next() // si no está configurado, no bloquea (backward compat)
+  const provided = req.headers['x-bot-secret']
+  if (provided !== BOT_SECRET) return res.status(401).json({ error: 'Unauthorized' })
+  next()
+}
+
 export function setupRoutes(app, botManager) {
 
-  // Health check
+  // Health check — sin auth (necesario para keepalive)
   app.get('/health', (req, res) => res.json({ ok: true }))
+
+  // Todas las demás rutas requieren el secret
+  app.use(authMiddleware)
 
   // Iniciar sesión / obtener QR
   app.post('/session/start', async (req, res) => {

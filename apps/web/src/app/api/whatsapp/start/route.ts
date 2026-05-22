@@ -3,7 +3,7 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
+import { botFetch } from '@/lib/bot-fetch'
 
 export async function POST() {
   const cookieStore = await cookies()
@@ -21,9 +21,8 @@ export async function POST() {
   if (!business) return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 })
 
   try {
-    const res = await fetch(`${BOT_URL}/session/start`, {
+    const res = await botFetch('/session/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ businessId: business.id })
     })
     const data = await res.json()

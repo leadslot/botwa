@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
+import { botFetch } from '@/lib/bot-fetch'
 
 export async function POST() {
   const supabase = await createClient()
@@ -12,9 +12,8 @@ export async function POST() {
     .from('businesses').select('id').eq('user_id', user.id).single()
   if (!business) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-  await fetch(`${BOT_URL}/session/disconnect`, {
+  await botFetch('/session/disconnect', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ businessId: business.id })
   })
   return NextResponse.json({ ok: true })

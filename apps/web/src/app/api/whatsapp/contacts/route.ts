@@ -3,7 +3,7 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
+import { botFetch } from '@/lib/bot-fetch'
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -22,7 +22,7 @@ export async function GET() {
 
   // 1) Intentar chats (más confiable que contacts en WA Web)
   try {
-    const res = await fetch(`${BOT_URL}/session/chats/${business.id}`, {
+    const res = await botFetch(`/session/chats/${business.id}`, {
       signal: AbortSignal.timeout(5000)
     })
     const data = await res.json()
@@ -31,7 +31,7 @@ export async function GET() {
 
   // 2) Fallback: contacts endpoint del bot
   try {
-    const res = await fetch(`${BOT_URL}/session/contacts/${business.id}`, {
+    const res = await botFetch(`/session/contacts/${business.id}`, {
       signal: AbortSignal.timeout(5000)
     })
     const data = await res.json()

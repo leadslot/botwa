@@ -3,7 +3,7 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
+import { botFetch } from '@/lib/bot-fetch'
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -21,7 +21,7 @@ export async function GET() {
   if (!business) return NextResponse.json({ status: 'disconnected' })
 
   try {
-    const res = await fetch(`${BOT_URL}/session/qr/${business.id}`, {
+    const res = await botFetch(`/session/qr/${business.id}`, {
       signal: AbortSignal.timeout(6000)
     })
     const data = await res.json()

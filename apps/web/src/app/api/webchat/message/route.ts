@@ -2,8 +2,30 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateChannelResponse } from '@/lib/ai-response'
 
+// Rate limiting por IP: max 30 requests por hora
+const ipRateMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 30
+const RATE_WINDOW_MS = 60 * 60 * 1000
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = ipRateMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    ipRateMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: 'Demasiadas solicitudes. Intentá en una hora.' }, { status: 429 })
+    }
+
     const body = await req.json() as { businessId?: string; visitorId?: string; message?: string; name?: string }
     const businessId = body.businessId?.trim()
     const message = body.message?.trim()

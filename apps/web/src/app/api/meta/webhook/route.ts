@@ -1,6 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateChannelResponse } from '@/lib/ai-response'
+import { createHmac, timingSafeEqual } from 'crypto'
+
+function verifyMetaSignature(rawBody: string, signature: string | null): boolean {
+  const appSecret = process.env.META_APP_SECRET
+  if (!appSecret || !signature) return false
+  const expected = 'sha256=' + createHmac('sha256', appSecret).update(rawBody).digest('hex')
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(signature))
+  } catch { return false }
+}
 
 type MetaMessagingEvent = {
   sender?: { id?: string }
@@ -37,7 +47,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as MetaWebhookBody
+    const rawBody = await req.text()
+    const signature = req.headers.get('x-hub-signature-256')
+    if (!verifyMetaSignature(rawBody, signature)) {
+      return new NextResponse('Forbidden', { status: 403 })
+    }
+    const body = JSON.parse(rawBody) as MetaWebhookBody
     const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
 
     for (const entry of body.entry ?? []) {

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { botFetch } from '@/lib/bot-fetch'
 
 export async function POST(req: Request) {
   const cookieStore = await cookies()
@@ -22,11 +23,9 @@ export async function POST(req: Request) {
   if (!business) return NextResponse.json({ error: 'No business' }, { status: 404 })
 
   const { phone } = await req.json()
-  const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
 
-  const r = await fetch(`${BOT_URL}/session/pair-code`, {
+  const r = await botFetch('/session/pair-code', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ businessId: business.id, phone }),
   })
   const data = await r.json()
