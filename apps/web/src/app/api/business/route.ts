@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 function extractAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): string | null {
   const all = cookieStore.getAll()
@@ -46,14 +46,18 @@ function extractAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): s
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const accessToken = extractAccessToken(cookieStore)
+    // Prefer Authorization header (localStorage-based sessions)
+    let accessToken = request.headers.get('Authorization')?.replace('Bearer ', '') ?? null
+
+    // Fallback: try to extract from cookies (cookie-based sessions)
+    if (!accessToken) {
+      const cookieStore = await cookies()
+      accessToken = extractAccessToken(cookieStore)
+    }
 
     if (!accessToken) {
-      const all = cookieStore.getAll()
-      console.log('[api/business] No token found. Cookies:', all.map(c => `${c.name}=${c.value.slice(0,30)}`).join(' | '))
       return NextResponse.json({ business: null }, { status: 401 })
     }
 

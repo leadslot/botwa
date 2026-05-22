@@ -1,5 +1,6 @@
 'use client'
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react'
+import { createClient as createSupabaseClient } from '@/lib/supabase/client'
 
 type Business = {
   id: string
@@ -44,7 +45,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (fetched.current) return
     fetched.current = true
     try {
-      const res = await fetch('/api/business')
+      const supabase = createSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: HeadersInit = {}
+      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
+      const res = await fetch('/api/business', { headers })
 
       // 401 = sin sesión, estado esperado para usuario no logueado
       if (res.status === 401) {
