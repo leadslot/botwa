@@ -1,22 +1,24 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
+import Image from 'next/image'
 import {
   ArrowRight,
   ArrowUp,
   BarChart3,
   Bot,
+  Camera,
   Check,
   CheckCircle2,
   Clock3,
-  Gift,
+  Globe2,
   HelpCircle,
   LayoutDashboard,
   MapPin,
   Menu,
-  MessageCircle,
   MessagesSquare,
   Moon,
   PackageCheck,
   Rocket,
+  Send,
   ShieldCheck,
   ShoppingBag,
   Smartphone,
@@ -25,6 +27,7 @@ import {
   UserRound,
   Zap,
 } from 'lucide-react'
+import { PLANS } from '@/lib/plans'
 
 const navLinks = [
   { label: 'Cómo funciona', href: '#como-funciona' },
@@ -33,7 +36,17 @@ const navLinks = [
   { label: 'Preguntas', href: '#preguntas' },
 ]
 
-const trustItems = ['50 mensajes gratis', 'Sin tarjeta', 'Con tu número actual']
+const trustItems = ['Prueba inicial', 'Sin tarjeta', 'Canales oficiales']
+
+const channels = [
+  { icon: Smartphone, name: 'WhatsApp QR', text: 'Plan de entrada para responder rapido.' },
+  { icon: ShieldCheck, name: 'WhatsApp API', text: 'Canal oficial para negocios con Meta.' },
+  { icon: Bot, name: 'Mails', text: 'Gmail, Outlook e iCloud con borradores sugeridos.' },
+  { icon: Camera, name: 'Instagram', text: 'DMs con integracion oficial de Meta.' },
+  { icon: MessagesSquare, name: 'Facebook', text: 'Messenger de paginas conectadas.' },
+  { icon: Send, name: 'Telegram', text: 'Bot propio conectado desde BotFather.' },
+  { icon: Globe2, name: 'Web Chat', text: 'Widget para instalar en tu sitio.' },
+]
 
 const problemCards = [
   {
@@ -57,19 +70,19 @@ const steps = [
   {
     step: '01',
     title: 'Configurás tu negocio',
-    text: 'Le decís al bot qué vendés, cómo hablás y qué respuestas querés dar.',
+    text: 'Cargas servicios, precios, preguntas frecuentes, tono de respuesta y reglas por canal.',
     preview: 'form',
   },
   {
     step: '02',
-    title: 'Escaneás el QR',
-    text: 'Conectás tu WhatsApp actual desde el panel.',
+    title: 'Conectás tus canales',
+    text: 'Activás WhatsApp, Web Chat, Telegram, Meta o Email según el plan contratado.',
     preview: 'qr',
   },
   {
     step: '03',
-    title: 'Responbot responde por vos',
-    text: 'El bot queda activo 24/7 en nuestro servidor, respondiendo al instante.',
+    title: 'Respondes y ordenas oportunidades',
+    text: 'El bot responde y el CRM simple ordena contactos, historial, estado y proxima accion.',
     preview: 'chat',
   },
 ]
@@ -92,13 +105,18 @@ const benefits = [
   },
   {
     icon: Smartphone,
-    title: 'Usás tu número actual',
-    text: 'Usás tu WhatsApp de siempre. Sin número nuevo. Sin trámites.',
+    title: 'Canales por separado',
+    text: 'Pausás Facebook, Instagram, Telegram, WhatsApp o Web Chat sin apagar todo.',
   },
   {
     icon: LayoutDashboard,
-    title: 'Panel de conversaciones',
-    text: 'Ves todo lo que pasa y tomás el control cuando quieras.',
+    title: 'CRM y seguimiento',
+    text: 'Cada contacto queda con historial, estado, score, notas y próxima acción.',
+  },
+  {
+    icon: Sparkles,
+    title: 'CRM simple incluido',
+    text: 'En el plan Completo unificás contactos, canales, etiquetas y seguimiento básico.',
   },
   {
     icon: ShieldCheck,
@@ -108,7 +126,7 @@ const benefits = [
 ]
 
 const industries = [
-  { icon: Sparkles, title: 'Tatuadores', question: 'Hola, ¿tenés turnos?' },
+  { icon: Sparkles, title: 'Turnos y reservas', question: 'Hola, ¿tenés disponibilidad?' },
   { icon: ShoppingBag, title: 'Tiendas online', question: '¿Hacen envíos a todo el país?' },
   { icon: Store, title: 'Cabañas', question: '¿Tienen disponibilidad este finde?' },
   { icon: PackageCheck, title: 'Estéticas', question: '¿Cuánto sale el servicio?' },
@@ -118,35 +136,29 @@ const industries = [
 
 const faqs = [
   {
-    question: '¿Y si el bot responde mal?',
-    answer: 'Podés ajustar el tono, revisar conversaciones y tomar el control cuando quieras.',
+    question: '¿Cuál es el plan para empezar?',
+    answer: 'El plan de entrada es Basico WhatsApp: WhatsApp, Web Chat, panel, prompt del negocio y hasta 500 respuestas asistidas.',
   },
   {
-    question: '¿Tengo que cambiar mi número?',
-    answer: 'No. Usás tu WhatsApp actual.',
+    question: '¿Mails es un plan o un complemento?',
+    answer: 'Puede venderse como plan propio o como complemento. Sirve para Gmail, Outlook e iCloud con clasificacion y borradores sugeridos.',
   },
   {
-    question: '¿Tengo que instalar algo?',
-    answer: 'No. Se conecta escaneando un QR.',
+    question: '¿Puedo pausar una red sin apagar todo?',
+    answer: 'Sí. Cada canal tiene pausa independiente para cortar WhatsApp, Telegram, Facebook, Instagram, Web Chat o Email por separado.',
   },
   {
-    question: '¿Sirve para mandar campañas?',
-    answer: 'No. Responbot responde mensajes que llegan. No hace spam.',
+    question: '¿El CRM viene incluido?',
+    answer: 'El CRM simple entra en el plan Completo para ordenar contactos, estados y seguimiento. No lo vendemos como producto enterprise.',
   },
   {
-    question: '¿Necesito saber de tecnología?',
-    answer: 'No. Está pensado para negocios reales, no para técnicos.',
+    question: '¿Las respuestas con IA son ilimitadas?',
+    answer: 'No conviene prometer eso. Cada plan incluye una cantidad de respuestas asistidas y el uso intensivo puede requerir ampliación o API propia.',
   },
 ]
 
-const priceBenefits = [
-  'Bot activo 24/7 en nuestro servidor',
-  'Respuestas automáticas en segundos',
-  'IA con el tono de tu negocio',
-  'Panel para ver todas las conversaciones',
-  'Sin límite de mensajes',
-  'Soporte directo por WhatsApp',
-]
+const entryPlanOrder = ['whatsapp', 'email'] as const
+const growthPlanOrder = ['social'] as const
 
 function QrEye({ className }: { className: string }) {
   return (
@@ -269,9 +281,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(124,92,255,0.42),transparent_32%),radial-gradient(circle_at_12%_0%,rgba(108,77,255,0.18),transparent_34%)]" />
         <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
           <Link href="/" className="flex items-center gap-3" aria-label="Responbot">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-950/40">
-              <MessageCircle className="h-5 w-5" />
-            </span>
+            <Image src="/logo.png" alt="" width={36} height={36} className="rounded-xl shadow-lg shadow-violet-950/40" />
             <span className="text-xl font-black tracking-tight">Responbot</span>
           </Link>
 
@@ -315,7 +325,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:text-[19px]">
-              Responbot responde automáticamente tus mensajes de WhatsApp, las 24 horas, con el tono de tu negocio.
+              Responbot responde WhatsApp, Web Chat, Telegram, Instagram, Facebook y correos desde un mismo panel, con CRM simple para ordenar oportunidades.
             </p>
 
             <div className="mt-7 flex flex-col gap-4 sm:flex-row">
@@ -392,6 +402,29 @@ export default function LandingPage() {
                 <span className="block">3 segundos</span>
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white py-8">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+          <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-slate-950">Canales que puede responder</h2>
+              <p className="mt-2 text-sm text-slate-500">La plataforma no queda atada a WhatsApp: cada canal se conecta, pausa, mide y escala por plan.</p>
+            </div>
+            <Link href="/register" className="text-sm font-black text-[#6C4DFF] hover:underline">Activar canales</Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {channels.map(({ icon: Icon, name, text }) => (
+              <article key={name} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white text-[#6C4DFF] shadow-sm">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <h3 className="font-black text-slate-950">{name}</h3>
+                <p className="mt-1 text-sm leading-5 text-slate-500">{text}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -478,10 +511,10 @@ export default function LandingPage() {
               Todo bajo control desde un <span className="text-[#7C5CFF]">panel simple.</span>
             </h2>
             <p className="mt-5 text-lg leading-8 text-slate-500">
-              Podés ver qué respondió el bot, revisar conversaciones y tomar el control cuando quieras.
+              Podés ver qué respondió el bot, revisar conversaciones, ordenar contactos en CRM, detectar oportunidades y tomar el control cuando quieras.
             </p>
             <div className="mt-7 space-y-3 text-sm font-medium text-slate-600">
-              {['Conversaciones en tiempo real', 'Mensajes respondidos', 'Bot activo 24/7', 'Historial y estadísticas'].map((item) => (
+              {['Conversaciones en tiempo real', 'CRM de contactos', 'Mails y redes en un panel', 'Pausa por canal'].map((item) => (
                 <div key={item} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-[#22C55E]" />
                   {item}
@@ -494,12 +527,10 @@ export default function LandingPage() {
             <div className="grid min-h-[310px] lg:grid-cols-[170px_1fr]">
               <aside className="border-b border-slate-200 bg-slate-50 p-5 lg:border-b-0 lg:border-r">
                 <div className="mb-7 flex items-center gap-2 font-black">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7C5CFF] text-white">
-                    <MessageCircle className="h-4 w-4" />
-                  </span>
+                  <Image src="/logo.png" alt="" width={28} height={28} className="rounded-lg" />
                   Responbot
                 </div>
-                {['Dashboard', 'Conversaciones', 'Estadísticas', 'Configuración'].map((item, index) => (
+                {['Dashboard', 'Canales', 'Conversaciones', 'CRM', 'Configuración'].map((item, index) => (
                   <div
                     key={item}
                     className={`mb-2 rounded-lg px-3 py-2 text-xs font-bold ${
@@ -515,10 +546,10 @@ export default function LandingPage() {
                 <h3 className="mb-5 font-black">Dashboard</h3>
                 <div className="grid gap-3 sm:grid-cols-4">
                   {[
-                    ['Conversaciones', '128', 'Hoy'],
-                    ['Mensajes respondidos', '342', 'Hoy'],
-                    ['Tiempo de respuesta', '3 seg', 'Promedio'],
-                    ['Bot activo', 'En línea', '24/7'],
+                    ['Canales activos', '4', 'Hoy'],
+                    ['Respondidas', '342', 'Hoy'],
+                    ['Leads CRM', '58', 'Abiertos'],
+                    ['CRM', '58', 'Contactos'],
                   ].map(([label, value, hint]) => (
                     <div key={label} className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
                       <p className="text-[11px] font-bold text-slate-400">{label}</p>
@@ -594,59 +625,106 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="precios" className="bg-[#0F1424] py-12 text-white lg:flex lg:min-h-screen lg:items-center lg:py-8">
-        <div className="mx-auto w-full max-w-6xl px-5 sm:px-8 lg:px-10">
+      <section id="precios" className="bg-[#0F1424] py-12 text-white lg:py-14">
+        <div className="mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="mx-auto max-w-4xl text-center">
             <p className="mb-2 inline-flex rounded-full border border-violet-400/20 bg-violet-400/10 px-4 py-2 text-sm font-black text-violet-200">
-              Plan simple para empezar
+              Tarifario recomendado
             </p>
             <h2 className="text-4xl font-black leading-tight tracking-tight">
-              Menos de <span className="text-[#A855F7]">$2.000 por día</span>
-              <span className="block">para no perder clientes.</span>
+              Elegi por donde queres empezar
+              <span className="block text-[#A855F7]">y suma canales cuando haga falta.</span>
             </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+              Los planes caballo de batalla son Basico WhatsApp y Mails. Completo suma redes, email y CRM simple.
+            </p>
           </div>
 
-          <div className="mx-auto mt-5 max-w-5xl rounded-[2rem] border border-white/10 bg-white/[0.035] p-3 shadow-2xl shadow-black/20">
-            <div className="rounded-[1.5rem] bg-white p-5 text-slate-950 sm:p-6">
-              <div className="grid items-center gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-                <div className="text-center lg:text-left">
-                <p className="text-base font-black text-[#7C5CFF]">Primer mes</p>
-                <p className="mt-2 text-5xl font-black tracking-tight sm:text-6xl">
-                  $40.000 <span className="text-lg text-slate-500">ARS</span>
-                </p>
-                <p className="mt-3 text-base font-semibold text-slate-500">Después $60.000 / mes</p>
-                <p className="mt-1 text-base text-slate-500">Cancelás cuando quieras</p>
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200">
-                  <Gift className="h-4 w-4" />
-                  50 mensajes gratis para probar
-                </div>
+          <div className="mt-7">
+            <div className="mb-3 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">Planes de entrada</p>
+                <h3 className="text-2xl font-black">Arrancar simple</h3>
               </div>
-
-                <div className="text-center lg:text-left">
-                  <Link
-                    href="/register"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-8 py-5 text-base font-black text-white shadow-xl shadow-violet-200 transition hover:-translate-y-0.5 sm:w-auto lg:min-w-[360px]"
-                  >
-                    Empezar gratis ahora
-                    <ArrowRight className="h-5 w-5" />
-                  </Link>
-                  <p className="mt-3 text-sm leading-6 text-slate-500">
-                    Sin tarjeta para la prueba. Pagás solo cuando decidís quedártelo.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {priceBenefits.map((benefit) => (
-                  <div key={benefit} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 text-sm font-bold text-slate-800">
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                      <Check className="h-4 w-4 text-[#22C55E]" />
-                    </span>
-                    {benefit}
-                  </div>
-                ))}
-              </div>
+              <p className="hidden max-w-sm text-right text-sm text-slate-300 sm:block">La promo vive dentro del plan. No hay doble tarjeta ni precio duplicado.</p>
             </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              {entryPlanOrder.map((tier) => (
+                <article key={tier} className={`rounded-[2rem] border p-6 ${
+                  tier === 'whatsapp'
+                    ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-white text-slate-950 shadow-2xl shadow-emerald-950/20'
+                    : 'border-violet-200/60 bg-white text-slate-950 shadow-2xl shadow-black/20'
+                }`}>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-2xl font-black">{PLANS[tier].name}</h4>
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-black ${tier === 'whatsapp' ? 'bg-emerald-500 text-white' : 'bg-[#F1EDFF] text-[#6C4DFF]'}`}>
+                          {tier === 'whatsapp' ? 'Entrada recomendada' : 'Plan de mails'}
+                        </span>
+                      </div>
+                      <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">{PLANS[tier].description}</p>
+                    </div>
+                    <div className={`rounded-2xl border px-4 py-3 ${tier === 'whatsapp' ? 'border-emerald-200 bg-emerald-50' : 'border-violet-100 bg-violet-50'}`}>
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-500">{PLANS[tier].firstMonthLabel}</p>
+                      <p className="mt-1 text-2xl font-black text-slate-950">{PLANS[tier].publicLabel}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                    {[...PLANS[tier].features.slice(0, 4), PLANS[tier].limit, PLANS[tier].users].map((feature) => (
+                      <div key={feature} className="flex items-start gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#22C55E]" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Link href="/register" className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 ${
+                    tier === 'whatsapp' ? 'bg-emerald-500 shadow-lg shadow-emerald-950/10' : 'bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-950/10'
+                  }`}>
+                    {tier === 'whatsapp' ? 'Arrancar con Basico' : 'Activar Mails'} <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            {growthPlanOrder.map((tier) => (
+              <article key={tier} className="rounded-[2rem] border border-violet-300 bg-white p-6 text-slate-950 shadow-2xl shadow-violet-950/15">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-2xl font-black">{PLANS[tier].name}</h4>
+                      {PLANS[tier].badge && (
+                        <span className="rounded-full bg-[#A855F7] px-3 py-1 text-[11px] font-black text-white">
+                          {PLANS[tier].badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{PLANS[tier].description}</p>
+                  </div>
+                  <div className="shrink-0 rounded-2xl bg-violet-50 px-4 py-3 text-left lg:text-right">
+                    <p className="text-xs font-black uppercase tracking-wide text-[#6C4DFF]">{PLANS[tier].firstMonthLabel}</p>
+                    <p className="mt-1 text-2xl font-black text-slate-950">{PLANS[tier].priceLabel}</p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {[...PLANS[tier].features.slice(0, 4), PLANS[tier].limit, PLANS[tier].users].map((feature) => (
+                    <div key={feature} className="flex items-start gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#22C55E]" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4 text-sm font-semibold leading-6 text-amber-100">
+            Mensajes ilimitados dentro del panel. Respuestas asistidas incluidas segun plan. El uso intensivo de IA, WhatsApp oficial o APIs externas puede requerir ampliacion, siempre avisando antes de cualquier ajuste.
           </div>
         </div>
       </section>

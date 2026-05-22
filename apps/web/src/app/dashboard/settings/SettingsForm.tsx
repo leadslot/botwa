@@ -186,7 +186,7 @@ Apertura para saludos cortos: "Hola, ¿cómo estás? Te habla [nombre] de [negoc
 PARTE 3 — MÓDULO DE CATEGORÍA (elegir el tuyo)
 ──────────────────────────────────────────────
 Categorías disponibles:
-  A) Belleza y estética (peluquería, tatuajes, manicura, masajes, maquilladora, depilación)
+  A) Belleza y estética (peluquería, estética, manicura, masajes, maquilladora, depilación)
   B) Salud y bienestar (médico, psicólogo, nutricionista, kinesiólogo, enfermería)
   C) Construcción y hogar (plomero, electricista, limpieza, técnico, pintor, carpintero)
   D) Tecnología y diseño (técnico celulares, diseñador, fotógrafo, videógrafo)
@@ -229,7 +229,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'prompt-base-botwa.txt'
+    a.download = 'prompt-base-responbot.txt'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -243,7 +243,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
   }
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="space-y-3 pb-20">
       {wizardOpen && business && (
         <SetupWizard
           businessId={business.id}
@@ -255,13 +255,13 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
       )}
 
       {/* Wizard card */}
-      <div className="rounded-[24px] border border-violet-100 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-semibold text-indigo-900">
               {hasWizardData ? 'Editar configuración' : 'Configurar con asistente'}
             </p>
-            <p className="text-sm text-[#6C4DFF] mt-0.5">
+            <p className="mt-0.5 text-sm text-[#6C4DFF]">
               {hasWizardData
                 ? 'Tu configuración actual fue generada con el asistente. Hacé clic para editarla.'
                 : 'Respondé las preguntas y generamos el prompt automáticamente'}
@@ -269,7 +269,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
           </div>
           <button
             onClick={() => setWizardOpen(true)}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-violet-200"
           >
             <Wand2 className="w-4 h-4" /> {hasWizardData ? 'Editar' : 'Iniciar wizard'}
           </button>
@@ -277,7 +277,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
       </div>
 
       {/* Bot activo */}
-      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)] flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
         <div>
           <p className="font-semibold text-gray-900">Bot activo</p>
           <p className="text-sm text-gray-500">Si lo desactivás, los mensajes llegan pero el bot no responde</p>
@@ -288,13 +288,13 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
       </div>
 
       {/* Delay de respuesta */}
-      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
         <div className="flex items-center justify-between mb-1">
           <div>
             <p className="font-semibold text-gray-900">Demora antes de responder</p>
-            <p className="text-sm text-gray-500">El bot espera este tiempo antes de enviar la respuesta — se ve más natural</p>
+            <p className="text-sm text-gray-500">El bot espera este tiempo antes de enviar la respuesta.</p>
           </div>
-          <span className="text-2xl font-black text-[#6C4DFF] shrink-0 ml-4">
+          <span className="ml-4 shrink-0 text-xl font-black text-[#6C4DFF]">
             {responseDelay === 0 ? 'Inmediato' : `${responseDelay}s`}
           </span>
         </div>
@@ -302,7 +302,7 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
           type="range" min={0} max={60} step={1}
           value={responseDelay}
           onChange={e => setResponseDelay(Number(e.target.value))}
-          className="w-full accent-[#6C4DFF] mt-3"
+          className="mt-2 w-full accent-[#6C4DFF]"
         />
         <div className="flex justify-between text-xs text-gray-400 mt-1">
           <span>Inmediato</span>
@@ -314,14 +314,14 @@ TIP: Usá el wizard en la app para que se genere automáticamente con tu módulo
       </div>
 
       {/* Nombre del negocio */}
-      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
         <label className="block text-sm font-semibold text-gray-700 mb-2">Nombre del negocio</label>
         <input type="text" value={name} onChange={e => setName(e.target.value)}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4DFF] transition-all" />
       </div>
 
       {/* Prompt del asistente */}
-      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
         <button type="button" onClick={() => setPromptExpanded(v => !v)}
           className="w-full flex items-center justify-between text-left">
           <p className="font-semibold text-gray-900">Prompt del asistente</p>
@@ -373,7 +373,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
       </div>
 
       {/* Lista de precios */}
-      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="font-semibold text-gray-900">Lista de precios</p>
@@ -408,7 +408,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
                 <input
                   value={row.name}
                   onChange={e => updatePriceRow(i, 'name', e.target.value)}
-                  placeholder="Ej: Tatuaje pequeño"
+                  placeholder="Ej: Consulta inicial"
                   className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4DFF] transition-all"
                 />
                 <input
@@ -431,7 +431,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
       </div>
 
       {/* Contactos excluidos */}
-      <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <UserX className="w-4 h-4 text-gray-500" />
@@ -525,7 +525,7 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
         </div>
       )}
 
-      <button onClick={save} disabled={saving} className={`sticky bottom-4 z-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-4 text-sm font-black text-white shadow-2xl shadow-violet-200 ${saved ? '!from-green-500 !to-green-500' : ''}`}>
+      <button onClick={save} disabled={saving} className={`sticky bottom-3 z-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-2xl shadow-violet-200 ${saved ? '!from-green-500 !to-green-500' : ''}`}>
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         {saved ? '✓ Guardado' : saving ? 'Guardando...' : 'Guardar cambios'}
       </button>

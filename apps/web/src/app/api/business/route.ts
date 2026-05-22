@@ -21,7 +21,7 @@ export async function GET() {
     )
     const { data } = await adminClient
       .from('businesses')
-      .select('id, name, is_paid, plan, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds')
+      .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds')
       .eq('user_id', session.user.id)
       .single()
 

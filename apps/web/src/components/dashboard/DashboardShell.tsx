@@ -8,6 +8,8 @@ import Image from 'next/image'
 import {
   Bell,
   CreditCard,
+  Mail,
+  UsersRound,
   Home,
   LogOut,
   MessageSquare,
@@ -18,8 +20,10 @@ import {
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Inicio' },
-  { href: '/dashboard/connect', icon: Wifi, label: 'Conectar WhatsApp' },
+  { href: '/dashboard/connect', icon: Wifi, label: 'Canales' },
   { href: '/dashboard/conversations', icon: MessageSquare, label: 'Conversaciones' },
+  { href: '/dashboard/email', icon: Mail, label: 'Correos' },
+  { href: '/dashboard/crm', icon: UsersRound, label: 'CRM' },
   { href: '/dashboard/settings', icon: Settings, label: 'Configuración' },
   { href: '/dashboard/billing', icon: CreditCard, label: 'Suscripción' },
 ]
@@ -52,22 +56,22 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
   return (
     <div className="min-h-screen bg-[#F7F8FB] text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur-xl lg:flex">
-        <div className="flex h-20 items-center px-7">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[244px] flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur-xl lg:flex">
+        <div className="flex h-16 items-center px-6">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Responbot" width={44} height={44} className="rounded-2xl shadow-lg shadow-violet-200" />
-            <span className="text-2xl font-black tracking-tight text-slate-950">Responbot</span>
+            <Image src="/logo.png" alt="Responbot" width={40} height={40} className="rounded-2xl shadow-lg shadow-violet-200" />
+            <span className="text-xl font-black tracking-tight text-slate-950">Responbot</span>
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-1.5 px-4">
+        <nav className="flex-1 space-y-1 px-3">
           {navItems.map(({ href, icon: Icon, label }) => {
             const active = isActive(pathname, href)
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-4 rounded-2xl px-5 py-3.5 text-base font-semibold transition ${
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                   active
                     ? 'bg-[#F1EDFF] text-[#6C4DFF] shadow-sm'
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
@@ -80,9 +84,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           })}
         </nav>
 
-        <div className="border-t border-slate-200/80 p-4">
+        <div className="border-t border-slate-200/80 p-3">
           <form action="/auth/signout" method="post">
-            <button className="flex w-full items-center gap-4 rounded-2xl px-5 py-3.5 text-base font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600">
+            <button className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600">
               <LogOut className="h-5 w-5" />
               Cerrar sesión
             </button>
@@ -90,10 +94,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
       </aside>
 
-      <div className="lg:pl-[264px]">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200/70 bg-[#F7F8FB]/85 px-5 backdrop-blur-xl sm:px-8 lg:px-8">
+      <div className="lg:pl-[244px]">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200/70 bg-[#F7F8FB]/85 px-5 backdrop-blur-xl sm:px-6 lg:px-6">
           <Link href="/dashboard" className="flex items-center gap-3 lg:hidden">
-            <Image src="/logo.svg" alt="Responbot" width={40} height={40} className="rounded-2xl shadow-lg shadow-violet-200" />
+            <Image src="/logo.png" alt="Responbot" width={40} height={40} className="rounded-2xl shadow-lg shadow-violet-200" />
             <span className="text-xl font-black text-slate-950">Responbot</span>
           </Link>
 
@@ -145,7 +149,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-64px)] px-5 py-5 sm:px-8 lg:px-8">
+        <main className="min-h-[calc(100vh-56px)] px-4 py-4 sm:px-6 lg:px-6">
           {children}
         </main>
       </div>

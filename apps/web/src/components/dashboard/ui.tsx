@@ -8,7 +8,7 @@ export function SectionCard({
   className?: string
 }) {
   return (
-    <div className={`rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] ${className}`}>
+    <div className={`rounded-2xl border border-slate-200 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)] ${className}`}>
       {children}
     </div>
   )
@@ -30,7 +30,7 @@ export function StatusPill({
   }
 
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${styles[tone]}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[tone]}`}>
       {tone === 'green' && <span className="h-2 w-2 rounded-full bg-[#22C55E]" />}
       {children}
     </span>
@@ -44,7 +44,7 @@ export function PurpleButton({
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-violet-200 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       {...props}
     >
       {children}
@@ -54,8 +54,8 @@ export function PurpleButton({
 
 export function CheckRow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-      <CheckCircle2 className="h-5 w-5 shrink-0 text-[#22C55E]" />
+    <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+      <CheckCircle2 className="h-4 w-4 shrink-0 text-[#22C55E]" />
       {children}
     </div>
   )

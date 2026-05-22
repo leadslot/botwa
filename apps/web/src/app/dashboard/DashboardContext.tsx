@@ -6,6 +6,8 @@ type Business = {
   name: string
   is_paid: boolean
   plan: string | null
+  plan_tier: string | null
+  enabled_channels: string[] | null
   messages_used: number
   ai_enabled: boolean
   ai_prompt: string | null

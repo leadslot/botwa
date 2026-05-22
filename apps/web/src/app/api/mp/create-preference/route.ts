@@ -22,7 +22,7 @@ export async function POST() {
     items: [{
       title: 'Responbot - Primer mes',
       quantity: 1,
-      unit_price: 40000,
+      unit_price: 49000,
       currency_id: 'ARS',
     }],
     payer: { email: session.user.email },

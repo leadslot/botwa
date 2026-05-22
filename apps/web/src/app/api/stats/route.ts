@@ -31,8 +31,15 @@ export async function GET() {
     since.setDate(since.getDate() - 6)
     since.setHours(0, 0, 0, 0)
 
-    const { data: messages } = await adminClient
+    const { data: whatsappMessages } = await adminClient
       .from('whatsapp_messages')
+      .select('created_at, direction')
+      .eq('business_id', business.id)
+      .gte('created_at', since.toISOString())
+      .order('created_at', { ascending: true })
+
+    const { data: channelMessages } = await adminClient
+      .from('channel_messages')
       .select('created_at, direction')
       .eq('business_id', business.id)
       .gte('created_at', since.toISOString())
@@ -50,7 +57,7 @@ export async function GET() {
       })
     }
 
-    for (const msg of messages ?? []) {
+    for (const msg of [...(whatsappMessages ?? []), ...(channelMessages ?? [])]) {
       const msgDate = new Date(msg.created_at)
       const diffDays = Math.floor((Date.now() - msgDate.getTime()) / 86400000)
       const idx = 6 - diffDays

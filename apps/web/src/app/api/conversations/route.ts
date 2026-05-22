@@ -30,6 +30,21 @@ export async function DELETE(req: NextRequest) {
       .eq('business_id', business.id)
       .like('from_number', `%${number}%`)
 
+    const { data: conversations } = await adminClient
+      .from('channel_conversations')
+      .select('id')
+      .eq('business_id', business.id)
+      .or(`external_conversation_id.eq.${number},contact_handle.eq.${number}`)
+
+    const conversationIds = (conversations ?? []).map(c => c.id)
+    if (conversationIds.length > 0) {
+      await adminClient
+        .from('channel_messages')
+        .delete()
+        .eq('business_id', business.id)
+        .in('conversation_id', conversationIds)
+    }
+
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error('/api/conversations DELETE error:', e)
@@ -62,14 +77,39 @@ export async function GET() {
 
     if (!business) return NextResponse.json({ messages: [] })
 
-    const { data: messages } = await adminClient
+    const { data: whatsappMessages } = await adminClient
       .from('whatsapp_messages')
       .select('id, from_number, message, direction, created_at, push_name')
       .eq('business_id', business.id)
       .order('created_at', { ascending: false })
       .limit(200)
 
-    return NextResponse.json({ messages: messages ?? [] })
+    const { data: channelMessages } = await adminClient
+      .from('channel_messages')
+      .select('id, channel, message, direction, created_at, channel_conversations(external_conversation_id, contact_name, contact_handle)')
+      .eq('business_id', business.id)
+      .order('created_at', { ascending: false })
+      .limit(200)
+
+    const unified = [
+      ...(whatsappMessages ?? []).map(msg => ({ ...msg, channel: 'whatsapp' })),
+      ...(channelMessages ?? []).map(msg => {
+        const conversation = Array.isArray(msg.channel_conversations)
+          ? msg.channel_conversations[0]
+          : msg.channel_conversations
+        return {
+          id: msg.id,
+          from_number: conversation?.contact_handle || conversation?.external_conversation_id || msg.channel,
+          push_name: conversation?.contact_name ?? msg.channel,
+          message: msg.message,
+          direction: msg.direction,
+          created_at: msg.created_at,
+          channel: msg.channel,
+        }
+      }),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 300)
+
+    return NextResponse.json({ messages: unified })
   } catch (e) {
     console.error('/api/conversations error:', e)
     return NextResponse.json({ messages: [] })

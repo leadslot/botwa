@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Responbot — Tu negocio respondiendo solo',
-  description: 'Conectá tu WhatsApp y dejá que la IA responda por vos, 24/7.',
+  description: 'Respondé WhatsApp, Web Chat, Telegram, Meta, Email y CRM desde una sola plataforma.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

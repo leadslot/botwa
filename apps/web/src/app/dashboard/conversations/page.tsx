@@ -2,25 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useDashboard } from '../DashboardContext'
-import {
-  Ban,
-  Bot,
-  CheckCircle2,
-  Clock3,
-  Filter,
-  History,
-  MessageSquare,
-  MoreHorizontal,
-  Paperclip,
-  Pause,
-  Play,
-  Search,
-  Send,
-  Tag,
-  Trash2,
-  UserRound,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Ban, Bot, Clock3, Filter, MessageSquare, Paperclip, Pause, Play, Search, Send, Trash2, UserRound } from 'lucide-react'
 import { SectionCard, StatusPill } from '@/components/dashboard/ui'
 
 type Msg = {
@@ -30,21 +12,26 @@ type Msg = {
   direction: 'inbound' | 'outbound'
   created_at: string
   push_name?: string | null
+  channel?: string
 }
 
 type Contact = {
+  key: string
   number: string
+  channel: string
   messages: Msg[]
   lastMsg: Msg
 }
 
 const cleanNumber = (n: string) => n.replace(/@[^@]+$/, '').replace(/[^0-9+]/g, '')
 
-// Detecta si es un LID irresolvible (no es un número de teléfono real)
+// Detecta si es un LID irresolvible (no es un numero de telefono real)
 const isLid = (n: string) => n.includes('@lid') || n.replace(/\D/g,'').length > 14
 
-// Muestra nombre o número según lo que esté disponible
+// Muestra nombre o numero segun lo que este disponible
 function contactLabel(number: string, msgs: Msg[], index?: number): string {
+  const channel = msgs[0]?.channel
+  if (channel && channel !== 'whatsapp') return msgs.find(m => m.push_name)?.push_name || number
   if (!isLid(number)) return `+${number}`
   const name = msgs.find(m => m.direction === 'inbound' && m.push_name)?.push_name
   if (name) return name
@@ -80,22 +67,25 @@ export default function ConversationsPage() {
       .then(({ messages }: { messages: Msg[] }) => {
         const map: Record<string, Msg[]> = {}
         for (const msg of messages ?? []) {
-          const key = cleanNumber(msg.from_number)
+          const channel = msg.channel ?? 'whatsapp'
+          const clean = channel === 'whatsapp' ? cleanNumber(msg.from_number) : msg.from_number
+          const key = `${channel}:${clean}`
           if (!map[key]) map[key] = []
           map[key].push(msg)
         }
-        const list = Object.entries(map).map(([number, msgs]) => {
-          return { number, messages: [...msgs].reverse(), lastMsg: msgs[0] }
+        const list = Object.entries(map).map(([key, msgs]) => {
+          const [channel, ...rest] = key.split(':')
+          return { key, number: rest.join(':'), channel, messages: [...msgs].reverse(), lastMsg: msgs[0] }
         })
         list.sort((a, b) => new Date(b.lastMsg.created_at).getTime() - new Date(a.lastMsg.created_at).getTime())
         setContacts(list)
-        if (list.length > 0) setSelected(list[0].number)
+        if (list.length > 0) setSelected(list[0].key)
         setLoading(false)
       })
   }, [bizLoading])
 
-  const activeContact = contacts.find(c => c.number === selected)
-  const activeContactIndex = contacts.findIndex(c => c.number === selected)
+  const activeContact = contacts.find(c => c.key === selected)
+  const activeContactIndex = contacts.findIndex(c => c.key === selected)
   const totalMsgs = contacts.reduce((s, c) => s + c.messages.length, 0)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -151,65 +141,65 @@ export default function ConversationsPage() {
   )
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px - 40px)' }}>
-      <div className="mb-4 shrink-0">
-        <h1 className="text-4xl font-black tracking-tight text-slate-950">Conversaciones</h1>
-        <p className="mt-1 text-lg text-slate-500">{contacts.length} contacto · {totalMsgs} mensajes en total</p>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 56px - 32px)' }}>
+      <div className="mb-3 shrink-0">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Conversaciones</h1>
+        <p className="text-sm text-slate-500">{contacts.length} contacto · {totalMsgs} mensajes en total</p>
       </div>
 
       {contacts.length === 0 ? (
         <SectionCard className="flex flex-1 items-center justify-center p-8">
           <div className="text-center">
             <MessageSquare className="mx-auto mb-4 h-14 w-14 text-slate-300" />
-            <p className="text-xl font-black text-slate-950">Sin conversaciones todavía</p>
+            <p className="text-xl font-semibold text-slate-950">Sin conversaciones todavía</p>
             <p className="mt-2 text-slate-500">Los mensajes aparecerán aquí cuando alguien escriba al bot.</p>
           </div>
         </SectionCard>
       ) : (
-        <div className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[350px_minmax(460px,1fr)_360px]">
-          <SectionCard className="flex flex-col overflow-hidden p-4">
-            <div className="flex gap-3">
-              <div className="flex flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                <Search className="h-5 w-5 text-slate-400" />
+        <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[300px_minmax(500px,1fr)_235px]">
+          <SectionCard className="flex flex-col overflow-hidden p-2.5">
+            <div className="flex gap-2">
+              <div className="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-1.5">
+                <Search className="h-4 w-4 text-slate-400" />
                 <input className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-slate-400" placeholder="Buscar contactos..." />
               </div>
-              <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600">
-                <Filter className="h-5 w-5" />
+              <button className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600">
+                <Filter className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {['Todas', 'No leídos', 'En curso', 'Cerradas'].map((filter, index) => (
-                <button key={filter} className={`rounded-xl border px-3 py-2 text-xs font-black ${index === 0 ? 'border-[#6C4DFF] bg-[#6C4DFF] text-white' : 'border-slate-200 bg-white text-slate-500'}`}>
+                <button key={filter} className={`rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold ${index === 0 ? 'border-[#6C4DFF] bg-[#6C4DFF] text-white' : 'border-slate-200 bg-white text-slate-500'}`}>
                   {filter}
                 </button>
               ))}
             </div>
 
-            <div className="mt-5 flex-1 space-y-3 overflow-y-auto">
-              {contacts.map(({ number, lastMsg, messages }, idx) => {
-                const isActive = selected === number
+            <div className="mt-3 flex-1 space-y-2 overflow-y-auto">
+              {contacts.map(({ key, number, channel, lastMsg, messages }, idx) => {
+                const isActive = selected === key
                 return (
-                  <div key={number} className="group relative">
+                  <div key={key} className="group relative">
                     <button
-                      onClick={() => setSelected(number)}
-                      className={`w-full rounded-2xl border p-4 text-left transition ${
+                      onClick={() => setSelected(key)}
+                      className={`w-full rounded-2xl border p-2.5 text-left transition ${
                         isActive ? 'border-violet-300 bg-[#F5F2FF]' : 'border-slate-200 bg-white hover:border-violet-200'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F1EDFF] text-[#6C4DFF]">
-                          <UserRound className="h-6 w-6" />
+                      <div className="flex items-center gap-2.5">
+                        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1EDFF] text-[#6C4DFF]">
+                          <UserRound className="h-4 w-4" />
                           <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white bg-[#22C55E]" />
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="truncate font-black text-slate-950">{contactLabel(number, messages, idx)}</p>
+                            <p className="truncate text-sm font-semibold text-slate-950">{contactLabel(number, messages, idx)}</p>
                             <span className="text-xs font-semibold text-slate-500">{formatTimeShort(lastMsg.created_at)}</span>
                           </div>
-                          <p className="mt-1 truncate text-sm text-slate-500">{lastMsg.message}</p>
+                          <p className="mt-0.5 truncate text-xs text-slate-500"><span className="font-semibold uppercase text-[#6C4DFF]">{channel}</span> · {lastMsg.message}</p>
                         </div>
-                        <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-[#6C4DFF] px-2 text-xs font-black text-white">
+                        <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[#6C4DFF] px-2 text-[11px] font-semibold text-white">
                           {messages.length}
                         </span>
                       </div>
@@ -233,33 +223,34 @@ export default function ConversationsPage() {
               })}
             </div>
 
-            <div className="mt-4 flex justify-center gap-3 border-t border-slate-100 pt-4">
-              <button className="h-10 w-10 rounded-xl border border-slate-200 text-slate-500">‹</button>
-              <button className="h-10 w-10 rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] font-black text-white">1</button>
-              <button className="h-10 w-10 rounded-xl border border-slate-200 text-slate-500">›</button>
+            <div className="mt-2 flex justify-center gap-2 border-t border-slate-100 pt-2">
+              <button className="h-8 w-8 rounded-xl border border-slate-200 text-slate-500">‹</button>
+              <button className="h-8 w-8 rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] text-sm font-semibold text-white">1</button>
+              <button className="h-8 w-8 rounded-xl border border-slate-200 text-slate-500">›</button>
             </div>
           </SectionCard>
 
           <SectionCard className="flex flex-col overflow-hidden">
             {activeContact ? (
               <>
-                <div className="flex items-center justify-between border-b border-slate-100 p-5">
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F1EDFF] text-[#6C4DFF]">
-                      <UserRound className="h-7 w-7" />
+                <div className="flex items-center justify-between border-b border-slate-100 p-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F1EDFF] text-[#6C4DFF]">
+                      <UserRound className="h-4 w-4" />
                     </span>
                     <div>
-                      <p className="text-xl font-black text-slate-950">{contactLabel(activeContact.number, activeContact.messages, activeContactIndex)}</p>
-                      <div className="mt-1 flex items-center gap-3">
-                        <span className="text-sm text-slate-500">{activeContact.messages.length} mensajes</span>
-                        <StatusPill tone="green">En línea</StatusPill>
+                      <p className="text-base font-semibold text-slate-950">{contactLabel(activeContact.number, activeContact.messages, activeContactIndex)}</p>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <StatusPill tone="violet">{activeContact.channel}</StatusPill>
+                        <span className="text-xs text-slate-500">{activeContact.messages.length} mensajes</span>
+                        <StatusPill tone="green">En linea</StatusPill>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => activeContact && togglePause(activeContact.number)}
-                      className={`flex h-10 w-10 items-center justify-center rounded-2xl border transition ${
+                      className={`flex h-9 w-9 items-center justify-center rounded-2xl border transition ${
                         pausedContacts.has(activeContact?.number ?? '')
                           ? 'border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100'
                           : 'border-slate-200 text-slate-400 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-500'
@@ -273,14 +264,14 @@ export default function ConversationsPage() {
                     </button>
                     <button
                       onClick={() => { if (activeContact) blockContact(activeContact.number) }}
-                      className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-400 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-500 transition"
+                      className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 text-slate-400 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-500 transition"
                       title="Bloquear contacto"
                     >
                       <Ban className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => { if (activeContact) { if (!confirm(`¿Eliminar conversación con +${activeContact.number}?`)) return; deleteConversation(activeContact.number) }}}
-                      className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition"
+                      className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition"
                       title="Eliminar conversación"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -288,19 +279,19 @@ export default function ConversationsPage() {
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-5 overflow-y-auto bg-white px-5 py-6">
-                  <div className="text-center"><span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-500">Hoy</span></div>
+                <div className="flex-1 space-y-2.5 overflow-y-auto bg-white px-3 py-2.5">
+                  <div className="text-center"><span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-500">Hoy</span></div>
                   {activeContact.messages.map((msg, i) => {
                     const isOut = msg.direction === 'outbound'
                     return (
                       <div key={msg.id ?? i} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[78%] rounded-[24px] px-5 py-4 text-sm leading-6 shadow-sm ${
+                        <div className={`max-w-[72%] rounded-2xl px-3 py-1.5 text-sm leading-5 shadow-sm ${
                           isOut
                             ? 'rounded-br-md bg-[#F1EDFF] text-[#4C1DFF]'
                             : 'rounded-bl-md bg-slate-100 text-slate-700'
                         }`}>
                           <p className="whitespace-pre-wrap break-words">{msg.message}</p>
-                          <p className={`mt-2 text-right text-xs ${isOut ? 'text-[#6C4DFF]/70' : 'text-slate-400'}`}>
+                          <p className={`mt-1 text-right text-[11px] ${isOut ? 'text-[#6C4DFF]/70' : 'text-slate-400'}`}>
                             {formatTime(msg.created_at)}
                           </p>
                         </div>
@@ -311,20 +302,20 @@ export default function ConversationsPage() {
                 </div>
 
                 {pausedContacts.has(activeContact?.number ?? '') && (
-                  <div className="border-t border-amber-100 bg-amber-50 px-5 py-2 text-center text-xs font-semibold text-amber-700">
-                    Bot pausado para este contacto — respondé manualmente desde tu teléfono
+                  <div className="border-t border-amber-100 bg-amber-50 px-5 py-1.5 text-center text-xs font-semibold text-amber-700">
+                    Bot pausado para este contacto - responde manualmente desde tu telefono
                   </div>
                 )}
-                <div className="border-t border-slate-100 p-5">
-                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-                    <button className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 text-slate-500">☺</button>
+                <div className="border-t border-slate-100 p-2.5">
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+                    <button className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-50 text-slate-500">:)</button>
                     <input className="min-w-0 flex-1 bg-transparent px-2 text-sm font-medium outline-none placeholder:text-slate-400" placeholder="Escribir mensaje..." />
                     <Paperclip className="h-5 w-5 text-slate-400" />
-                    <button className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] text-white">
-                      <Send className="h-5 w-5" />
+                    <button className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] text-white">
+                      <Send className="h-4 w-4" />
                     </button>
                   </div>
-                  <p className="mt-3 text-center text-xs text-slate-400">Responbot responde automáticamente desde nuestro servidor.</p>
+                  <p className="mt-2 text-center text-[11px] text-slate-400">Responbot responde automaticamente desde nuestro servidor.</p>
                 </div>
               </>
             ) : (
@@ -332,58 +323,36 @@ export default function ConversationsPage() {
             )}
           </SectionCard>
 
-          <div className="flex flex-col gap-4 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-4">
-              <SectionCard className="p-5">
-                <Clock3 className="mb-3 h-8 w-8 text-[#6C4DFF]" />
-                <p className="text-sm font-semibold text-slate-500">Tiempo de respuesta</p>
-                <p className="text-3xl font-black text-slate-950">3 seg</p>
+          <div className="flex flex-col gap-3 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3">
+              <SectionCard className="p-2.5">
+                <Clock3 className="mb-2 h-6 w-6 text-[#6C4DFF]" />
+                <p className="text-xs font-semibold text-slate-500">Respuesta</p>
+                <p className="text-xl font-semibold text-slate-950">3 seg</p>
                 <p className="text-xs text-slate-500">Promedio</p>
               </SectionCard>
-              <SectionCard className="p-5">
-                <Bot className="mb-3 h-8 w-8 text-[#6C4DFF]" />
-                <p className="text-sm font-semibold text-slate-500">Bot activo</p>
-                <p className="text-3xl font-black text-slate-950">24/7</p>
+              <SectionCard className="p-2.5">
+                <Bot className="mb-2 h-6 w-6 text-[#6C4DFF]" />
+                <p className="text-xs font-semibold text-slate-500">Bot activo</p>
+                <p className="text-xl font-semibold text-slate-950">24/7</p>
                 <span className="mt-2 block h-2 w-2 rounded-full bg-[#22C55E]" />
               </SectionCard>
             </div>
 
-            <SectionCard className="p-5">
-              <h2 className="mb-5 text-lg font-black text-slate-950">Información del contacto</h2>
-              <div className="rounded-3xl border border-slate-100 bg-white p-5 text-center">
-                <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#F1EDFF] text-[#6C4DFF]">
-                  <UserRound className="h-10 w-10" />
+            <SectionCard className="p-2.5">
+              <h2 className="mb-2 text-base font-semibold text-slate-950">Contacto</h2>
+              <div className="rounded-2xl border border-slate-100 bg-white p-2.5 text-center">
+                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#F1EDFF] text-[#6C4DFF]">
+                  <UserRound className="h-5 w-5" />
                 </span>
-                <p className="mt-4 text-xl font-black text-slate-950">{activeContact ? contactLabel(activeContact.number, activeContact.messages, activeContactIndex) : ''}</p>
-                <p className="mt-1 text-sm text-slate-500">Cliente desde mayo 2025</p>
-                <div className="mt-5 divide-y divide-slate-100 text-sm">
-                  <div className="flex justify-between py-3"><span className="text-slate-500">Mensajes totales</span><span className="font-black">{activeContact?.messages.length ?? 0}</span></div>
-                  <div className="flex justify-between py-3"><span className="text-slate-500">Último contacto</span><span className="font-black">Hoy</span></div>
-                  <div className="flex justify-between py-3"><span className="text-slate-500">Estado</span><StatusPill tone="green">En línea</StatusPill></div>
+                <p className="mt-1.5 truncate text-sm font-semibold text-slate-950">{activeContact ? contactLabel(activeContact.number, activeContact.messages, activeContactIndex) : ''}</p>
+                <div className="mt-2 divide-y divide-slate-100 text-xs">
+                  <div className="flex justify-between py-1.5"><span className="text-slate-500">Mensajes</span><span className="font-semibold">{activeContact?.messages.length ?? 0}</span></div>
+                  <div className="flex justify-between py-1.5"><span className="text-slate-500">Canal</span><span className="font-semibold capitalize">{activeContact?.channel ?? '-'}</span></div>
+                  <div className="flex justify-between py-1.5"><span className="text-slate-500">Último</span><span className="font-semibold">Hoy</span></div>
+                  <div className="flex items-center justify-between py-1.5"><span className="text-slate-500">Estado</span><StatusPill tone="green">En linea</StatusPill></div>
                 </div>
               </div>
-            </SectionCard>
-
-            <SectionCard className="p-5">
-              <h2 className="mb-4 text-lg font-black text-slate-950">Actividad reciente</h2>
-              {([
-                ['Conversación iniciada', MessageSquare],
-                ['Pregunta sobre turnos', CheckCircle2],
-                ['Responbot respondió', Bot],
-              ] as [string, LucideIcon][]).map(([label, Icon]) => (
-                <div key={label} className="mb-3 flex items-center gap-3 rounded-2xl border border-slate-100 p-4 last:mb-0">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F1EDFF] text-[#6C4DFF]">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="font-bold text-slate-700">{label}</p>
-                    <p className="text-xs text-slate-500">Hoy, 11:00</p>
-                  </div>
-                </div>
-              ))}
-              <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-[#6C4DFF]">
-                Ver historial completo <History className="h-4 w-4" />
-              </button>
             </SectionCard>
           </div>
         </div>
@@ -391,3 +360,4 @@ export default function ConversationsPage() {
     </div>
   )
 }
+

@@ -228,10 +228,10 @@ const RUBRO_FIELDS: Record<string, FieldDef[]> = {
     { key: 'duracion',  label: '¿Cuánto dura cada servicio aprox?', type: 'text', placeholder: 'Ej: Corte 30min, mechas 2hs' },
   ],
   tatuajes: [
-    { key: 'estilos',   label: '¿Qué estilos hacés?', type: 'textarea', placeholder: 'Ej: Realismo, blackwork, geométrico, lettering' },
-    { key: 'cotizacion',label: '¿Cómo cotizás?', type: 'textarea', placeholder: 'Ej: Por foto e imagen de referencia. Precio según tamaño y detalle.' },
-    { key: 'turno',     label: '¿Cómo se saca turno y qué seña pedís?', type: 'textarea', placeholder: 'Ej: Se reserva con seña del 50% por transferencia, turnos cada 15 días.' },
-    { key: 'restricciones', label: '¿Hay restricciones?', type: 'textarea', placeholder: 'Ej: No tatuamos embarazadas, menores con tutor, no cara ni manos.' },
+    { key: 'estilos',   label: '¿Qué estilos o servicios ofrecés?', type: 'textarea', placeholder: 'Ej: Líneas finas, blackwork, piercings, retoques...' },
+    { key: 'cotizacion',label: '¿Cómo cotizás?', type: 'textarea', placeholder: 'Ej: Según referencia, tamaño, zona y complejidad. Se confirma por WhatsApp.' },
+    { key: 'turno',     label: '¿Cómo se reserva un turno?', type: 'textarea', placeholder: 'Ej: Se coordina por WhatsApp y se confirma con seña si corresponde.' },
+    { key: 'restricciones', label: '¿Hay condiciones o restricciones?', type: 'textarea', placeholder: 'Ej: Requiere consulta previa, documentación o autorización según el caso.' },
   ],
   manicura: [
     { key: 'servicios', label: '¿Qué servicios ofrecés?', type: 'textarea', placeholder: 'Ej: Manicura, pedicura, kapping, nail art, semipermanente...' },
@@ -705,7 +705,7 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
   const [step, setStep] = useState(initialStep ?? 1)
   const [saving, setSaving] = useState(false)
   const [data, setData] = useState<WizardData>({
-    rubro: 'peluqueria',
+    rubro: 'tienda',
     botProfiles: ['ventas'],
     businessName: '', contactName: '', tone: 'amigable y rioplatense',
     address: '', hours: '', payments: [], websiteLink: '',
@@ -879,10 +879,10 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
               <h2 className="font-bold text-gray-900 text-lg">Identidad del negocio</h2>
               <div>
                 <label className={lbl}>Nombre del negocio</label>
-                <input className={inp} value={data.businessName} onChange={e => set('businessName', e.target.value)} placeholder="Ej: Estudio Sol, Centro Vital, Taller Norte" />
+                <input className={inp} value={data.businessName} onChange={e => set('businessName', e.target.value)} placeholder="Ej: Tienda Norte, Centro Vital, Servicios Sol" />
               </div>
               <div>
-                <label className={lbl}>Nombre del responsable que "habla"</label>
+                <label className={lbl}>Nombre del responsable que habla</label>
                 <input className={inp} value={data.contactName} onChange={e => set('contactName', e.target.value)} placeholder="Ej: Laura, Marcos, El equipo" />
               </div>
               <div>
@@ -1019,13 +1019,13 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
                     className={inp}
                     value={faq.question}
                     onChange={e => setFaq(i, 'question', e.target.value)}
-                    placeholder={`Pregunta ${i + 1} (ej: ¿Atienden menores?)`}
+                    placeholder={`Pregunta ${i + 1} (ej: ¿Cuáles son los horarios?)`}
                   />
                   <input
                     className={inp}
                     value={faq.answer}
                     onChange={e => setFaq(i, 'answer', e.target.value)}
-                    placeholder="Respuesta corta (ej: Sí, desde 15 años con tutor presente)"
+                    placeholder="Respuesta corta (ej: Lunes a viernes de 9 a 18hs)"
                   />
                 </div>
               ))}
