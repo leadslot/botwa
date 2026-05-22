@@ -303,6 +303,8 @@ export const botManager = {
           .from('whatsapp_sessions')
           .upsert({ business_id: businessId, status: 'connected', qr_code: null })
         console.log(`[${businessId}] WhatsApp conectado`)
+        // Load persisted paused contacts from DB
+        botManager.loadPausedContacts(businessId).catch(() => {})
         // Request full contact sync from WhatsApp
         try {
           await sock.fetchAppStateSync(['regular_high', 'regular_low', 'regular'])
@@ -430,28 +432,15 @@ export const botManager = {
           continue
         }
 
-        // ── LÍMITES ──────────────────────────────────────────
-        const TRIAL_LIMIT = 50        // mensajes totales en prueba
-        const DAILY_LIMIT = 200       // mensajes por día en plan pago
-        const usados = business.messages_used || 0
+        // ── LÍMITES (atómico vía función SQL) ────────────────
+        const TRIAL_LIMIT = 50
+        const DAILY_LIMIT = 200
+        const today = new Date().toISOString().slice(0, 10)
 
-        // 1) Chequeo trial
-        if (!business.is_paid && usados >= TRIAL_LIMIT) {
+        // Aviso trial (pre-check sin lock para el mensaje de usuario)
+        if (!business.is_paid && (business.messages_used || 0) >= TRIAL_LIMIT) {
           await sock.sendMessage(from, {
-            text: `Hola, el período de prueba de ${business.name} llegó a su límite de ${TRIAL_LIMIT} mensajes. Para continuar, activá tu suscripción en botwa-app.vercel.app 🙏`
-          })
-          continue
-        }
-
-        // 2) Chequeo límite diario (reset automático cada día)
-        const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-        const lastReset = business.daily_reset_date || ''
-        const dailyCount = lastReset === today ? (business.daily_messages_count || 0) : 0
-
-        if (business.is_paid && dailyCount >= DAILY_LIMIT) {
-          console.warn(`[${businessId}] Límite diario alcanzado (${DAILY_LIMIT} msgs)`)
-          // No respondemos ni avisamos al cliente — simplemente ignoramos
-          // para no spamear al usuario final con mensajes de error
+            text:           })
           continue
         }
 
@@ -488,27 +477,21 @@ export const botManager = {
 
           await sock.sendMessage(from, { text: response })
 
-          // Actualizar contadores
-          const newDailyCount = dailyCount + 1
-          await Promise.all([
-            supabase.from('whatsapp_messages').insert({
-              business_id: businessId,
-              from_number: from,
-              message: response,
-              direction: 'outbound',
-            }),
-            supabase.from('businesses')
-              .update({
-                messages_used: usados + 1,
-                daily_messages_count: newDailyCount,
-                daily_reset_date: today,
-                // ~430 tokens por intercambio (300 prompt + 30 user + 100 respuesta)
-                tokens_estimated: (business.tokens_estimated || 0) + 430,
-              })
-              .eq('id', businessId),
-          ])
-
-          console.log(`[${businessId}] Respondido. Diario: ${newDailyCount}/${DAILY_LIMIT}`)
+          // Actualizar contadores (atómico via SQL function)
+          await supabase.from('whatsapp_messages').insert({
+            business_id: businessId,
+            from_number: from,
+            message: response,
+            direction: 'outbound',
+          })
+          const { data: counter } = await supabase.rpc('increment_message_counters', {
+            p_business_id: businessId,
+            p_today: today,
+            p_tokens: 430,
+            p_daily_limit: DAILY_LIMIT,
+            p_trial_limit: TRIAL_LIMIT,
+          })
+          console.log(`[${businessId}] Respondido. Counter: ${JSON.stringify(counter)}`)
         } catch (err) {
           console.error(`[${businessId}] Error IA:`, err.message)
         }
@@ -519,18 +502,26 @@ export const botManager = {
   },
 
   // ── Human Handoff ────────────────────────────────────────
-  pauseContact(businessId, number) {
+  async pauseContact(businessId, number) {
     if (!pausedContacts.has(businessId)) pausedContacts.set(businessId, new Set())
     pausedContacts.get(businessId).add(number)
+    await supabase.from('paused_contacts').upsert({ business_id: businessId, phone: number }, { onConflict: 'business_id,phone' })
   },
-  unpauseContact(businessId, number) {
+  async unpauseContact(businessId, number) {
     pausedContacts.get(businessId)?.delete(number)
+    await supabase.from('paused_contacts').delete().eq('business_id', businessId).eq('phone', number)
   },
   isPaused(businessId, number) {
     return pausedContacts.get(businessId)?.has(number) ?? false
   },
   getPausedContacts(businessId) {
     return Array.from(pausedContacts.get(businessId) ?? [])
+  },
+  async loadPausedContacts(businessId) {
+    const { data } = await supabase.from('paused_contacts').select('phone').eq('business_id', businessId)
+    if (data?.length) {
+      pausedContacts.set(businessId, new Set(data.map(r => r.phone)))
+    }
   },
 
   // ── Pairing Code ─────────────────────────────────────────

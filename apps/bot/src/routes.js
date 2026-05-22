@@ -82,11 +82,11 @@ export function setupRoutes(app, botManager) {
   })
 
   // Pausar/reanudar bot para un contacto específico
-  app.post('/session/pause', (req, res) => {
+  app.post('/session/pause', async (req, res) => {
     const { businessId, number, paused } = req.body
     if (!businessId || !number) return res.status(400).json({ error: 'businessId y number requeridos' })
-    if (paused) botManager.pauseContact(businessId, number)
-    else botManager.unpauseContact(businessId, number)
+    if (paused) await botManager.pauseContact(businessId, number)
+    else await botManager.unpauseContact(businessId, number)
     res.json({ ok: true, paused })
   })
 
