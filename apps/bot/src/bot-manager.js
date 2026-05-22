@@ -103,6 +103,27 @@ const lidToNumber = new Map()
 const pausedContacts = new Map()
 // Sockets en proceso de conexión (antes de 'open'): businessId -> sock
 const pendingSockets = new Map()
+// Loop detection: `${businessId}:${from}` -> { text, count, firstTs }
+const loopTracker = new Map()
+
+function isLoopMessage(businessId, from, text) {
+  const key = `${businessId}:${from}`
+  const now = Date.now()
+  const entry = loopTracker.get(key)
+  const WINDOW_MS = 60_000 // 60 segundos
+  const MAX_REPEATS = 3    // más de 3 veces el mismo texto = loop
+
+  if (entry && entry.text === text && (now - entry.firstTs) < WINDOW_MS) {
+    entry.count++
+    if (entry.count >= MAX_REPEATS) {
+      console.warn(`[${businessId}] Loop detectado con ${from}: "${text}" x${entry.count}`)
+      return true
+    }
+  } else {
+    loopTracker.set(key, { text, count: 1, firstTs: now })
+  }
+  return false
+}
 
 function parseChat(chat) {
   const jid = chat.id || ''
@@ -441,6 +462,9 @@ export const botManager = {
           // para no spamear al usuario final con mensajes de error
           continue
         }
+
+        // ── LOOP DETECTION ───────────────────────────────
+        if (isLoopMessage(businessId, from, text)) continue
 
         // ── GENERAR RESPUESTA ─────────────────────────────
         try {
