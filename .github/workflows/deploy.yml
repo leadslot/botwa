@@ -42,9 +42,8 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           npm install -g vercel@latest --silent
-          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-          vercel build --prod --token=$VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          # Deploy directo a Vercel — el build corre en sus servidores con las env vars reales
+          vercel deploy --prod --yes --token=$VERCEL_TOKEN
 
       - name: Smoke test
         run: |
