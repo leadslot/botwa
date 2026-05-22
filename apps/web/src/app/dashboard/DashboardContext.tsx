@@ -16,6 +16,7 @@ type Business = {
   price_list: { name: string; price: string }[] | null
   excluded_numbers: string[] | null
   response_delay_seconds: number | null
+  context_messages: number | null
 }
 
 type DashboardData = {
