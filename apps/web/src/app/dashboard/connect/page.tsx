@@ -84,6 +84,8 @@ export default function ConnectPage() {
   const [telegramError, setTelegramError] = useState<string | null>(null)
   const [waApiLoading, setWaApiLoading] = useState(false)
   const [waApiError, setWaApiError] = useState<string | null>(null)
+  const [waApiManual, setWaApiManual] = useState(false)
+  const [waApiManualForm, setWaApiManualForm] = useState({ phoneNumberId: '', wabaId: '', accessToken: '' })
   const [metaLoading, setMetaLoading] = useState(false)
   const [metaError, setMetaError] = useState<string | null>(null)
   const [emailLoading, setEmailLoading] = useState<string | null>(null)
@@ -370,6 +372,22 @@ export default function ConnectPage() {
     } finally {
       setWaApiLoading(false)
     }
+  }
+
+  const connectWhatsAppApiManual = async () => {
+    setWaApiLoading(true)
+    setWaApiError(null)
+    try {
+      const res = await fetch('/api/whatsapp-business/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+        body: JSON.stringify(waApiManualForm),
+      })
+      const data = await res.json()
+      if (!res.ok) setWaApiError(data.error || 'No se pudo conectar')
+      else { setWaApiManual(false); await reloadChannels() }
+    } catch { setWaApiError('Error de conexión') }
+    finally { setWaApiLoading(false) }
   }
 
   const disconnectWhatsAppApi = async () => {
@@ -724,9 +742,23 @@ export default function ConnectPage() {
             </div>
           )}
           {!whatsappApi && (
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-3">
               <button onClick={connectWhatsAppApi} disabled={waApiLoading} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 disabled:opacity-60">
-                {waApiLoading ? 'Abriendo Meta...' : 'Probar conexion (requiere app Meta aprobada)'}
+                {waApiLoading ? 'Abriendo Meta...' : 'Conectar con Meta'}
+              </button>
+              <button onClick={() => setWaApiManual(m => !m)} className="rounded-xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700">
+                Ingresar IDs manualmente
+              </button>
+            </div>
+          )}
+          {waApiManual && (
+            <div className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-700">Conexión manual — ingresá los datos de tu WABA</p>
+              <input placeholder="Phone Number ID" value={waApiManualForm.phoneNumberId} onChange={e => setWaApiManualForm(f => ({...f, phoneNumberId: e.target.value}))} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-violet-400" />
+              <input placeholder="WABA ID (WhatsApp Business Account ID)" value={waApiManualForm.wabaId} onChange={e => setWaApiManualForm(f => ({...f, wabaId: e.target.value}))} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-violet-400" />
+              <input placeholder="Access Token" value={waApiManualForm.accessToken} onChange={e => setWaApiManualForm(f => ({...f, accessToken: e.target.value}))} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-violet-400" />
+              <button onClick={connectWhatsAppApiManual} disabled={waApiLoading || !waApiManualForm.phoneNumberId || !waApiManualForm.accessToken} className="rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
+                {waApiLoading ? 'Guardando...' : 'Conectar'}
               </button>
             </div>
           )}
