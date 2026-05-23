@@ -88,27 +88,24 @@ export async function GET(req: NextRequest) {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'business_id,channel,external_id' })
     } else {
-      // Fallback: buscar vía /me/instagram_accounts con el user token
+      // Fallback 1: buscar con USER token en /me/accounts con más campos
       try {
-        const igUrl = new URL(`https://graph.facebook.com/v20.0/${page.id}`)
-        igUrl.searchParams.set('fields', 'instagram_accounts{id,username}')
-        igUrl.searchParams.set('access_token', page.access_token)
-        const igRes = await fetch(igUrl)
-        const igData = await igRes.json()
-        const igAccount = igData.instagram_accounts?.data?.[0]
-        if (igAccount?.id) {
+        const igUrl2 = new URL('https://graph.facebook.com/v20.0/me/accounts')
+        igUrl2.searchParams.set('fields', `id,instagram_business_account{id,username}`)
+        igUrl2.searchParams.set('access_token', tokenData.access_token)
+        const igRes2 = await fetch(igUrl2)
+        const igData2 = await igRes2.json()
+        console.log('IG_FALLBACK1:', JSON.stringify(igData2))
+        const igPage2 = (igData2.data ?? []).find((p: { id: string; instagram_business_account?: { id: string; username?: string } }) => p.id === page.id)
+        const igAccount2 = igPage2?.instagram_business_account
+        if (igAccount2?.id) {
           await auth.adminClient.from('channel_connections').upsert({
             business_id: auth.businessId,
             channel: 'instagram',
             status: 'active',
-            external_id: igAccount.id,
-            display_name: igAccount.username ? `@${igAccount.username}` : 'Instagram',
-            metadata: {
-              instagram_id: igAccount.id,
-              username: igAccount.username,
-              page_id: page.id,
-              page_access_token: page.access_token,
-            },
+            external_id: igAccount2.id,
+            display_name: igAccount2.username ? `@${igAccount2.username}` : 'Instagram',
+            metadata: { instagram_id: igAccount2.id, username: igAccount2.username, page_id: page.id, page_access_token: page.access_token },
             updated_at: new Date().toISOString(),
           }, { onConflict: 'business_id,channel,external_id' })
         }
