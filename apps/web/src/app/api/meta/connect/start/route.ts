@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   // Persist nonce in DB for verification (best-effort — table may not exist yet)
   try {
     const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
-    await admin.from('oauth_states').upsert({ nonce, business_id: ctx.businessId, created_at: new Date().toISOString() })
+    await admin.from('oauth_states').upsert({ nonce, business_id: businessId, created_at: new Date().toISOString() })
   } catch { /* ignore if table doesn't exist */ }
 
   const origin = req.nextUrl.origin
