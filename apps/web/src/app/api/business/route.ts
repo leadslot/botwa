@@ -71,13 +71,37 @@ export async function GET(request: NextRequest) {
 
     const { data, error: dbError } = await adminClient
       .from('businesses')
-      .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds, context_messages, escalation_contact')
+      .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds, context_messages, escalation_contact, monthly_responses_used, monthly_emails_used, extra_responses, extra_emails, cycle_start_date, mp_subscription_id, bonus_responses, bonus_emails, bonus_note, first_month_paid')
       .eq('user_id', user.id)
       .single()
 
     if (dbError && dbError.code !== 'PGRST116') {
       console.error('/api/business DB error:', dbError)
       return NextResponse.json({ error: 'db_error' }, { status: 500 })
+    }
+
+    // Lazy cycle reset: if 30 days have passed since cycle_start_date, roll it forward
+    if (data?.cycle_start_date) {
+      const cycleStart = new Date(data.cycle_start_date)
+      const now = new Date()
+      const daysSinceCycleStart = Math.floor((now.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24))
+      if (daysSinceCycleStart >= 30) {
+        // Advance cycle_start_date by N full 30-day periods
+        const periodsElapsed = Math.floor(daysSinceCycleStart / 30)
+        const newCycleStart = new Date(cycleStart)
+        newCycleStart.setDate(newCycleStart.getDate() + periodsElapsed * 30)
+        await adminClient
+          .from('businesses')
+          .update({
+            monthly_responses_used: 0,
+            monthly_emails_used: 0,
+            cycle_start_date: newCycleStart.toISOString().split('T')[0],
+          })
+          .eq('id', data.id)
+        data.monthly_responses_used = 0
+        data.monthly_emails_used = 0
+        data.cycle_start_date = newCycleStart.toISOString().split('T')[0]
+      }
     }
 
     return NextResponse.json({ business: data ?? null })

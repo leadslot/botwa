@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TrendingUp, Users, MessageSquare, Zap, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import AdminAddonRequests from './AdminAddonRequests'
+import AdminBonusPanel from './AdminBonusPanel'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'maxijrodriguez09@gmail.com'
 const DAILY_LIMIT = 200
@@ -14,7 +16,7 @@ export default async function AdminPage() {
 
   const { data: businesses } = await supabase
     .from('businesses')
-    .select('*, whatsapp_sessions(status)')
+    .select('*, whatsapp_sessions(status), bonus_responses, bonus_emails, bonus_note, monthly_responses_used, monthly_emails_used, plan_tier')
     .order('messages_used', { ascending: false })
 
   const total = businesses?.length ?? 0
@@ -46,6 +48,10 @@ export default async function AdminPage() {
             <a href="/admin/api-keys"
               className="btn-primary text-sm flex items-center gap-2">
               🔑 Gestionar APIs
+            </a>
+            <a href="/admin/mp-setup"
+              className="btn-secondary text-sm flex items-center gap-2">
+              💳 Planes MP
             </a>
           </div>
         </div>
@@ -170,6 +176,21 @@ export default async function AdminPage() {
             )}
           </div>
         </div>
+
+        {/* Solicitudes de packs */}
+        <AdminAddonRequests />
+
+        {/* Bonificaciones */}
+        <AdminBonusPanel businesses={(businesses ?? []).map(b => ({
+          id: b.id,
+          name: b.name,
+          plan_tier: b.plan_tier ?? null,
+          bonus_responses: b.bonus_responses ?? 0,
+          bonus_emails: b.bonus_emails ?? 0,
+          bonus_note: b.bonus_note ?? null,
+          monthly_responses_used: b.monthly_responses_used ?? 0,
+          monthly_emails_used: b.monthly_emails_used ?? 0,
+        }))} />
 
         {/* Guía de escalado */}
         <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-6">

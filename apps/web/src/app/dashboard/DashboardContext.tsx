@@ -18,6 +18,16 @@ type Business = {
   excluded_numbers: string[] | null
   response_delay_seconds: number | null
   context_messages: number | null
+  monthly_responses_used?: number
+  monthly_emails_used?: number
+  extra_responses?: number
+  extra_emails?: number
+  cycle_start_date?: string
+  mp_subscription_id?: string | null
+  bonus_responses?: number
+  bonus_emails?: number
+  bonus_note?: string | null
+  first_month_paid?: boolean
 }
 
 type DashboardData = {

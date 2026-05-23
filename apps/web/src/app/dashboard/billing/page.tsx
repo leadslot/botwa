@@ -2,282 +2,323 @@
 
 import { useState, useEffect } from 'react'
 import { useDashboard } from '../DashboardContext'
-import { CheckCircle2, CreditCard, HelpCircle, Infinity as InfinityIcon, KeyRound, Loader2, ShieldCheck, Sparkles, Zap } from 'lucide-react'
+import { CheckCircle2, HelpCircle, Infinity as InfinityIcon, Loader2, ShieldCheck, Sparkles, Zap } from 'lucide-react'
 import CouponForm from './CouponForm'
 import { SectionCard, StatusPill, CheckRow } from '@/components/dashboard/ui'
-import { PLANS } from '@/lib/plans'
+import { PLANS, ADDON_CATALOG, normalizePlan, type PlanTier } from '@/lib/plans'
+import UsageSummary from '@/components/dashboard/UsageSummary'
 
-const entryPlans = ['whatsapp', 'email'] as const
-const growthPlans = ['social'] as const
+type AddonRequest = { id: string; addon_type: string; addon_label: string; price: number; status: string; created_at: string }
+
+const PLAN_ORDER: PlanTier[] = ['whatsapp', 'email', 'social', 'gold']
+
+const PLAN_COLORS: Record<PlanTier, { border: string; bg: string; badge: string; btn: string }> = {
+  whatsapp: { border: 'border-emerald-200', bg: 'bg-emerald-50/60', badge: 'bg-emerald-100 text-emerald-700', btn: 'bg-emerald-600 hover:bg-emerald-700' },
+  email:    { border: 'border-violet-100',  bg: 'bg-white',         badge: 'bg-violet-100 text-violet-700',   btn: 'bg-violet-600 hover:bg-violet-700' },
+  social:   { border: 'border-violet-200',  bg: 'bg-[#F7F3FF]',    badge: 'bg-violet-200 text-violet-800',   btn: 'bg-violet-700 hover:bg-violet-800' },
+  gold:     { border: 'border-amber-200',   bg: 'bg-amber-50/60',  badge: 'bg-amber-100 text-amber-800',     btn: 'bg-amber-600 hover:bg-amber-700' },
+}
 
 export default function BillingPage() {
   const { business, loading, reload } = useDashboard()
-  const [paying, setPaying] = useState(false)
+  const [subscribing, setSubscribing] = useState<string | null>(null)
+  const [packing, setPacking] = useState<string | null>(null)
+  const [addonRequests, setAddonRequests] = useState<AddonRequest[]>([])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.search.includes('pago=ok')) {
-      reload()
-    }
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('suscripcion') === 'ok' || q.get('pago') === 'ok' || q.get('pack') === 'ok') reload()
   }, [reload])
 
-  const handlePrimerMes = async () => {
-    setPaying(true)
+  useEffect(() => {
+    fetch('/api/addon-requests')
+      .then(r => r.json())
+      .then(d => { if (d.requests) setAddonRequests(d.requests) })
+      .catch(() => {})
+  }, [])
+
+  const handleSubscribe = async (tier: PlanTier) => {
+    setSubscribing(tier)
     try {
-      const res = await fetch('/api/mp/create-preference', { method: 'POST' })
+      // Usar primer mes con descuento si no pagó antes, suscripción normal si ya tiene historial
+      const endpoint = business?.first_month_paid ? '/api/mp/subscribe' : '/api/mp/first-month'
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_tier: tier }),
+      })
       const data = await res.json()
       if (data.init_point) window.location.href = data.init_point
-    } catch { setPaying(false) }
+    } finally {
+      setSubscribing(null)
+    }
+  }
+
+  const handlePack = async (addon_type: string) => {
+    setPacking(addon_type)
+    try {
+      const res = await fetch('/api/mp/pack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addon_type }),
+      })
+      const data = await res.json()
+      if (data.init_point) window.location.href = data.init_point
+    } finally {
+      setPacking(null)
+    }
   }
 
   if (loading) return (
     <div className="max-w-7xl animate-pulse space-y-6">
       <div className="h-10 w-48 rounded-2xl bg-slate-200" />
       <div className="h-56 rounded-[24px] border border-slate-200 bg-white" />
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="h-72 rounded-[24px] border border-slate-200 bg-white" />
-        <div className="h-72 rounded-[24px] border border-slate-200 bg-white" />
-      </div>
     </div>
   )
 
   const isLifetime = business?.plan === 'lifetime'
   const isPaid = business?.is_paid && !isLifetime
-  const messagesUsed = business?.messages_used || 0
-  const trialPct = Math.min(100, Math.round((messagesUsed / 50) * 100))
+  const currentTier = normalizePlan(business?.plan_tier) as PlanTier
+  const currentPlan = PLANS[currentTier]
 
   return (
-    <div className="mx-auto max-w-7xl space-y-3">
+    <div className="mx-auto max-w-5xl space-y-5">
+
+      {/* Header */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Suscripción</h1>
-          <p className="text-sm text-slate-500">Tu plan actual y opciones de activación</p>
+          <p className="text-sm text-slate-500">Gestioná tu plan desde Mercado Pago</p>
         </div>
-        <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm">
-          <HelpCircle className="h-5 w-5" /> ¿Tenés dudas? Ver preguntas frecuentes
-        </button>
+        <a
+          href="https://www.mercadopago.com.ar/subscriptions"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+        >
+          <HelpCircle className="h-4 w-4" /> Mis suscripciones en MP →
+        </a>
       </div>
 
-      {isLifetime ? (
-        <>
-          <SectionCard className="relative overflow-hidden p-5">
-            <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.13),transparent_42%)]" />
-            <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-5">
-                <span className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-[#EAFBF1]">
-                  <span className="absolute h-32 w-32 rounded-full border border-emerald-100" />
-                  <CheckCircle2 className="h-14 w-14 text-[#22C55E]" />
-                </span>
-                <div>
-                  <p className="font-semibold text-[#22C55E]">Plan actual</p>
-                  <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Acceso de por vida</h2>
-                  <p className="mt-2 text-base text-slate-500">Código: <span className="font-semibold text-[#22C55E]">{business?.coupon_used || 'RUNAS'}</span></p>
-                  <p className="text-base text-slate-500">Tu cuenta nunca vence.</p>
-                </div>
-              </div>
-              <StatusPill tone="green"><InfinityIcon className="h-5 w-5" /> Activo para siempre</StatusPill>
-            </div>
-          </SectionCard>
-
-          <div className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr]">
-            <SectionCard className="p-5">
-              <div className="mb-3 flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F1EDFF] text-[#6C4DFF]">
-                  <ShieldCheck className="h-6 w-6" />
-                </span>
-                <h2 className="text-xl font-semibold text-slate-950">Estado del plan</h2>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {[
-                  ['Estado', 'Activo'],
-                  ['Tipo de plan', 'Acceso de por vida'],
-                  ['Código', business?.coupon_used || 'RUNAS'],
-                  ['Activado el', '20 abr 2024, 11:32 a. m.'],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between py-2.5 text-sm">
-                    <span className="font-semibold text-slate-500">{label}</span>
-                    <span className="font-semibold text-slate-800">{value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 rounded-2xl border border-emerald-200 bg-[#EAFBF1] p-3">
-                <p className="font-semibold text-slate-950">Tu plan está activo de por vida.</p>
-                <p className="text-sm text-slate-600">No requiere renovación ni pagos recurrentes.</p>
-              </div>
-            </SectionCard>
-
-            <SectionCard className="relative overflow-hidden p-5">
-              <div className="absolute right-8 top-10 hidden h-32 w-32 rounded-full bg-emerald-100/70 lg:block" />
-              <div className="relative">
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F1EDFF] text-[#6C4DFF]">
-                    <Sparkles className="h-6 w-6" />
-                  </span>
-                  <h2 className="text-xl font-semibold text-slate-950">Beneficios incluidos</h2>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    'Bot activo 24/7 por canal',
-                    'WhatsApp, Web Chat, Telegram, Meta y Email',
-                    'CRM de contactos y seguimiento',
-                    'Panel de conversaciones completo',
-                    'Plan Completo disponible para redes, mails y CRM simple',
-                  ].map(item => <CheckRow key={item}>{item}</CheckRow>)}
-                </div>
-                <p className="mt-3 text-sm text-slate-500">Dentro de las políticas de WhatsApp.</p>
-              </div>
-            </SectionCard>
-          </div>
-
-          <SectionCard className="p-4">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-4">
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1EDFF] text-[#6C4DFF]">
-                  <KeyRound className="h-7 w-7" />
-                </span>
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-950">Gestionar tu cuenta</h2>
-                  <p className="mt-1 text-slate-500">Usá estas opciones para administrar tu suscripción o activar otro código.</p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button className="rounded-2xl border border-violet-200 bg-white px-6 py-3 text-sm font-semibold text-[#6C4DFF]">Activar otro código</button>
-                <button className="rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-violet-200">Gestionar plan</button>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard className="p-5">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      {/* Plan activo */}
+      {isPaid && (
+        <SectionCard className="p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
+                <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+              </span>
               <div>
-                <h2 className="text-xl font-semibold text-slate-950">Planes y modulos</h2>
-                <p className="text-sm text-slate-500">Entrada clara: WhatsApp o Mails. Despues escalas al plan Completo.</p>
-              </div>
-              <StatusPill tone="violet">Tu acceso actual queda activo</StatusPill>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Planes de entrada</p>
-              <div className="grid gap-3 lg:grid-cols-2">
-                {entryPlans.map((tier) => (
-                  <div key={tier} className={`rounded-[22px] border p-4 ${
-                    tier === 'whatsapp' ? 'border-emerald-200 bg-emerald-50/80' : 'border-violet-100 bg-white'
-                  }`}>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-lg font-semibold text-slate-950">{PLANS[tier].name}</p>
-                          <StatusPill tone={tier === 'whatsapp' ? 'green' : 'violet'}>{tier === 'whatsapp' ? 'Entrada recomendada' : 'Mails'}</StatusPill>
-                        </div>
-                        <p className="mt-1 text-sm text-slate-500">{PLANS[tier].description}</p>
-                      </div>
-                      <div className="rounded-2xl bg-white px-4 py-3 text-left sm:text-right">
-                        <p className="text-xs font-semibold text-slate-400">{PLANS[tier].firstMonthLabel}</p>
-                        <p className="text-sm font-semibold text-slate-950">{PLANS[tier].priceLabel}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {[...PLANS[tier].features.slice(0, 4), PLANS[tier].limit, PLANS[tier].users].map(feature => (
-                        <span key={feature} className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Plan activo</p>
+                <h2 className="text-xl font-semibold text-slate-950">{currentPlan.name}</h2>
+                <p className="text-sm text-slate-500">{currentPlan.priceLabel} · {currentPlan.limit}</p>
               </div>
             </div>
-
-            <div className="mt-5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#6C4DFF]">Plan completo</p>
-              <div className="grid gap-3">
-                {growthPlans.map((tier) => (
-                  <div key={tier} className={`rounded-[22px] border p-4 ${
-                    'border-violet-200 bg-[#F7F3FF]'
-                  }`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-slate-950">{PLANS[tier].name}</p>
-                          {PLANS[tier].badge && <StatusPill tone="green">{PLANS[tier].badge}</StatusPill>}
-                        </div>
-                        <p className="mt-1 text-sm text-slate-500">{PLANS[tier].description}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-semibold text-slate-400">{PLANS[tier].firstMonthLabel}</p>
-                        <p className="text-sm font-semibold text-slate-950">{PLANS[tier].priceLabel}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid gap-2">
-                      {[...PLANS[tier].features.slice(0, 3), PLANS[tier].limit, PLANS[tier].users].map(feature => (
-                        <span key={feature} className="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </SectionCard>
-        </>
-      ) : isPaid ? (
-        <SectionCard className="p-7">
-          <div className="flex items-center gap-4">
-            <Zap className="h-10 w-10 text-[#6C4DFF]" />
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-950">Plan activo</h2>
-              <p className="text-slate-500">Uso amplio incluido · Bot activo 24/7 por canal</p>
-            </div>
+            <StatusPill tone="green"><Zap className="h-4 w-4" /> Activo</StatusPill>
           </div>
-          <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-sm text-slate-600">
-            <p className="font-semibold text-slate-800">¿Querés cancelar?</p>
-            <p className="mt-1">Podés dar de baja la suscripción directamente desde Mercado Pago → <strong>Mis suscripciones</strong>. Una vez cancelada, el bot seguirá activo hasta el fin del período ya pago.</p>
-            <a href="https://www.mercadopago.com.ar/subscriptions" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-[#6C4DFF] hover:underline font-semibold">
-              Ir a Mis suscripciones en MP →
-            </a>
-          </div>
+          <p className="mt-3 text-xs text-slate-400">
+            Para cambiar de plan o cancelar, ingresá a{' '}
+            <a href="https://www.mercadopago.com.ar/subscriptions" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline font-medium">
+              Mercado Pago → Mis suscripciones
+            </a>.
+            Al cancelar, el bot sigue activo hasta el fin del período ya pago.
+          </p>
         </SectionCard>
-      ) : (
-        <SectionCard className="p-6">
-          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] xl:items-start">
-            <div>
-              <div className="flex items-start justify-between gap-5">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-950">Período de prueba</h2>
-                  <StatusPill tone="amber">{messagesUsed}/50 mensajes usados</StatusPill>
-                </div>
-                <CreditCard className="h-7 w-7 text-[#6C4DFF]" />
-              </div>
-              <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
-                <div className={`h-full rounded-full ${trialPct >= 80 ? 'bg-red-400' : 'bg-gradient-to-r from-[#6C4DFF] to-[#A855F7]'}`} style={{ width: `${Math.max(2, trialPct)}%` }} />
-              </div>
-              <div className="mt-5 rounded-3xl bg-[#F1EDFF] p-6">
-                <p className="text-sm font-semibold uppercase tracking-wide text-[#6C4DFF]">Para continuar sin límites</p>
-                <div className="mt-2 flex items-end gap-2">
-                  <span className="text-4xl font-semibold text-slate-950">$49.000</span>
-                  <span className="mb-2 text-slate-500">ARS primer mes</span>
-                </div>
-                <p className="mt-1 text-slate-500">Luego <strong className="text-slate-700">$79.000/mes</strong></p>
-                <p className="mt-2 text-sm text-slate-500">Respuestas asistidas incluidas segun plan. Si el uso escala mucho, te avisamos antes de cualquier ajuste.</p>
-              </div>
-            </div>
+      )}
 
-            <div className="rounded-3xl border border-slate-200 bg-white/80 p-5">
-              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                {['Bot activo 24/7','IA con tu tono y negocio','Panel multicanal','Pausa por canal','Escala simple: WhatsApp, Mails o Completo'].map(f => (
-                  <li key={f}><CheckRow>{f}</CheckRow></li>
-                ))}
-              </ul>
-              <button onClick={handlePrimerMes} disabled={paying} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-4 text-sm font-semibold text-white shadow-sm shadow-violet-200">
-                {paying ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirigiendo...</> : 'Pagar primer mes · $49.000'}
-              </button>
-              <p className="mt-3 text-center text-xs text-slate-400">Pago seguro · Tarjeta, débito o transferencia</p>
-              <div className="mt-2"><CouponForm /></div>
+      {/* Lifetime */}
+      {isLifetime && (
+        <SectionCard className="relative overflow-hidden p-5">
+          <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.10),transparent_42%)]" />
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Plan actual</p>
+                <h2 className="text-xl font-semibold text-slate-950">Acceso de por vida</h2>
+                <p className="text-sm text-slate-500">Código: <span className="font-semibold text-emerald-600">{business?.coupon_used || 'RUNAS'}</span></p>
+              </div>
             </div>
+            <StatusPill tone="green"><InfinityIcon className="h-4 w-4" /> Activo para siempre</StatusPill>
           </div>
         </SectionCard>
       )}
+
+      {/* Consumo mensual — solo para pagos activos */}
+      {(isPaid || isLifetime) && business && (
+        <UsageSummary
+          business={business as Parameters<typeof UsageSummary>[0]['business']}
+          addonRequests={addonRequests}
+          onRequestAddon={async (type) => {
+            setPacking(type)
+            try {
+              const res = await fetch('/api/mp/pack', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ addon_type: type }),
+              })
+              const d = await res.json()
+              if (d.init_point) window.location.href = d.init_point
+            } finally { setPacking(null) }
+          }}
+        />
+      )}
+
+      {/* Planes — siempre visibles (para elegir o cambiar) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">Planes disponibles</h2>
+          {!isPaid && !isLifetime && (
+            <div className="mt-1"><CouponForm /></div>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {PLAN_ORDER.map((tier) => {
+            const plan = PLANS[tier]
+            const colors = PLAN_COLORS[tier]
+            const isCurrent = isPaid && currentTier === tier
+            const isLoading = subscribing === tier
+
+            return (
+              <div
+                key={tier}
+                className={`rounded-2xl border p-5 flex flex-col gap-4 ${colors.border} ${colors.bg} ${isCurrent ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-slate-900">{plan.name}</h3>
+                      {plan.badge && (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colors.badge}`}>
+                          {plan.badge}
+                        </span>
+                      )}
+                      {isCurrent && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">
+                          Tu plan
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">{plan.description}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs text-slate-400">{plan.firstMonthLabel}</p>
+                    <p className="text-sm font-semibold text-slate-800">{plan.priceLabel}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {plan.features.slice(0, 4).map(f => (
+                    <span key={f} className="rounded-full bg-white/80 px-2.5 py-1 text-xs text-slate-600 border border-slate-100">
+                      {f}
+                    </span>
+                  ))}
+                  <span className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-100">
+                    {plan.limit}
+                  </span>
+                </div>
+
+                {isCurrent ? (
+                  <div className="rounded-xl bg-white/60 px-3 py-2 text-center text-xs font-medium text-emerald-700">
+                    ✓ Plan activo
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleSubscribe(tier)}
+                    disabled={!!subscribing}
+                    className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-60 ${colors.btn}`}
+                  >
+                    {isLoading
+                    ? <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Redirigiendo...</span>
+                    : isPaid
+                      ? `Cambiar a ${plan.name}`
+                      : business?.first_month_paid
+                        ? `Suscribirme · ${plan.priceLabel}`
+                        : <span>Empezar · <span className="line-through opacity-60">{plan.priceLabel}</span> <span className="font-bold">{plan.firstMonthLabel}</span></span>
+                  }
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Packs adicionales — solo para pagos activos */}
+      {(isPaid || isLifetime) && (
+        <SectionCard className="p-5 space-y-4">
+          <div>
+            <h3 className="font-semibold text-slate-900">Packs adicionales</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Se cobran por única vez desde Mercado Pago. El crédito se activa automáticamente al confirmar el pago.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {ADDON_CATALOG.filter(a => a.type !== 'agenda' && a.type !== 'reminders').map(addon => (
+              <div key={addon.type} className="rounded-xl border border-slate-100 bg-slate-50 p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-sm font-medium text-slate-800">{addon.label}</span>
+                  <span className="shrink-0 text-sm font-semibold text-violet-700">
+                    ${addon.price.toLocaleString()}<span className="text-xs font-normal text-slate-400"> único</span>
+                  </span>
+                </div>
+                <button
+                  onClick={() => handlePack(addon.type)}
+                  disabled={!!packing}
+                  className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-violet-700 transition-colors"
+                >
+                  {packing === addon.type
+                    ? <span className="flex items-center justify-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Redirigiendo...</span>
+                    : 'Comprar pack'
+                  }
+                </button>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Funcionalidades extras (agenda/recordatorios) */}
+      {(isPaid || isLifetime) && (
+        <SectionCard className="p-5 space-y-4">
+          <div>
+            <h3 className="font-semibold text-slate-900">Módulos adicionales</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Funcionalidades extra que se suman a tu plan.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {ADDON_CATALOG.filter(a => a.type === 'agenda' || a.type === 'reminders').map(addon => (
+              <div key={addon.type} className="rounded-xl border border-slate-100 bg-slate-50 p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-sm font-medium text-slate-800">{addon.label}</span>
+                  <span className="shrink-0 text-sm font-semibold text-violet-700">
+                    ${addon.price.toLocaleString()}<span className="text-xs font-normal text-slate-400">/mes</span>
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleSubscribe(`${addon.type}` as PlanTier)}
+                  disabled={!!subscribing}
+                  className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-violet-700 transition-colors"
+                >
+                  Agregar módulo
+                </button>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Sin plan — solo coupon */}
+      {!isPaid && !isLifetime && (
+        <SectionCard className="p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <ShieldCheck className="h-5 w-5 text-slate-400" />
+            <h3 className="font-semibold text-slate-700">¿Tenés un código de acceso?</h3>
+          </div>
+          <CouponForm />
+        </SectionCard>
+      )}
+
     </div>
   )
 }

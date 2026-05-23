@@ -21,12 +21,12 @@ export async function POST() {
     payer: { email: user.email },
     external_reference: business.id,
     back_urls: {
-      success: `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/dashboard/billing?pago=ok`,
-      failure: `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/dashboard/billing?pago=error`,
-      pending: `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/dashboard/billing?pago=pendiente`,
+      success: `https://responbot.com.ar/dashboard/billing?pago=ok`,
+      failure: `https://responbot.com.ar/dashboard/billing?pago=error`,
+      pending: `https://responbot.com.ar/dashboard/billing?pago=pendiente`,
     },
     auto_return: 'approved',
-    notification_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/api/mp/webhook`,
+    notification_url: `https://responbot.com.ar/api/mp/webhook`,
   }
 
   const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
