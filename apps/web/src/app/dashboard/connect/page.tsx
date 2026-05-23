@@ -302,9 +302,60 @@ export default function ConnectPage() {
     })
   }
 
-  const connectWhatsAppApi = () => {
-    if (!business?.id) return
-    window.location.href = `/api/whatsapp-business/connect/start?bid=${business.id}`
+  const connectWhatsAppApi = async () => {
+    setWaApiLoading(true)
+    setWaApiError(null)
+    try {
+      const setupRes = await fetch('/api/whatsapp-business/connect', { headers: await getAuthHeaders() })
+      const setup = await setupRes.json()
+      if (!setupRes.ok) {
+        setWaApiError(setup.error || 'Error al iniciar conexión con Meta')
+        return
+      }
+
+      await loadFacebookSdk(setup.appId, setup.version)
+
+      const signupData: NonNullable<WhatsAppSignupMessage['data']> = {}
+      const onMessage = (event: MessageEvent) => {
+        if (!event.origin.endsWith('facebook.com')) return
+        try {
+          const payload = typeof event.data === 'string' ? JSON.parse(event.data) as WhatsAppSignupMessage : event.data as WhatsAppSignupMessage
+          if (payload.event === 'FINISH' || payload.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
+            Object.assign(signupData, payload.data ?? {})
+          }
+        } catch {}
+      }
+      window.addEventListener('message', onMessage)
+
+      const authCode = await new Promise<string>((resolve, reject) => {
+        const loginOptions: Record<string, unknown> = {
+          response_type: 'code',
+          override_default_response_type: true,
+          extras: { setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' },
+        }
+        if (setup.configId) loginOptions.config_id = setup.configId
+        ;(window as WindowWithPolling).FB?.login((response) => {
+          const code = response.authResponse?.code
+          if (code) resolve(code)
+          else reject(new Error('Meta no devolvio autorizacion'))
+        }, loginOptions)
+      })
+
+      window.removeEventListener('message', onMessage)
+
+      const res = await fetch('/api/whatsapp-business/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+        body: JSON.stringify({ code: authCode, phoneNumberId: signupData?.phone_number_id, wabaId: signupData?.waba_id }),
+      })
+      const data = await res.json()
+      if (!res.ok) setWaApiError(data.error || 'No se pudo conectar WhatsApp API')
+      else await reloadChannels()
+    } catch (error) {
+      setWaApiError(error instanceof Error ? error.message : 'No se pudo abrir Meta')
+    } finally {
+      setWaApiLoading(false)
+    }
   }
 
 

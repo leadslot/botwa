@@ -19,14 +19,14 @@ export async function GET() {
   const appId = process.env.META_APP_ID
   const configId = process.env.META_WHATSAPP_CONFIG_ID
 
-  if (!appId || !configId) {
-    return NextResponse.json({ error: 'Falta configurar META_WHATSAPP_CONFIG_ID en Vercel. El ID actual de Facebook/Instagram no sirve para WhatsApp oficial.' }, { status: 500 })
+  if (!appId) {
+    return NextResponse.json({ error: 'Falta configurar META_APP_ID en Vercel.' }, { status: 500 })
   }
 
   const auth = await getAuth()
   if (!auth) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
 
-  return NextResponse.json({ appId, configId, version: 'v20.0' })
+  return NextResponse.json({ appId, configId: configId ?? null, version: 'v20.0' })
 }
 
 export async function POST(req: NextRequest) {
