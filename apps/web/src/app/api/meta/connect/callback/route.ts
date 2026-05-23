@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
   accountsUrl.searchParams.set('access_token', tokenData.access_token)
   const accountsRes = await fetch(accountsUrl)
   const accountsData = await accountsRes.json()
+  console.log('META_ACCOUNTS:', JSON.stringify(accountsData))
   const pages = (accountsData.data ?? []) as MetaPage[]
 
   for (const page of pages) {
