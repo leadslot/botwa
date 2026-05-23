@@ -107,7 +107,9 @@ export default function ConnectPage() {
     .filter((channel, index, list) => list.indexOf(channel) === index)
   const lockedChannels = (Object.keys(CHANNELS) as ChannelId[]).filter(channel => !includedChannels.includes(channel))
   const nextPlan = PLAN_ORDER.find(plan => PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan))
-  const widgetUrl = business?.id ? `${typeof window !== 'undefined' ? window.location.origin : ''}/widget/${business.id}` : ''
+  const [origin, setOrigin] = useState('')
+  useEffect(() => { setOrigin(window.location.origin) }, [])
+  const widgetUrl = business?.id && origin ? `${origin}/widget/${business.id}` : ''
   const widgetCode = widgetUrl ? `<iframe src="${widgetUrl}" style="position:fixed;right:20px;bottom:20px;width:380px;height:620px;border:0;border-radius:24px;z-index:9999;"></iframe>` : ''
 
   const connected = status === 'connected'
