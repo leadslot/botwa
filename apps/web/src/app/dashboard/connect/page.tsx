@@ -399,17 +399,7 @@ export default function ConnectPage() {
   const connectMeta = async () => {
     setMetaLoading(true)
     setMetaError(null)
-    try {
-      const res = await fetch('/api/meta/connect/start')
-      const data = await res.json()
-      if (!res.ok) {
-        setMetaError(data.error || 'Meta todavia no esta configurado')
-        return
-      }
-      window.location.href = data.url
-    } finally {
-      setMetaLoading(false)
-    }
+    window.location.href = '/api/meta/connect/start'
   }
 
   const connectEmail = async (provider: 'gmail' | 'outlook') => {

@@ -34,8 +34,7 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('scope', scopes.join(','))
   if (configId) url.searchParams.set('config_id', configId)
 
-  return NextResponse.json(
-    { url: url.toString() },
-    { headers: { 'Cache-Control': 'no-store, max-age=0' } }
-  )
+  const response = NextResponse.redirect(url.toString())
+  response.cookies.set('meta_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
+  return response
 }
