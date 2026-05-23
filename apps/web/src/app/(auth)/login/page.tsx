@@ -20,8 +20,9 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword(form)
     if (error) { setError('Email o contraseña incorrectos'); setLoading(false); return }
-    // Hard redirect para que el servidor lea las cookies frescas
-    window.location.href = '/dashboard'
+    // Esperar que las cookies se escriban antes de navegar
+    await new Promise(resolve => setTimeout(resolve, 300))
+    window.location.replace('/dashboard')
   }
 
   return (
