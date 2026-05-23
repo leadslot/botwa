@@ -36,7 +36,7 @@ export default function RegisterPage() {
       password: form.password,
       options: {
         data: { full_name: form.name },
-        emailRedirectTo: 'https://responbot.vercel.app/auth/callback',
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/auth/callback`,
       }
     })
     if (signUpError) { setError(signUpError.message); setLoading(false); return }

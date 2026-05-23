@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (!me.ok) return NextResponse.json({ error: 'token invalido' }, { status: 400 })
 
   const webhookSecret = crypto.randomUUID().replaceAll('-', '')
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://botwa-app.vercel.app'}/api/telegram/webhook?businessId=${auth.businessId}&secret=${webhookSecret}`
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/api/telegram/webhook?businessId=${auth.businessId}&secret=${webhookSecret}`
   const hookRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
