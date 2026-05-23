@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
 import {
   Bell,
+  CalendarDays,
   CreditCard,
   FileText,
   Mail,
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/dashboard/conversations', icon: MessageSquare, label: 'Conversaciones' },
   { href: '/dashboard/email', icon: Mail, label: 'Correos' },
   { href: '/dashboard/crm', icon: UsersRound, label: 'CRM' },
+  { href: '/dashboard/calendar', icon: CalendarDays, label: 'Agenda' },
   { href: '/dashboard/templates', icon: FileText, label: 'Plantillas' },
   { href: '/dashboard/settings', icon: Settings, label: 'Configuración' },
   { href: '/dashboard/billing', icon: CreditCard, label: 'Suscripción' },
