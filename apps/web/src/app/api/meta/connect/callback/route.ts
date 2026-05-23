@@ -1,6 +1,5 @@
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthContext } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 type MetaPage = {
   id: string
@@ -9,25 +8,26 @@ type MetaPage = {
   instagram_business_account?: { id: string; username?: string }
 }
 
-async function getBusinessId() {
-  const ctx = await getAuthContext()
-  if (!ctx) return null
-  return { businessId: ctx.businessId, adminClient: ctx.adminClient }
-}
-
 export async function GET(req: NextRequest) {
   const appId = process.env.META_APP_ID
   const appSecret = process.env.META_APP_SECRET
   if (!appId || !appSecret) return NextResponse.redirect(new URL('/dashboard/connect?meta=missing_env', req.url))
 
-  const cookieStore = await cookies()
   const code = req.nextUrl.searchParams.get('code')
-  const state = req.nextUrl.searchParams.get('state')
-  const savedState = cookieStore.get('meta_oauth_state')?.value
-  if (!code || !state || state !== savedState) return NextResponse.redirect(new URL('/dashboard/connect?meta=invalid_state', req.url))
+  const stateParam = req.nextUrl.searchParams.get('state')
+  if (!code || !stateParam) return NextResponse.redirect(new URL('/dashboard/connect?meta=invalid_state', req.url))
 
-  const auth = await getBusinessId()
-  if (!auth) return NextResponse.redirect(new URL('/login', req.url))
+  let businessId: string
+  try {
+    const decoded = JSON.parse(Buffer.from(stateParam, 'base64url').toString())
+    businessId = decoded.businessId
+    if (!businessId) throw new Error('no businessId')
+  } catch {
+    return NextResponse.redirect(new URL('/dashboard/connect?meta=invalid_state', req.url))
+  }
+
+  const adminClient = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  const auth = { businessId, adminClient }
 
   const origin = req.nextUrl.origin
   const redirectUri = `${origin}/api/meta/connect/callback`

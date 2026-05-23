@@ -1,21 +1,24 @@
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { getVerifiedUser } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export async function GET(req: NextRequest) {
   const appId = process.env.META_APP_ID
   const configId = process.env.META_CONFIG_ID
-  if (!appId) return NextResponse.json({ error: 'META_APP_ID no configurado' }, { status: 500 })
+  if (!appId) return NextResponse.redirect(new URL('/dashboard/connect?meta=missing_env', req.url))
 
-  const user = await getVerifiedUser()
-  if (!user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
+  const ctx = await getAuthContext()
+  if (!ctx) return NextResponse.redirect(new URL('/login', req.url))
 
-  const cookieStore = await cookies()
+  const nonce = crypto.randomUUID().replace(/-/g, '')
+  const statePayload = Buffer.from(JSON.stringify({ nonce, businessId: ctx.businessId })).toString('base64url')
+
+  // Persist nonce in DB for verification (no cookies needed)
+  const admin = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
+  await admin.from('oauth_states').upsert({ nonce, business_id: ctx.businessId, created_at: new Date().toISOString() })
 
   const origin = req.nextUrl.origin
   const redirectUri = `${origin}/api/meta/connect/callback`
-  const state = crypto.randomUUID()
-  cookieStore.set('meta_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
 
   const scopes = [
     'pages_show_list',
@@ -29,12 +32,10 @@ export async function GET(req: NextRequest) {
   const url = new URL('https://www.facebook.com/v20.0/dialog/oauth')
   url.searchParams.set('client_id', appId)
   url.searchParams.set('redirect_uri', redirectUri)
-  url.searchParams.set('state', state)
+  url.searchParams.set('state', statePayload)
   url.searchParams.set('response_type', 'code')
   url.searchParams.set('scope', scopes.join(','))
   if (configId) url.searchParams.set('config_id', configId)
 
-  const response = NextResponse.redirect(url.toString())
-  response.cookies.set('meta_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
-  return response
+  return NextResponse.redirect(url.toString())
 }
