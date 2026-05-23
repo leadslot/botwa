@@ -39,7 +39,8 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('state', statePayload)
   url.searchParams.set('response_type', 'code')
   url.searchParams.set('scope', scopes.join(','))
-  if (configId) url.searchParams.set('config_id', configId)
+  // config_id triggers Business Login which blocks selection when app already belongs to portfolio
+  // if (configId) url.searchParams.set('config_id', configId)
 
   return NextResponse.redirect(url.toString())
 }
