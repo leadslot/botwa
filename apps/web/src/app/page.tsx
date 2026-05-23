@@ -137,7 +137,7 @@ const industries = [
 const faqs = [
   {
     question: '¿Cuál es el plan para empezar?',
-    answer: 'El plan de entrada es Basico WhatsApp: WhatsApp, Web Chat, panel, prompt del negocio y hasta 500 respuestas asistidas.',
+    answer: 'El plan de entrada es Basico WhatsApp: WhatsApp, Web Chat, panel, prompt del negocio y hasta 500 respuestas asistidas. Para negocios con alta demanda de turnos, el plan Gold agrega agenda integrada y recordatorios automaticos.',
   },
   {
     question: '¿Mails es un plan o un complemento?',
@@ -158,7 +158,7 @@ const faqs = [
 ]
 
 const entryPlanOrder = ['whatsapp', 'email'] as const
-const growthPlanOrder = ['social'] as const
+const growthPlanOrder = ['social', 'gold'] as const
 
 function QrEye({ className }: { className: string }) {
   return (
@@ -636,7 +636,7 @@ export default function LandingPage() {
               <span className="block text-[#A855F7]">y suma canales cuando haga falta.</span>
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-              Los planes caballo de batalla son Basico WhatsApp y Mails. Completo suma redes, email y CRM simple.
+              Los planes de entrada son Basico WhatsApp y Mails. Completo suma redes y CRM. Gold agrega agenda de turnos y recordatorios automaticos.
             </p>
           </div>
 
@@ -691,36 +691,49 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-5">
-            {growthPlanOrder.map((tier) => (
-              <article key={tier} className="rounded-[2rem] border border-violet-300 bg-white p-6 text-slate-950 shadow-2xl shadow-violet-950/15">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-2xl font-black">{PLANS[tier].name}</h4>
-                      {PLANS[tier].badge && (
-                        <span className="rounded-full bg-[#A855F7] px-3 py-1 text-[11px] font-black text-white">
-                          {PLANS[tier].badge}
-                        </span>
-                      )}
+          <div className="mt-8 mb-3 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-300">Planes avanzados</p>
+              <h3 className="text-2xl font-black">Crecer y automatizar</h3>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {growthPlanOrder.map((tier) => {
+              const isGold = tier === 'gold'
+              return (
+                <article key={tier} className={`rounded-[2rem] border p-6 text-slate-950 shadow-2xl ${isGold ? 'border-amber-300 bg-gradient-to-br from-amber-50 via-white to-white shadow-amber-950/15' : 'border-violet-300 bg-white shadow-violet-950/15'}`}>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-2xl font-black">{PLANS[tier].name}</h4>
+                        {PLANS[tier].badge && (
+                          <span className={`rounded-full px-3 py-1 text-[11px] font-black text-white ${isGold ? 'bg-amber-500' : 'bg-[#A855F7]'}`}>
+                            {PLANS[tier].badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">{PLANS[tier].description}</p>
                     </div>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{PLANS[tier].description}</p>
-                  </div>
-                  <div className="shrink-0 rounded-2xl bg-violet-50 px-4 py-3 text-left lg:text-right">
-                    <p className="text-xs font-black uppercase tracking-wide text-[#6C4DFF]">{PLANS[tier].firstMonthLabel}</p>
-                    <p className="mt-1 text-2xl font-black text-slate-950">{PLANS[tier].priceLabel}</p>
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {[...PLANS[tier].features.slice(0, 4), PLANS[tier].limit, PLANS[tier].users].map((feature) => (
-                    <div key={feature} className="flex items-start gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#22C55E]" />
-                      <span>{feature}</span>
+                    <div className={`shrink-0 rounded-2xl px-4 py-3 text-left ${isGold ? 'bg-amber-50 border border-amber-200' : 'bg-violet-50'}`}>
+                      <p className={`text-xs font-black uppercase tracking-wide ${isGold ? 'text-amber-700' : 'text-[#6C4DFF]'}`}>{PLANS[tier].firstMonthLabel}</p>
+                      <p className="mt-1 text-2xl font-black text-slate-950">{PLANS[tier].priceLabel}</p>
                     </div>
-                  ))}
-                </div>
-              </article>
-            ))}
+                  </div>
+                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                    {[...PLANS[tier].features.slice(0, 4), PLANS[tier].limit, PLANS[tier].users].map((feature) => (
+                      <div key={feature} className="flex items-start gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                        <Check className={`mt-0.5 h-4 w-4 shrink-0 ${isGold ? 'text-amber-500' : 'text-[#22C55E]'}`} />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link href="/register" className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 shadow-lg ${isGold ? 'bg-amber-500 shadow-amber-950/10' : 'bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] shadow-violet-950/10'}`}>
+                    {isGold ? 'Activar Gold con Agenda' : 'Activar Completo'} <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </article>
+              )
+            })}
           </div>
 
           <div className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4 text-sm font-semibold leading-6 text-amber-100">
