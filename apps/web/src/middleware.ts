@@ -21,19 +21,18 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh the session and sync to cookies
-  // IMPORTANT: always use getUser() (not getSession()) for security
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use getSession() for redirect guards (fast, reads cookie only)
+  // getUser() is used inside API routes for security
+  const { data: { session } } = await supabase.auth.getSession()
 
-  // Redirect guards (merged from proxy.ts)
   const path = request.nextUrl.pathname
   const isDashboard = path.startsWith('/dashboard')
   const isAuth = path.startsWith('/login') || path.startsWith('/register')
 
-  if (!user && isDashboard) {
+  if (!session && isDashboard) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
-  if (user && isAuth) {
+  if (session && isAuth) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
