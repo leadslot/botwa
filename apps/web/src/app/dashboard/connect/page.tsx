@@ -84,8 +84,6 @@ export default function ConnectPage() {
   const [telegramError, setTelegramError] = useState<string | null>(null)
   const [waApiLoading, setWaApiLoading] = useState(false)
   const [waApiError, setWaApiError] = useState<string | null>(null)
-  const [waApiManual, setWaApiManual] = useState(false)
-  const [waApiManualForm, setWaApiManualForm] = useState({ phoneNumberId: '', wabaId: '', accessToken: '' })
   const [metaLoading, setMetaLoading] = useState(false)
   const [metaError, setMetaError] = useState<string | null>(null)
   const [emailLoading, setEmailLoading] = useState<string | null>(null)
@@ -304,91 +302,11 @@ export default function ConnectPage() {
     })
   }
 
-  const connectWhatsAppApi = async () => {
-    setWaApiLoading(true)
-    setWaApiError(null)
-    try {
-      const setupRes = await fetch('/api/whatsapp-business/connect', { headers: await getAuthHeaders() })
-      const setup = await setupRes.json()
-      if (!setupRes.ok) {
-        setWaApiError(setup.error || 'Falta configurar WhatsApp oficial')
-        return
-      }
-
-      await loadFacebookSdk(setup.appId, setup.version)
-
-      const signupData: NonNullable<WhatsAppSignupMessage['data']> = {}
-      const onMessage = (event: MessageEvent) => {
-        if (!event.origin.endsWith('facebook.com')) return
-        try {
-          const payload = typeof event.data === 'string' ? JSON.parse(event.data) as WhatsAppSignupMessage : event.data as WhatsAppSignupMessage
-          if (payload.event === 'FINISH' || payload.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
-            Object.assign(signupData, payload.data ?? {})
-          }
-        } catch {}
-      }
-
-      window.addEventListener('message', onMessage)
-
-      const authCode = await new Promise<string>((resolve, reject) => {
-        ;(window as WindowWithPolling).FB?.login((response) => {
-          const code = response.authResponse?.code
-          if (code) resolve(code)
-          else reject(new Error('Meta no devolvio autorizacion'))
-        }, {
-          config_id: setup.configId,
-          response_type: 'code',
-          override_default_response_type: true,
-          extras: {
-            setup: {},
-            featureType: 'whatsapp_business_app_onboarding',
-            sessionInfoVersion: '3',
-          },
-        })
-      })
-
-      window.removeEventListener('message', onMessage)
-
-      const res = await fetch('/api/whatsapp-business/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({
-          code: authCode,
-          phoneNumberId: signupData?.phone_number_id,
-          wabaId: signupData?.waba_id,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) setWaApiError(data.error || 'No se pudo conectar WhatsApp API')
-      else {
-        await reloadChannels()
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo abrir Meta'
-      setWaApiError(message.includes('Meta no devolvio autorizacion')
-        ? 'Meta bloqueo el inicio porque falta activar "Inicio de sesion con el SDK para JavaScript" en la app.'
-        : message
-      )
-    } finally {
-      setWaApiLoading(false)
-    }
+  const connectWhatsAppApi = () => {
+    if (!business?.id) return
+    window.location.href = `/api/whatsapp-business/connect/start?bid=${business.id}`
   }
 
-  const connectWhatsAppApiManual = async () => {
-    setWaApiLoading(true)
-    setWaApiError(null)
-    try {
-      const res = await fetch('/api/whatsapp-business/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify(waApiManualForm),
-      })
-      const data = await res.json()
-      if (!res.ok) setWaApiError(data.error || 'No se pudo conectar')
-      else { setWaApiManual(false); await reloadChannels() }
-    } catch { setWaApiError('Error de conexión') }
-    finally { setWaApiLoading(false) }
-  }
 
   const disconnectWhatsAppApi = async () => {
     setWaApiLoading(true)
@@ -746,19 +664,8 @@ export default function ConnectPage() {
               <button onClick={connectWhatsAppApi} disabled={waApiLoading} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 disabled:opacity-60">
                 {waApiLoading ? 'Abriendo Meta...' : 'Conectar con Meta'}
               </button>
-              <button onClick={() => setWaApiManual(m => !m)} className="rounded-xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700">
+              <button onClick={() => {}} className="rounded-xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 hidden">
                 Ingresar IDs manualmente
-              </button>
-            </div>
-          )}
-          {waApiManual && (
-            <div className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-700">Conexión manual — ingresá los datos de tu WABA</p>
-              <input placeholder="Phone Number ID" value={waApiManualForm.phoneNumberId} onChange={e => setWaApiManualForm(f => ({...f, phoneNumberId: e.target.value}))} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-violet-400" />
-              <input placeholder="WABA ID (WhatsApp Business Account ID)" value={waApiManualForm.wabaId} onChange={e => setWaApiManualForm(f => ({...f, wabaId: e.target.value}))} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-violet-400" />
-              <input placeholder="Access Token" value={waApiManualForm.accessToken} onChange={e => setWaApiManualForm(f => ({...f, accessToken: e.target.value}))} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-violet-400" />
-              <button onClick={connectWhatsAppApiManual} disabled={waApiLoading || !waApiManualForm.phoneNumberId || !waApiManualForm.accessToken} className="rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
-                {waApiLoading ? 'Guardando...' : 'Conectar'}
               </button>
             </div>
           )}
