@@ -296,11 +296,14 @@ export default function BillingPage() {
                   </span>
                 </div>
                 <button
-                  onClick={() => handleSubscribe(`${addon.type}` as PlanTier)}
-                  disabled={!!subscribing}
+                  onClick={() => handlePack(addon.type)}
+                  disabled={!!packing}
                   className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-violet-700 transition-colors"
                 >
-                  Agregar módulo
+                  {packing === addon.type
+                    ? <span className="flex items-center justify-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Redirigiendo...</span>
+                    : 'Agregar módulo'
+                  }
                 </button>
               </div>
             ))}
