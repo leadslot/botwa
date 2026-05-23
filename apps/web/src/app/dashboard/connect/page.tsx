@@ -399,7 +399,7 @@ export default function ConnectPage() {
   const connectMeta = async () => {
     setMetaLoading(true)
     setMetaError(null)
-    window.location.href = '/api/meta/connect/start'
+    window.location.href = `/api/meta/connect/start?bid=${business?.id ?? ''}`
   }
 
   const connectEmail = async (provider: 'gmail' | 'outlook') => {

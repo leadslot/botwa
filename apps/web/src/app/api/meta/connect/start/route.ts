@@ -7,11 +7,16 @@ export async function GET(req: NextRequest) {
   const configId = process.env.META_CONFIG_ID
   if (!appId) return NextResponse.redirect(new URL('/dashboard/connect?meta=missing_env', req.url))
 
-  const ctx = await getAuthContext()
-  if (!ctx) return NextResponse.redirect(new URL('/login', req.url))
+  // Try bid param first (sent from dashboard), fallback to session
+  let businessId: string | null = req.nextUrl.searchParams.get('bid')
+  if (!businessId) {
+    const ctx = await getAuthContext()
+    if (!ctx) return NextResponse.redirect(new URL('/login', req.url))
+    businessId = ctx.businessId
+  }
 
   const nonce = crypto.randomUUID().replace(/-/g, '')
-  const statePayload = Buffer.from(JSON.stringify({ nonce, businessId: ctx.businessId })).toString('base64url')
+  const statePayload = Buffer.from(JSON.stringify({ nonce, businessId })).toString('base64url')
 
   // Persist nonce in DB for verification (best-effort — table may not exist yet)
   try {
