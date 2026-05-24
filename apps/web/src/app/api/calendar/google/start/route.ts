@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
 
@@ -19,10 +18,7 @@ export async function GET(req: NextRequest) {
   const hasAgenda = tier === 'gold' || tier === 'lifetime'
   if (!hasAgenda) return NextResponse.json({ error: 'Plan Gold requerido' }, { status: 403 })
 
-  const cookieStore = await cookies()
   const state = crypto.randomUUID()
-  cookieStore.set('gcal_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
-
   const redirectUri = `https://responbot.com.ar/api/calendar/google/callback`
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   url.searchParams.set('client_id', clientId)
@@ -39,5 +35,7 @@ export async function GET(req: NextRequest) {
     'https://www.googleapis.com/auth/calendar.events',
   ].join(' '))
 
-  return NextResponse.json({ url: url.toString() }, { headers: { 'Cache-Control': 'no-store, max-age=0' } })
+  const response = NextResponse.redirect(url.toString())
+  response.cookies.set('gcal_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
+  return response
 }

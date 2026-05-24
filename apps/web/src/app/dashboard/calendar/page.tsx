@@ -57,16 +57,8 @@ export default function CalendarPage() {
     setLoading(false)
   }
 
-  async function connectGoogle() {
-    setGoogleLoading(true)
-    try {
-      const headers = await authHeaders()
-      const res = await fetch('/api/calendar/google/start', { headers })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-      else setMsg('❌ ' + (data.error ?? 'Error al iniciar OAuth'))
-    } catch { setMsg('❌ Error de red') }
-    setGoogleLoading(false)
+  function connectGoogle() {
+    window.location.href = '/api/calendar/google/start'
   }
 
   async function connectICloud() {
