@@ -1,5 +1,5 @@
 export type PlanTier = 'whatsapp' | 'email' | 'social' | 'gold'
-export type ChannelId = 'whatsapp' | 'whatsapp_api' | 'webchat' | 'email' | 'telegram' | 'instagram' | 'facebook'
+export type ChannelId = 'whatsapp' | 'whatsapp_api' | 'webchat' | 'email' | 'telegram' | 'instagram' | 'facebook' | 'calendar_google' | 'gmail'
 
 export const PLAN_ORDER: PlanTier[] = ['whatsapp', 'email', 'social', 'gold']
 
@@ -76,7 +76,7 @@ export const PLANS: Record<PlanTier, {
     publicLabel: 'Desde $199.000 / mes',
     badge: 'Con agenda',
     description: 'Todo lo del Completo mas agenda de turnos, confirmaciones y recordatorios.',
-    channels: ['whatsapp', 'whatsapp_api', 'webchat', 'email', 'telegram', 'instagram', 'facebook'],
+    channels: ['whatsapp', 'whatsapp_api', 'webchat', 'email', 'telegram', 'instagram', 'facebook', 'calendar_google', 'gmail'],
     features: ['Todo lo del Completo', 'Agenda de turnos', 'Confirmaciones automaticas', 'Recordatorios', 'Reglas por servicio y disponibilidad'],
     limit: '1.500 respuestas asistidas + 500 correos por mes',
     users: '2 usuarios',
@@ -154,6 +154,20 @@ export const CHANNELS: Record<ChannelId, {
     description: 'Requiere pagina y permisos oficiales de Meta.',
     requiredPlan: 'social',
     status: 'meta_pending',
+  },
+  calendar_google: {
+    name: 'Google Calendar',
+    shortName: 'Google Calendar',
+    description: 'Agenda automática: el bot verifica disponibilidad y crea turnos.',
+    requiredPlan: 'gold',
+    status: 'ready',
+  },
+  gmail: {
+    name: 'Gmail',
+    shortName: 'Gmail',
+    description: 'Clasificar correos entrantes y generar respuestas automáticas.',
+    requiredPlan: 'gold',
+    status: 'ready',
   },
 }
 

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ElementType } from 'react'
 import Link from 'next/link'
 import {
+  CalendarDays,
   Camera,
   CheckCircle2,
   Clock3,
@@ -62,6 +63,8 @@ const channelIcons: Record<ChannelId, ElementType> = {
   telegram: Send,
   instagram: Camera,
   facebook: MessagesSquare,
+  calendar_google: CalendarDays,
+  gmail: Mail,
 }
 
 export default function ConnectPage() {
@@ -137,6 +140,8 @@ export default function ConnectPage() {
     if (channel === 'telegram') return telegram?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Falta token', tone: 'amber' as const }
     if (channel === 'instagram') return instagram?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Meta pendiente', tone: 'amber' as const }
     if (channel === 'facebook') return facebook?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Meta pendiente', tone: 'amber' as const }
+    if (channel === 'calendar_google') return getConnection('calendar_google')?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Por conectar', tone: 'amber' as const }
+    if (channel === 'gmail') return getConnection('gmail')?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Por conectar', tone: 'amber' as const }
     return { label: 'Pendiente', tone: 'amber' as const }
   }
 
@@ -146,6 +151,8 @@ export default function ConnectPage() {
     if (planAllows(currentPlan, 'telegram')) tools.push('telegram')
     if (planAllows(currentPlan, 'facebook') || planAllows(currentPlan, 'instagram')) tools.push('facebook')
     if (planAllows(currentPlan, 'email')) tools.push('email')
+    if (planAllows(currentPlan, 'calendar_google')) tools.push('calendar_google')
+    if (planAllows(currentPlan, 'gmail')) tools.push('gmail')
     return tools
   }, [currentPlan])
 
@@ -498,7 +505,11 @@ export default function ConnectPage() {
     const state = channelState(channel)
     return (
       <button
-        onClick={() => !locked && setActiveTool(channel === 'instagram' ? 'facebook' : channel)}
+        onClick={() => {
+          if (locked) return
+          if (channel === 'calendar_google' || channel === 'gmail') { window.location.href = '/dashboard/calendar'; return }
+          setActiveTool(channel === 'instagram' ? 'facebook' : channel)
+        }}
         className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
           activeTool === channel && !locked ? 'border-violet-300 bg-[#F8F5FF]' : 'border-slate-200 bg-white hover:border-violet-200'
         } ${locked ? 'opacity-75' : ''}`}
