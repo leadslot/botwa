@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
 
@@ -10,11 +9,8 @@ export async function GET(req: NextRequest) {
   if (!clientId || !clientSecret)
     return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=missing_env`))
 
-  const cookieStore = await cookies()
   const code = req.nextUrl.searchParams.get('code')
-  const state = req.nextUrl.searchParams.get('state')
-  const savedState = cookieStore.get('gcal_oauth_state')?.value
-  if (!code || !state || state !== savedState)
+  if (!code)
     return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=invalid_state`))
 
   const ctx = await getAuthContext()

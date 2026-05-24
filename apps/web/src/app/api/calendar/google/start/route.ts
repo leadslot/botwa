@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
   const hasAgenda = tier === 'gold' || tier === 'lifetime'
   if (!hasAgenda) return NextResponse.json({ error: 'Plan Gold requerido' }, { status: 403 })
 
-  const state = crypto.randomUUID()
   const redirectUri = `https://responbot.com.ar/api/calendar/google/callback`
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   url.searchParams.set('client_id', clientId)
@@ -26,7 +25,6 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('response_type', 'code')
   url.searchParams.set('access_type', 'offline')
   url.searchParams.set('prompt', 'consent')
-  url.searchParams.set('state', state)
   url.searchParams.set('scope', [
     'openid',
     'email',
@@ -35,7 +33,5 @@ export async function GET(req: NextRequest) {
     'https://www.googleapis.com/auth/calendar.events',
   ].join(' '))
 
-  const response = NextResponse.redirect(url.toString())
-  response.cookies.set('gcal_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
-  return response
+  return NextResponse.json({ url: url.toString() })
 }
