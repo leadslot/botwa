@@ -756,6 +756,13 @@ export default function LandingPage() {
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
+        <div className="mx-auto mt-4 max-w-7xl border-t border-white/20 pt-4 text-center text-xs text-white/60">
+          <Link href="/privacidad" className="hover:text-white hover:underline">Política de Privacidad</Link>
+          {' · '}
+          <Link href="/terminos" className="hover:text-white hover:underline">Términos de Servicio</Link>
+          {' · '}
+          <span>© {new Date().getFullYear()} Responbot</span>
+        </div>
       </footer>
 
       <a
