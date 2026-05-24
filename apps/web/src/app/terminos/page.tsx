@@ -83,7 +83,7 @@ export default function TerminosPage() {
 
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-slate-900">12. Contacto</h2>
-          <p>Para consultas sobre estos términos: <a href="mailto:botwa.app@gmail.com" className="text-violet-600 hover:underline">botwa.app@gmail.com</a></p>
+          <p>Para consultas sobre estos términos: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
         </section>
       </main>
 

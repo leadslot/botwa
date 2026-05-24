@@ -71,7 +71,7 @@ export default function PrivacidadPage() {
             <li>Solicitar la eliminación de su cuenta y datos.</li>
             <li>Revocar el acceso a integraciones (Google Calendar, Gmail) desde su panel de control en cualquier momento.</li>
           </ul>
-          <p>Para ejercer estos derechos, contáctenos en <a href="mailto:botwa.app@gmail.com" className="text-violet-600 hover:underline">botwa.app@gmail.com</a>.</p>
+          <p>Para ejercer estos derechos, contáctenos en <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a>.</p>
         </section>
 
         <section className="space-y-3">
@@ -86,7 +86,7 @@ export default function PrivacidadPage() {
 
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-slate-900">10. Contacto</h2>
-          <p>Para consultas sobre privacidad o para ejercer sus derechos: <a href="mailto:botwa.app@gmail.com" className="text-violet-600 hover:underline">botwa.app@gmail.com</a></p>
+          <p>Para consultas sobre privacidad o para ejercer sus derechos: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
         </section>
       </main>
 
