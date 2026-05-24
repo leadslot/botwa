@@ -1,5 +1,5 @@
+import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthContext } from '@/lib/supabase/server'
 
 const REDIRECT_BASE = 'https://responbot.com.ar/dashboard/calendar'
 
@@ -10,11 +10,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=missing_env`))
 
   const code = req.nextUrl.searchParams.get('code')
-  if (!code)
+  const state = req.nextUrl.searchParams.get('state')
+  // state format: "businessId:nonce"
+  const businessId = state?.split(':')[0]
+  if (!code || !businessId)
     return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=invalid_state`))
 
-  const ctx = await getAuthContext()
-  if (!ctx) return NextResponse.redirect(new URL('https://responbot.com.ar/login'))
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  )
 
   const redirectUri = `https://responbot.com.ar/api/calendar/google/callback`
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -45,8 +50,8 @@ export async function GET(req: NextRequest) {
     ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
     : null
 
-  await ctx.adminClient.from('channel_connections').upsert({
-    business_id: ctx.businessId,
+  await adminClient.from('channel_connections').upsert({
+    business_id: businessId,
     channel: 'calendar_google',
     status: 'active',
     external_id: `gcal:${email}`,

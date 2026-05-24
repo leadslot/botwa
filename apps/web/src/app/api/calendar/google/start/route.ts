@@ -18,6 +18,9 @@ export async function GET(req: NextRequest) {
   const hasAgenda = tier === 'gold' || tier === 'lifetime'
   if (!hasAgenda) return NextResponse.json({ error: 'Plan Gold requerido' }, { status: 403 })
 
+  // Encodear businessId en state para recuperarlo en callback (browser no envía auth headers en redirect)
+  const state = `${ctx.businessId}:${crypto.randomUUID()}`
+
   const redirectUri = `https://responbot.com.ar/api/calendar/google/callback`
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   url.searchParams.set('client_id', clientId)
@@ -25,6 +28,7 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('response_type', 'code')
   url.searchParams.set('access_type', 'offline')
   url.searchParams.set('prompt', 'consent')
+  url.searchParams.set('state', state)
   url.searchParams.set('scope', [
     'openid',
     'email',
