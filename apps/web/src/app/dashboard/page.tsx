@@ -136,7 +136,8 @@ export default function DashboardPage() {
   const messagesUsed = business.messages_used ?? 0
   const currentPlan = planData.currentPlan
   const nextPlan = planData.nextPlan
-  const allowedChannels = PLANS[currentPlan].channels
+  // gmail is a sub-provider of email, not a standalone channel card
+  const allowedChannels = PLANS[currentPlan].channels.filter(c => c !== 'gmail')
   const totalInbound = statDays.reduce((sum, day) => sum + day.inbound, 0)
   const totalOutbound = statDays.reduce((sum, day) => sum + day.outbound, 0)
 

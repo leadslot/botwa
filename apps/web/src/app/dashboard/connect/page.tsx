@@ -74,11 +74,11 @@ function ReconnectingPanel({ reconnectingSince, onForce, resetting }: { reconnec
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - reconnectingSince) / 1000)), 1000)
     return () => clearInterval(t)
   }, [reconnectingSince])
-  // auto-force after 30s
+  // auto-force after 10s
   useEffect(() => {
-    if (elapsed === 30 && !resetting) onForce()
+    if (elapsed === 10 && !resetting) onForce()
   }, [elapsed, resetting, onForce])
-  const stuck = elapsed > 15
+  const stuck = elapsed > 5
   return (
     <div className="py-10">
       <RefreshCw className="mx-auto mb-4 h-9 w-9 animate-spin text-[#6C4DFF]" />
@@ -580,10 +580,10 @@ export default function ConnectPage() {
       <SectionCard className="p-3">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-950">Incluidos en tu plan</h2>
-          <span className="text-xs text-slate-500">{includedChannels.length} canales</span>
+          <span className="text-xs text-slate-500">{includedChannels.filter(c => !HIDDEN_CHANNEL_CARDS.includes(c)).length} canales</span>
         </div>
         <div className="grid gap-2 grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-          {includedChannels.map(channel => <ChannelButton key={channel} channel={channel} />)}
+          {includedChannels.filter(c => !HIDDEN_CHANNEL_CARDS.includes(c)).map(channel => <ChannelButton key={channel} channel={channel} />)}
         </div>
         {lockedChannels.length > 0 && (
           <>
