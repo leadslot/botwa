@@ -74,11 +74,11 @@ function ReconnectingPanel({ reconnectingSince, onForce, resetting }: { reconnec
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - reconnectingSince) / 1000)), 1000)
     return () => clearInterval(t)
   }, [reconnectingSince])
-  // auto-force after 90s
+  // auto-force after 30s
   useEffect(() => {
-    if (elapsed === 90 && !resetting) onForce()
+    if (elapsed === 30 && !resetting) onForce()
   }, [elapsed, resetting, onForce])
-  const stuck = elapsed > 30
+  const stuck = elapsed > 15
   return (
     <div className="py-10">
       <RefreshCw className="mx-auto mb-4 h-9 w-9 animate-spin text-[#6C4DFF]" />
