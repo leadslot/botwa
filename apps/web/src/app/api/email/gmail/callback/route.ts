@@ -1,26 +1,22 @@
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthContext } from '@/lib/supabase/server'
-
-async function getBusinessId() {
-  const ctx = await getAuthContext()
-  if (!ctx) return null
-  return { adminClient: ctx.adminClient, businessId: ctx.businessId }
-}
+import { createClient } from '@supabase/supabase-js'
+import { encryptSecret } from '@/lib/secrets'
 
 export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
   if (!clientId || !clientSecret) return NextResponse.redirect(new URL('/dashboard/connect?email=missing_google_env', req.url))
 
-  const cookieStore = await cookies()
   const code = req.nextUrl.searchParams.get('code')
   const state = req.nextUrl.searchParams.get('state')
-  const savedState = cookieStore.get('gmail_oauth_state')?.value
-  if (!code || !state || state !== savedState) return NextResponse.redirect(new URL('/dashboard/connect?email=invalid_state', req.url))
+  const businessId = state?.split(':')[0]
+  if (!code || !businessId) return NextResponse.redirect(new URL('/dashboard/connect?email=invalid_state', req.url))
 
-  const auth = await getBusinessId()
-  if (!auth) return NextResponse.redirect(new URL('/login', req.url))
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  )
+  const auth = { adminClient, businessId }
 
   const redirectUri = `${req.nextUrl.origin}/api/email/gmail/callback`
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -62,8 +58,8 @@ export async function GET(req: NextRequest) {
     metadata: {
       provider: 'gmail',
       email: profile.emailAddress,
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token ?? null,
+      access_token: encryptSecret(tokenData.access_token),
+      refresh_token: encryptSecret(tokenData.refresh_token ?? null),
       expires_at: expiresAt,
       scope: tokenData.scope ?? null,
       mode: 'drafts_first',

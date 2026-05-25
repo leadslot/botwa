@@ -1,17 +1,15 @@
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-import { getVerifiedUser } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID
   if (!clientId) return NextResponse.json({ error: 'GOOGLE_CLIENT_ID no configurado' }, { status: 500 })
 
-  const user = await getVerifiedUser()
-  if (!user) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
+  const ctx = await getAuthContext()
+  if (!ctx) return NextResponse.json({ error: 'sin sesion' }, { status: 401 })
 
-  const cookieStore = await cookies()
-  const state = crypto.randomUUID()
-  cookieStore.set('gmail_oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 900 })
+  // Encode businessId in state so callback can identify the business without a session
+  const state = `${ctx.businessId}:${crypto.randomUUID()}`
 
   const redirectUri = `${req.nextUrl.origin}/api/email/gmail/callback`
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
