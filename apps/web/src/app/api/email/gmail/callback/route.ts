@@ -36,11 +36,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard/connect?email=token_error', req.url))
   }
 
-  const profileRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+  const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: { Authorization: `Bearer ${tokenData.access_token}` },
   })
   const profile = await profileRes.json()
-  if (!profileRes.ok || !profile.emailAddress) {
+  const emailAddress = profile.email ?? profile.emailAddress
+  if (!profileRes.ok || !emailAddress) {
     console.error('Gmail profile error:', profile)
     return NextResponse.redirect(new URL('/dashboard/connect?email=profile_error', req.url))
   }
@@ -53,11 +54,11 @@ export async function GET(req: NextRequest) {
     business_id: auth.businessId,
     channel: 'email',
     status: 'active',
-    external_id: `gmail:${profile.emailAddress}`,
-    display_name: `Gmail - ${profile.emailAddress}`,
+    external_id: `gmail:${emailAddress}`,
+    display_name: `Gmail - ${emailAddress}`,
     metadata: {
       provider: 'gmail',
-      email: profile.emailAddress,
+      email: emailAddress,
       access_token: encryptSecret(tokenData.access_token),
       refresh_token: encryptSecret(tokenData.refresh_token ?? null),
       expires_at: expiresAt,

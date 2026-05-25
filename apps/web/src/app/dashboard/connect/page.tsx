@@ -70,6 +70,7 @@ const channelIcons: Record<ChannelId, ElementType> = {
 function ReconnectingPanel({ reconnectingSince, onForce, resetting }: { reconnectingSince: number | null; onForce: () => void; resetting: boolean }) {
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
+    setElapsed(0)
     if (!reconnectingSince) return
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - reconnectingSince) / 1000)), 1000)
     return () => clearInterval(t)
