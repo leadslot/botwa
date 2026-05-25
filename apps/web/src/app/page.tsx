@@ -5,6 +5,7 @@ import {
   ArrowUp,
   BarChart3,
   Bot,
+  CalendarDays,
   Camera,
   Check,
   CheckCircle2,
@@ -41,11 +42,12 @@ const trustItems = ['Prueba inicial', 'Sin tarjeta', 'Canales oficiales']
 const channels = [
   { icon: Smartphone, name: 'WhatsApp QR', text: 'Plan de entrada para responder rapido.' },
   { icon: ShieldCheck, name: 'WhatsApp API', text: 'Canal oficial para negocios con Meta.' },
-  { icon: Bot, name: 'Mails', text: 'Gmail, Outlook e iCloud con borradores sugeridos.' },
+  { icon: Bot, name: 'Gmail / Mails', text: 'Gmail, Outlook e iCloud con borradores sugeridos.' },
   { icon: Camera, name: 'Instagram', text: 'DMs con integracion oficial de Meta.' },
   { icon: MessagesSquare, name: 'Facebook', text: 'Messenger de paginas conectadas.' },
   { icon: Send, name: 'Telegram', text: 'Bot propio conectado desde BotFather.' },
   { icon: Globe2, name: 'Web Chat', text: 'Widget para instalar en tu sitio.' },
+  { icon: CalendarDays, name: 'Google Calendar', text: 'Agenda automatica de turnos con confirmaciones.' },
 ]
 
 const problemCards = [
@@ -325,7 +327,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:text-[19px]">
-              Responbot responde WhatsApp, Web Chat, Telegram, Instagram, Facebook y correos desde un mismo panel, con CRM simple para ordenar oportunidades.
+              Responbot responde WhatsApp, Telegram, Instagram, Facebook, correos y gestiona tu agenda de turnos desde un mismo panel, con CRM para ordenar oportunidades.
             </p>
 
             <div className="mt-7 flex flex-col gap-4 sm:flex-row">
