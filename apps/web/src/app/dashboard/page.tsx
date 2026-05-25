@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
-  Bot,
   CheckCircle2,
   ChevronRight,
   CreditCard,
@@ -12,6 +11,7 @@ import {
   MessageCircle,
   MessageSquare,
   Settings,
+  TrendingUp,
   Wifi,
   WifiOff,
 } from 'lucide-react'
@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const [waStatus, setWaStatus] = useState<'connected' | 'disconnected' | 'reconnecting' | null>(null)
   const [recentContacts, setRecentContacts] = useState<{ number: string; msg: string; time: string; pushName?: string }[]>([])
   const [statDays, setStatDays] = useState<{ label: string; inbound: number; outbound: number }[]>([])
+  const [activeChannelsCount, setActiveChannelsCount] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/whatsapp/status')
@@ -75,10 +76,20 @@ export default function DashboardPage() {
       .then(r => r.json())
       .then(({ days }) => { if (days?.length) setStatDays(days) })
       .catch(() => {})
+
+    fetch('/api/channels')
+      .then(r => r.json())
+      .then(({ channels }) => {
+        if (Array.isArray(channels)) {
+          const active = channels.filter((c: { status: string }) => c.status === 'active').length
+          setActiveChannelsCount(active)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const planData = useMemo(() => {
-    const currentPlan = business?.plan === 'lifetime' ? 'social' : normalizePlan(business?.plan_tier || business?.plan)
+    const currentPlan = business?.plan === 'lifetime' ? 'gold' : normalizePlan(business?.plan_tier || business?.plan)
     const nextPlan = PLAN_ORDER.find(plan => PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan))
     return { currentPlan, nextPlan }
   }, [business])
@@ -121,13 +132,10 @@ export default function DashboardPage() {
     </div>
   )
 
-  const waLabel = waStatus === 'connected' ? 'Conectado' : waStatus === 'reconnecting' ? 'Reconectando' : 'Desconectado'
-  const waTone = waStatus === 'connected' ? 'green' : waStatus === 'reconnecting' ? 'amber' : 'red'
   const messagesUsed = business.messages_used ?? 0
   const currentPlan = planData.currentPlan
   const nextPlan = planData.nextPlan
   const allowedChannels = PLANS[currentPlan].channels
-  const connectedChannels = allowedChannels.filter(channel => channel === 'webchat' || (channel === 'whatsapp' && waStatus !== 'disconnected')).length
   const totalInbound = statDays.reduce((sum, day) => sum + day.inbound, 0)
   const totalOutbound = statDays.reduce((sum, day) => sum + day.outbound, 0)
 
@@ -181,29 +189,27 @@ export default function DashboardPage() {
         </SectionCard>
       )}
 
-      <div className="grid gap-2 lg:grid-cols-4">
+      <div className="grid gap-2 lg:grid-cols-3">
         <SectionCard className="p-3">
           <div className="flex items-center justify-between gap-3">
             <MessageSquare className="h-5 w-5 text-[#6C4DFF]" />
             <MiniLineChart className="h-7 w-20" />
           </div>
-          <p className="mt-2 text-xs font-semibold text-slate-500">Respondidos</p>
+          <p className="mt-2 text-xs font-semibold text-slate-500">Total respondidos</p>
           <p className="text-2xl font-semibold text-slate-950">{messagesUsed}</p>
         </SectionCard>
         <SectionCard className="p-3">
           <Globe2 className="h-5 w-5 text-emerald-600" />
-          <p className="mt-2 text-xs font-semibold text-slate-500">Canales del plan</p>
-          <p className="text-2xl font-semibold text-slate-950">{connectedChannels}/{allowedChannels.length}</p>
+          <p className="mt-2 text-xs font-semibold text-slate-500">Canales activos</p>
+          <p className="text-2xl font-semibold text-slate-950">
+            {activeChannelsCount !== null ? activeChannelsCount : '—'}<span className="text-sm text-slate-400">/{allowedChannels.length}</span>
+          </p>
         </SectionCard>
         <SectionCard className="p-3">
-          <Wifi className="h-5 w-5 text-[#6C4DFF]" />
-          <p className="mt-2 text-xs font-semibold text-slate-500">WhatsApp</p>
-          <p className={`text-2xl font-semibold ${waStatus === 'connected' ? 'text-emerald-600' : 'text-slate-950'}`}>{waLabel}</p>
-        </SectionCard>
-        <SectionCard className="p-3">
-          <Bot className="h-5 w-5 text-[#6C4DFF]" />
-          <p className="mt-2 text-xs font-semibold text-slate-500">Bot activo</p>
-          <p className="text-2xl font-semibold text-slate-950">{business.ai_enabled ? 'Activo' : 'Pausado'}</p>
+          <TrendingUp className="h-5 w-5 text-[#6C4DFF]" />
+          <p className="mt-2 text-xs font-semibold text-slate-500">Últimos 7 días</p>
+          <p className="text-2xl font-semibold text-slate-950">{totalInbound > 0 ? `${totalOutbound}/${totalInbound}` : '—'}</p>
+          <p className="text-[10px] text-slate-400">respondidos/recibidos</p>
         </SectionCard>
       </div>
 
@@ -211,13 +217,13 @@ export default function DashboardPage() {
         <div className="absolute right-0 top-0 h-full w-1/2 bg-[radial-gradient(circle_at_50%_50%,rgba(108,77,255,0.14),transparent_45%)]" />
         <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#EAFBF1]">
-              <MessageCircle className="h-6 w-6 text-[#22C55E]" />
-              <CheckCircle2 className="absolute right-0 top-0 h-4 w-4 rounded-full bg-white text-[#22C55E]" />
+            <span className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${waStatus === 'connected' ? 'bg-[#EAFBF1]' : 'bg-slate-100'}`}>
+              <MessageCircle className={`h-6 w-6 ${waStatus === 'connected' ? 'text-[#22C55E]' : 'text-slate-400'}`} />
+              {waStatus === 'connected' && <CheckCircle2 className="absolute right-0 top-0 h-4 w-4 rounded-full bg-white text-[#22C55E]" />}
             </span>
             <div>
-              <h2 className="text-base font-semibold text-slate-950">Canal principal {waLabel.toLowerCase()}</h2>
-              <p className="text-sm text-slate-500">Tu asistente responde desde los canales incluidos en tu plan.</p>
+              <h2 className="text-base font-semibold text-slate-950">Bot {business.ai_enabled ? 'activo' : 'pausado'}</h2>
+              <p className="text-sm text-slate-500">Responde desde los canales incluidos en tu plan.</p>
             </div>
           </div>
           <Link href="/dashboard/conversations" className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2 text-sm font-semibold text-white">

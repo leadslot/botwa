@@ -103,12 +103,14 @@ export default function ConnectPage() {
   const [copiedWidget, setCopiedWidget] = useState<string | null>(null)
   const [activeTool, setActiveTool] = useState<ChannelId>('whatsapp')
 
-  const currentPlan = business?.plan === 'lifetime' ? 'social' : normalizePlan(business?.plan_tier || business?.plan)
+  const currentPlan = business?.plan === 'lifetime' ? 'gold' : normalizePlan(business?.plan_tier || business?.plan)
   const includedChannels = PLAN_ORDER
     .slice(0, PLAN_ORDER.indexOf(currentPlan) + 1)
     .flatMap(plan => PLANS[plan].channels)
     .filter((channel, index, list) => list.indexOf(channel) === index)
-  const lockedChannels = (Object.keys(CHANNELS) as ChannelId[]).filter(channel => !includedChannels.includes(channel))
+  // gmail is a sub-provider of email, not a standalone channel card
+  const HIDDEN_CHANNEL_CARDS: ChannelId[] = ['gmail']
+  const lockedChannels = (Object.keys(CHANNELS) as ChannelId[]).filter(channel => !includedChannels.includes(channel) && !HIDDEN_CHANNEL_CARDS.includes(channel))
   const nextPlan = PLAN_ORDER.find(plan => PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan))
   const [origin, setOrigin] = useState('')
   useEffect(() => { setOrigin(window.location.origin) }, [])
@@ -141,7 +143,7 @@ export default function ConnectPage() {
     if (channel === 'instagram') return instagram?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Meta pendiente', tone: 'amber' as const }
     if (channel === 'facebook') return facebook?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Meta pendiente', tone: 'amber' as const }
     if (channel === 'calendar_google') return getConnection('calendar_google')?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Por conectar', tone: 'amber' as const }
-    if (channel === 'gmail') return getConnection('gmail')?.status === 'active' ? { label: 'Conectado', tone: 'green' as const } : { label: 'Por conectar', tone: 'amber' as const }
+    if (channel === 'gmail') return emailConnections.some(item => item.status === 'active' && item.external_id?.startsWith('gmail:')) ? { label: 'Conectado', tone: 'green' as const } : { label: 'Por conectar', tone: 'amber' as const }
     return { label: 'Pendiente', tone: 'amber' as const }
   }
 
@@ -152,7 +154,6 @@ export default function ConnectPage() {
     if (planAllows(currentPlan, 'facebook') || planAllows(currentPlan, 'instagram')) tools.push('facebook')
     if (planAllows(currentPlan, 'email')) tools.push('email')
     if (planAllows(currentPlan, 'calendar_google')) tools.push('calendar_google')
-    if (planAllows(currentPlan, 'gmail')) tools.push('gmail')
     return tools
   }, [currentPlan])
 
