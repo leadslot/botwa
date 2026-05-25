@@ -86,6 +86,7 @@ export default function DashboardPage() {
         }
       })
       .catch(() => {})
+    // note: activeChannelsCount is later adjusted +1 for webchat and +1 for whatsapp if connected
   }, [])
 
   const planData = useMemo(() => {
@@ -202,7 +203,10 @@ export default function DashboardPage() {
           <Globe2 className="h-5 w-5 text-emerald-600" />
           <p className="mt-2 text-xs font-semibold text-slate-500">Canales activos</p>
           <p className="text-2xl font-semibold text-slate-950">
-            {activeChannelsCount !== null ? activeChannelsCount : '—'}<span className="text-sm text-slate-400">/{allowedChannels.length}</span>
+            {activeChannelsCount !== null
+              ? (activeChannelsCount + 1 /* webchat */ + (waStatus === 'connected' ? 1 : 0))
+              : '—'
+            }<span className="text-sm text-slate-400">/{allowedChannels.length}</span>
           </p>
         </SectionCard>
         <SectionCard className="p-3">

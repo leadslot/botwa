@@ -67,6 +67,36 @@ const channelIcons: Record<ChannelId, ElementType> = {
   gmail: Mail,
 }
 
+function ReconnectingPanel({ reconnectingSince, onForce, resetting }: { reconnectingSince: number | null; onForce: () => void; resetting: boolean }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (!reconnectingSince) return
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - reconnectingSince) / 1000)), 1000)
+    return () => clearInterval(t)
+  }, [reconnectingSince])
+  // auto-force after 90s
+  useEffect(() => {
+    if (elapsed === 90 && !resetting) onForce()
+  }, [elapsed, resetting, onForce])
+  const stuck = elapsed > 30
+  return (
+    <div className="py-10">
+      <RefreshCw className="mx-auto mb-4 h-9 w-9 animate-spin text-[#6C4DFF]" />
+      <h2 className="text-xl font-semibold text-slate-950">Reconectando...</h2>
+      {stuck ? (
+        <>
+          <p className="mt-2 text-sm text-amber-600 font-medium">Tardando más de lo normal ({elapsed}s). Forzá la reconexión:</p>
+          <button onClick={onForce} disabled={resetting} className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+            {resetting ? 'Reiniciando...' : 'Forzar reconexión'}
+          </button>
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-slate-500">Levantando tu sesion automaticamente...</p>
+      )}
+    </div>
+  )
+}
+
 export default function ConnectPage() {
   const { business } = useDashboard()
   const [status, setStatus] = useState<WAStatus>(() => {
@@ -76,6 +106,7 @@ export default function ConnectPage() {
   const [qr, setQR] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [reconnectingSince, setReconnectingSince] = useState<number | null>(null)
   const [disconnecting, setDisconnecting] = useState(false)
   const [pairPhone, setPairPhone] = useState('')
   const [pairCode, setPairCode] = useState<string | null>(null)
@@ -173,7 +204,14 @@ export default function ConnectPage() {
       try {
         const res = await fetch('/api/whatsapp/status', { headers: await getAuthHeaders() })
         const data = await res.json()
-        setStatus(data.status)
+        setStatus(prev => {
+          if (data.status === 'reconnecting' && prev !== 'reconnecting') {
+            setReconnectingSince(Date.now())
+          } else if (data.status !== 'reconnecting') {
+            setReconnectingSince(null)
+          }
+          return data.status
+        })
         if (data.status) sessionStorage.setItem('wa_status', data.status)
         setQR(data.qr)
         if (data.status === 'connected' && interval) {
@@ -601,11 +639,11 @@ export default function ConnectPage() {
                 </div>
               )}
               {status === 'reconnecting' && (
-                <div className="py-14">
-                  <RefreshCw className="mx-auto mb-4 h-9 w-9 animate-spin text-[#6C4DFF]" />
-                  <h2 className="text-xl font-semibold text-slate-950">Reconectando...</h2>
-                  <p className="mt-2 text-sm text-slate-500">Estamos levantando tu sesion automaticamente.</p>
-                </div>
+                <ReconnectingPanel
+                  reconnectingSince={reconnectingSince}
+                  onForce={resetAndConnect}
+                  resetting={resetting}
+                />
               )}
               {status !== null && (status === 'disconnected' || (status as string) === 'no_business' || (!['connected','waiting_qr','reconnecting'].includes(status as string))) && (
                 <div className="py-10">
