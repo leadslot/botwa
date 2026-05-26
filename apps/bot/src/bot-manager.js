@@ -147,7 +147,7 @@ export const botManager = {
       },
       printQRInTerminal: false,
       logger: { level: 'silent', trace: ()=>{}, debug: ()=>{}, info: ()=>{}, warn: console.warn, error: console.error, fatal: console.error, child: ()=>({ level:'silent', trace:()=>{}, debug:()=>{}, info:()=>{}, warn:()=>{}, error:()=>{}, fatal:()=>{}, child:()=>{} }) },
-      browser: ['BotWA', 'Chrome', '1.0.0'],
+      browser: ['ResponBot', 'Chrome', '1.0.0'],
     })
 
     pendingSockets.set(businessId, sock)
@@ -440,7 +440,8 @@ export const botManager = {
         // Aviso trial (pre-check sin lock para el mensaje de usuario)
         if (!business.is_paid && (business.messages_used || 0) >= TRIAL_LIMIT) {
           await sock.sendMessage(from, {
-            text:           })
+            text: 'Alcanzaste el limite de prueba de Responbot. Para seguir respondiendo mensajes, activa tu plan desde el panel.'
+          })
           continue
         }
 
