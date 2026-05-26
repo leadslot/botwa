@@ -322,10 +322,20 @@ export const botManager = {
         if (code !== DisconnectReason.loggedOut) {
           const attempts = (reconnectAttempts.get(businessId) || 0) + 1
           reconnectAttempts.set(businessId, attempts)
+
+          // Después de 6 intentos fallidos, las credenciales probablemente expiaron → limpiar y pedir QR nuevo
+          if (attempts > 6) {
+            console.warn(`[${businessId}] Demasiados intentos (${attempts}), limpiando sesión — necesita nuevo QR`)
+            reconnectAttempts.delete(businessId)
+            await supabase
+              .from('whatsapp_sessions')
+              .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
+            return
+          }
+
           // Backoff exponencial: 3s, 6s, 12s, 24s, 48s... máximo 5 minutos
           const delayMs = Math.min(3000 * Math.pow(2, attempts - 1), 5 * 60 * 1000)
           console.log(`[${businessId}] Reconectando (intento ${attempts}) en ${delayMs / 1000}s...`)
-          // NUNCA borrar session_data — las credenciales se conservan siempre
           await supabase
             .from('whatsapp_sessions')
             .upsert({ business_id: businessId, status: 'reconnecting', qr_code: null }, { onConflict: 'business_id' })
