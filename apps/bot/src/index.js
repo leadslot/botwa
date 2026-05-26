@@ -21,12 +21,18 @@ server.listen(PORT, () => {
 })
 
 function startKeepAlive() {
-  const selfUrl = process.env.RAILWAY_PUBLIC_DOMAIN
-    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/health`
-    : null
+  const selfUrl =
+    process.env.BOT_PUBLIC_URL
+      ? `${process.env.BOT_PUBLIC_URL}/health`
+      : process.env.RAILWAY_PUBLIC_DOMAIN
+        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/health`
+        : process.env.RAILWAY_STATIC_URL
+          ? `${process.env.RAILWAY_STATIC_URL}/health`
+          : null
 
   if (!selfUrl) {
-    console.log('[keepalive] RAILWAY_PUBLIC_DOMAIN no definido — keep-alive desactivado en local')
+    console.log('[keepalive] Sin URL pública configurada — keep-alive desactivado')
+    console.log('[keepalive] Configurá BOT_PUBLIC_URL en Railway con la URL del servicio')
     return
   }
 
