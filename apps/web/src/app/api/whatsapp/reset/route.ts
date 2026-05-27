@@ -12,6 +12,13 @@ export async function POST() {
     .from('businesses').select('id').eq('user_id', user.id).single()
   if (!business) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
+  // Limpiar Supabase directamente, independiente de si el bot responde
+  await admin.from('whatsapp_sessions')
+    .upsert(
+      { business_id: business.id, status: 'disconnected', session_data: null, qr_code: null },
+      { onConflict: 'business_id' }
+    )
+
   try {
     await botFetch('/session/reset', {
       method: 'POST',
