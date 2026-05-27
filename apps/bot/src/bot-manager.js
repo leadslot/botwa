@@ -132,7 +132,7 @@ function parseChat(chat) {
 export const botManager = {
 
   async startSession(businessId) {
-    if (activeSessions.has(businessId)) {
+    if (activeSessions.has(businessId) || pendingSockets.has(businessId)) {
       return { status: 'already_connected' }
     }
 
@@ -314,7 +314,10 @@ export const botManager = {
       }
 
       if (connection === 'close') {
+        // Capture whether this was a real active connection BEFORE removing it
+        const wasPreviouslyConnected = activeSessions.has(businessId)
         activeSessions.delete(businessId)
+        pendingSockets.delete(businessId)
         const code = (lastDisconnect?.error instanceof Boom)
           ? lastDisconnect.error.output?.statusCode
           : undefined
@@ -336,9 +339,14 @@ export const botManager = {
           // Backoff exponencial: 3s, 6s, 12s, 24s, 48s... máximo 5 minutos
           const delayMs = Math.min(3000 * Math.pow(2, attempts - 1), 5 * 60 * 1000)
           console.log(`[${businessId}] Reconectando (intento ${attempts}) en ${delayMs / 1000}s...`)
-          await supabase
-            .from('whatsapp_sessions')
-            .upsert({ business_id: businessId, status: 'reconnecting', qr_code: null }, { onConflict: 'business_id' })
+          // Only mark as 'reconnecting' in Supabase if we had a real active connection.
+          // For fresh QR attempts that fail, keep status 'disconnected' to avoid
+          // triggering the auto-reset loop in the frontend.
+          if (wasPreviouslyConnected) {
+            await supabase
+              .from('whatsapp_sessions')
+              .upsert({ business_id: businessId, status: 'reconnecting', qr_code: null }, { onConflict: 'business_id' })
+          }
           setTimeout(() => this.startSession(businessId), delayMs)
         } else {
           // Logout explícito del dispositivo — ahí sí limpiar credenciales
@@ -589,11 +597,13 @@ export const botManager = {
 
   async resetSession(businessId) {
     // Fuerza desconexión y borra credenciales → próximo start pedirá QR nuevo
-    const sock = activeSessions.get(businessId)
+    const sock = activeSessions.get(businessId) || pendingSockets.get(businessId)
     if (sock) {
       try { sock.end(undefined) } catch {}
       activeSessions.delete(businessId)
+      pendingSockets.delete(businessId)
     }
+    reconnectAttempts.delete(businessId)
     pendingQRs.delete(businessId)
     await supabase.from('whatsapp_sessions')
       .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
