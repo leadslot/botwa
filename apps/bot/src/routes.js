@@ -1,7 +1,10 @@
 const BOT_SECRET = process.env.BOT_SECRET
 
 function authMiddleware(req, res, next) {
-  if (!BOT_SECRET) return next() // si no está configurado, no bloquea (backward compat)
+  if (!BOT_SECRET) {
+    console.warn('[auth] BOT_SECRET no configurado — acceso sin autenticación')
+    return next()
+  }
   const provided = req.headers['x-bot-secret']
   if (provided !== BOT_SECRET) return res.status(401).json({ error: 'Unauthorized' })
   next()
