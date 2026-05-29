@@ -70,8 +70,17 @@ export async function generateAIResponse(userMessage, business, history = []) {
     if (lines) priceBlock = `\n\nLISTA DE PRECIOS (EXACTA, usá solo estos valores):\n${lines}\nSi te preguntan por algo que no está en esta lista, decí que ese precio se maneja por consulta.`
   }
 
+  // Inyectar link de seña/pago si está configurado
+  let paymentBlock = ''
+  if (business.mp_payment_link) {
+    const desc = business.mp_payment_description || 'Para reservar tu turno o dejar una seña'
+    paymentBlock = `\n\nPAGO ANTICIPADO (SEÑA):
+${desc}. Cuando el cliente quiera reservar, confirmar un turno, dejar una seña o realizar un pago, compartí este link de Mercado Pago: ${business.mp_payment_link}
+El pago es opcional. No lo ofrezcas proactivamente, solo cuando el cliente lo pida o pregunte cómo reservar.`
+  }
+
   const basePrompt = (business.ai_prompt ||
-    `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`) + priceBlock
+    `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`) + priceBlock + paymentBlock
 
   const WHATSAPP_FORMAT_RULE = `\n\nFORMATO WHATSAPP (OBLIGATORIO, NO IGNORAR):
 - Máximo 2-3 oraciones por mensaje. Nunca más.

@@ -432,7 +432,7 @@ export const botManager = {
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
-          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact')
+          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact, mp_payment_link, mp_payment_description')
           .eq('id', businessId)
           .single()
 

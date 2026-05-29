@@ -976,6 +976,10 @@ function MercadoPagoSection() {
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [mpLink, setMpLink] = useState('')
+  const [mpDesc, setMpDesc] = useState('')
+  const [savingSeña, setSavingSeña] = useState(false)
+  const [señaSaved, setSeñaSaved] = useState(false)
   const { getAuthHeaders } = useDashboard() as unknown as { getAuthHeaders: () => Promise<HeadersInit> }
 
   async function authH(): Promise<HeadersInit> {
@@ -994,13 +998,37 @@ function MercadoPagoSection() {
   async function load() {
     setLoading(true)
     const h = await authH()
-    const res = await fetch('/api/channel-connections?channel=mercadopago', { headers: h }).catch(() => null)
-    if (res?.ok) {
-      const data = await res.json()
+    const [connRes, bizRes] = await Promise.all([
+      fetch('/api/channel-connections?channel=mercadopago', { headers: h }).catch(() => null),
+      fetch('/api/business', { headers: h }).catch(() => null),
+    ])
+    if (connRes?.ok) {
+      const data = await connRes.json()
       const active = (data.connections ?? []).find((c: { status: string; display_name: string; metadata?: { mp_email?: string } }) => c.status === 'active')
       setConn(active ? { display_name: active.display_name, mp_email: active.metadata?.mp_email } : null)
     }
+    if (bizRes?.ok) {
+      const biz = await bizRes.json()
+      setMpLink(biz.business?.mp_payment_link ?? '')
+      setMpDesc(biz.business?.mp_payment_description ?? '')
+    }
     setLoading(false)
+  }
+
+  async function saveSeña() {
+    setSavingSeña(true)
+    setSeñaSaved(false)
+    const supabase = createSupabaseClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      const { data: biz } = await supabase.from('businesses').select('id').eq('user_id', session.user.id).single()
+      if (biz) {
+        await supabase.from('businesses').update({ mp_payment_link: mpLink.trim() || null, mp_payment_description: mpDesc.trim() || null }).eq('id', biz.id)
+        setSeñaSaved(true)
+        setTimeout(() => setSeñaSaved(false), 3000)
+      }
+    }
+    setSavingSeña(false)
   }
 
   async function connect() {
@@ -1065,6 +1093,52 @@ function MercadoPagoSection() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Configuración de señas — siempre visible */}
+      <div className="mt-5 border-t border-slate-100 pt-5 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Cobro de señas por el bot</h3>
+          <p className="mt-1 text-xs text-slate-500 leading-5">
+            Cuando un cliente pregunte cómo reservar o dejar una seña, el bot va a compartir tu link de pago de Mercado Pago.
+            El turno no se agenda en ningún lado — solo se recibe el pago. Generá el link desde tu cuenta de MP en <span className="font-medium text-[#009EE3]">mercadopago.com.ar → Cobrar → Link de pago</span>.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">Link de pago de Mercado Pago</label>
+            <input
+              type="url"
+              value={mpLink}
+              onChange={e => setMpLink(e.target.value)}
+              placeholder="https://mpago.la/..."
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#009EE3]"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">Descripción del cobro (opcional)</label>
+            <input
+              type="text"
+              value={mpDesc}
+              onChange={e => setMpDesc(e.target.value)}
+              placeholder="Ej: Para reservar tu turno dejá una seña de $5.000"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#009EE3]"
+            />
+          </div>
+          <button
+            onClick={saveSeña}
+            disabled={savingSeña}
+            className="flex items-center gap-2 rounded-xl bg-[#009EE3] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0088CC] transition-colors disabled:opacity-60"
+          >
+            {savingSeña ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {señaSaved ? '✓ Guardado' : savingSeña ? 'Guardando...' : 'Guardar configuración'}
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-[#009EE3]/20 bg-[#009EE3]/5 p-3 text-xs text-slate-600 leading-5">
+          <span className="font-semibold text-[#0088CC]">Cómo funciona:</span> el bot no agenda nada automáticamente. Cuando el cliente pide reservar o pagar, recibe el link directamente en el chat y paga desde su celular. Vos ves el cobro en tu cuenta de Mercado Pago.
+        </div>
       </div>
     </SectionCard>
   )
