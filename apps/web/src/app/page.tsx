@@ -5,8 +5,6 @@ import {
   ArrowUp,
   BarChart3,
   Bot,
-  CalendarDays,
-  Camera,
   Check,
   CheckCircle2,
   Clock3,
@@ -40,14 +38,10 @@ const navLinks = [
 const trustItems = ['Prueba inicial', 'Sin tarjeta', 'Canales oficiales']
 
 const channels = [
-  { icon: Smartphone, name: 'WhatsApp QR', text: 'Plan de entrada para responder rapido.' },
-  { icon: ShieldCheck, name: 'WhatsApp API', text: 'Canal oficial para negocios con Meta.' },
-  { icon: Bot, name: 'Gmail / Mails', text: 'Gmail, Outlook e iCloud con borradores sugeridos.' },
-  { icon: Camera, name: 'Instagram', text: 'DMs con integracion oficial de Meta.' },
-  { icon: MessagesSquare, name: 'Facebook', text: 'Messenger de paginas conectadas.' },
-  { icon: Send, name: 'Telegram', text: 'Bot propio conectado desde BotFather.' },
-  { icon: Globe2, name: 'Web Chat', text: 'Widget para instalar en tu sitio.' },
-  { icon: CalendarDays, name: 'Google Calendar', text: 'Agenda automatica de turnos con confirmaciones.' },
+  { icon: Smartphone, name: 'WhatsApp QR', text: 'Conectá tu WhatsApp por QR y empezá a responder hoy.' },
+  { icon: Bot, name: 'Mail IMAP/SMTP', text: 'Cualquier casilla de correo: clasificación y borradores.' },
+  { icon: Send, name: 'Telegram', text: 'Bot propio conectado desde BotFather, sin costo extra.' },
+  { icon: Globe2, name: 'Web Chat', text: 'Widget para instalar en tu sitio en 2 minutos.' },
 ]
 
 const problemCards = [
@@ -78,7 +72,7 @@ const steps = [
   {
     step: '02',
     title: 'Conectás tus canales',
-    text: 'Activás WhatsApp, Web Chat, Telegram, Meta o Email según el plan contratado.',
+    text: 'Activás WhatsApp, Web Chat, Telegram o Mail según el plan contratado.',
     preview: 'qr',
   },
   {
@@ -108,7 +102,7 @@ const benefits = [
   {
     icon: Smartphone,
     title: 'Canales por separado',
-    text: 'Pausás Facebook, Instagram, Telegram, WhatsApp o Web Chat sin apagar todo.',
+    text: 'Pausás Telegram, WhatsApp, Mail o Web Chat sin apagar todo el bot.',
   },
   {
     icon: LayoutDashboard,
@@ -118,7 +112,7 @@ const benefits = [
   {
     icon: Sparkles,
     title: 'CRM simple incluido',
-    text: 'En el plan Completo unificás contactos, canales, etiquetas y seguimiento básico.',
+    text: 'En el plan Multicanal unificás contactos, canales, etiquetas y seguimiento básico.',
   },
   {
     icon: ShieldCheck,
@@ -139,28 +133,28 @@ const industries = [
 const faqs = [
   {
     question: '¿Cuál es el plan para empezar?',
-    answer: 'El plan de entrada es Basico WhatsApp: WhatsApp, Web Chat, panel, prompt del negocio y hasta 500 respuestas asistidas. Para negocios con alta demanda de turnos, el plan Gold agrega agenda integrada y recordatorios automaticos.',
+    answer: 'El plan de entrada es WhatsApp QR: WhatsApp, Web Chat, panel, prompt del negocio y hasta 500 respuestas asistidas por mes. Simple y listo para funcionar el mismo día.',
   },
   {
-    question: '¿Mails es un plan o un complemento?',
-    answer: 'Puede venderse como plan propio o como complemento. Sirve para Gmail, Outlook e iCloud con clasificacion y borradores sugeridos.',
+    question: '¿El plan de mails incluye WhatsApp?',
+    answer: 'Sí. El plan WhatsApp QR + Mail incluye todo lo del plan de entrada más conexión por IMAP/SMTP con cualquier casilla de correo, borradores sugeridos y plantillas de respuesta.',
   },
   {
-    question: '¿Puedo pausar una red sin apagar todo?',
-    answer: 'Sí. Cada canal tiene pausa independiente para cortar WhatsApp, Telegram, Facebook, Instagram, Web Chat o Email por separado.',
+    question: '¿Puedo pausar un canal sin apagar todo?',
+    answer: 'Sí. Cada canal tiene pausa independiente. Podés cortar WhatsApp, Telegram, Mail o Web Chat por separado sin afectar el resto.',
   },
   {
     question: '¿El CRM viene incluido?',
-    answer: 'El CRM simple entra en el plan Completo para ordenar contactos, estados y seguimiento. No lo vendemos como producto enterprise.',
+    answer: 'El CRM simple entra en el plan Multicanal para ordenar contactos, estados y seguimiento. En los planes de entrada tenés historial de conversaciones.',
   },
   {
     question: '¿Las respuestas con IA son ilimitadas?',
-    answer: 'No conviene prometer eso. Cada plan incluye una cantidad de respuestas asistidas y el uso intensivo puede requerir ampliación o API propia.',
+    answer: 'Cada plan incluye una cantidad de respuestas asistidas. Si necesitás más, podés sumar packs adicionales desde el panel en cualquier momento.',
   },
 ]
 
 const entryPlanOrder = ['whatsapp', 'email'] as const
-const growthPlanOrder = ['social', 'gold'] as const
+const growthPlanOrder = ['social'] as const
 
 function QrEye({ className }: { className: string }) {
   return (
@@ -327,7 +321,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200 lg:text-[19px]">
-              Responbot responde WhatsApp, Telegram, Instagram, Facebook, correos y gestiona tu agenda de turnos desde un mismo panel, con CRM para ordenar oportunidades.
+              Responbot responde WhatsApp, Telegram, correos y Web Chat desde un mismo panel. Bot con IA, CRM básico para ordenar oportunidades y pausa por canal.
             </p>
 
             <div className="mt-7 flex flex-col gap-4 sm:flex-row">
@@ -638,7 +632,7 @@ export default function LandingPage() {
               <span className="block text-[#A855F7]">y suma canales cuando haga falta.</span>
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-              Los planes de entrada son Basico WhatsApp y Mails. Completo suma redes y CRM. Gold agrega agenda de turnos y recordatorios automaticos.
+              Empezá con WhatsApp QR o sumá Mail desde el día uno. Multicanal agrega Telegram y un panel unificado para todos tus canales.
             </p>
           </div>
 
@@ -686,7 +680,7 @@ export default function LandingPage() {
                   <Link href="/register" className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 ${
                     tier === 'whatsapp' ? 'bg-emerald-500 shadow-lg shadow-emerald-950/10' : 'bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] shadow-lg shadow-violet-950/10'
                   }`}>
-                    {tier === 'whatsapp' ? 'Arrancar con Basico' : 'Activar Mails'} <ArrowRight className="h-4 w-4" />
+                    {tier === 'whatsapp' ? 'Empezar con WhatsApp QR' : 'Activar WhatsApp + Mail'} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </article>
               ))}
@@ -731,7 +725,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                   <Link href="/register" className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 shadow-lg ${isGold ? 'bg-amber-500 shadow-amber-950/10' : 'bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] shadow-violet-950/10'}`}>
-                    {isGold ? 'Activar Gold con Agenda' : 'Activar Completo'} <ArrowRight className="h-4 w-4" />
+                      Activar Multicanal <ArrowRight className="h-4 w-4" />
                   </Link>
                 </article>
               )
