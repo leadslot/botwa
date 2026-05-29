@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error: dbError } = await adminClient
       .from('businesses')
-      .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds, context_messages, escalation_contact, monthly_responses_used, monthly_emails_used, extra_responses, extra_emails, cycle_start_date, mp_subscription_id, bonus_responses, bonus_emails, bonus_note, first_month_paid, mp_payment_link, mp_payment_description')
+      .select('id, name, is_paid, plan, plan_tier, enabled_channels, messages_used, ai_enabled, ai_prompt, coupon_used, daily_messages_count, price_list, excluded_numbers, response_delay_seconds, context_messages, escalation_contact, monthly_responses_used, monthly_emails_used, extra_responses, extra_emails, cycle_start_date, mp_subscription_id, bonus_responses, bonus_emails, bonus_note, first_month_paid, mp_payment_link, mp_payment_description, mp_payment_amount')
       .eq('user_id', user.id)
       .single()
 

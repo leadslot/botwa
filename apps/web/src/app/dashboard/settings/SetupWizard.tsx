@@ -47,6 +47,8 @@ interface WizardData {
   payments: string[]
   websiteLink: string
   bookingLink: string
+  senaMonto: string       // monto de seña en pesos (puede ser fijo o porcentaje)
+  senaDescripcion: string // descripción que el bot comparte al cliente
   // Step 5 — rubro-specific fields
   specific: Record<string, string>
   specificMulti: Record<string, string[]>
@@ -644,6 +646,8 @@ function buildPrompt(d: WizardData): string {
     payments: d.payments,
     websiteLink: d.websiteLink,
     bookingLink: d.bookingLink,
+    senaMonto: d.senaMonto,
+    senaDescripcion: d.senaDescripcion,
     specific: d.specific,
     specificMulti: d.specificMulti,
     botLimits: d.botLimits,
@@ -726,7 +730,7 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
     botProfiles: ['ventas'],
     businessName: '', contactName: '', tone: 'amigable y rioplatense',
     mainChannels: ['WhatsApp'],
-    address: '', hours: '', payments: [], websiteLink: '', bookingLink: '',
+    address: '', hours: '', payments: [], websiteLink: '', bookingLink: '', senaMonto: '', senaDescripcion: '',
     specific: {},
     specificMulti: {},
     botLimits: '', escalationContact: '', extraInfo: '',
@@ -771,6 +775,15 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
       setSaving(true)
       const supabase = createClient()
       const updates: Record<string, unknown> = { ai_prompt: prompt }
+      // Seña / pago anticipado
+      const senaMonto = parseInt(data.senaMonto.replace(/\D/g, ''), 10)
+      if (!isNaN(senaMonto) && senaMonto > 0) {
+        updates.mp_payment_amount = senaMonto
+        updates.mp_payment_description = data.senaDescripcion.trim() || `Seña para confirmar tu reserva: $${senaMonto.toLocaleString('es-AR')}`
+      } else {
+        updates.mp_payment_amount = null
+        updates.mp_payment_description = null
+      }
       if (data.escalationContact.trim()) {
         updates.escalation_contact = data.escalationContact.trim()
         // Auto-agregar contacto a excluidos para que el bot no le responda
@@ -983,6 +996,35 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
                 <label className={lbl}>Link de turnos / reservas <span className="text-gray-400 font-normal">(opcional)</span></label>
                 <p className="text-xs text-gray-400 mb-2">Ej: Booksy, Calendly, Turnify, WhatsApp link, etc.</p>
                 <input className={inp} value={data.bookingLink} onChange={e => set('bookingLink', e.target.value)} placeholder="https://booksy.com/..." />
+              </div>
+
+              {/* Señas / pago anticipado */}
+              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
+                <div>
+                  <p className="text-sm font-bold text-gray-800">Seña / pago anticipado con Mercado Pago</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Si pedís seña para confirmar turnos, el bot puede generar un link de pago automáticamente cuando el cliente lo pida. Necesitás conectar tu cuenta de Mercado Pago en la sección Canales.</p>
+                </div>
+                <div>
+                  <label className={lbl}>Monto de la seña <span className="text-gray-400 font-normal">(en pesos)</span></label>
+                  <input
+                    className={inp}
+                    value={data.senaMonto}
+                    onChange={e => set('senaMonto', e.target.value)}
+                    placeholder="Ej: 5000"
+                    type="number"
+                    min="0"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Dejalo vacío si no cobrás seña o preferís el link manual.</p>
+                </div>
+                <div>
+                  <label className={lbl}>Descripción del cobro <span className="text-gray-400 font-normal">(opcional)</span></label>
+                  <input
+                    className={inp}
+                    value={data.senaDescripcion}
+                    onChange={e => set('senaDescripcion', e.target.value)}
+                    placeholder="Ej: Seña para confirmar tu turno de diseño de cejas"
+                  />
+                </div>
               </div>
             </>
           )}

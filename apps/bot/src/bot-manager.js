@@ -16,6 +16,59 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 )
 
+// Genera un link de pago en MP usando el token OAuth del negocio
+async function generateMpPaymentLink(businessId, amount, description) {
+  try {
+    const { data: conn } = await supabase
+      .from('channel_connections')
+      .select('metadata')
+      .eq('business_id', businessId)
+      .eq('channel', 'mercadopago')
+      .eq('status', 'active')
+      .single()
+
+    const accessToken = conn?.metadata?.access_token
+    if (!accessToken) return null
+
+    const preference = {
+      items: [{
+        title: description || 'Seña / pago anticipado',
+        quantity: 1,
+        unit_price: amount,
+        currency_id: 'ARS',
+      }],
+      back_urls: {
+        success: 'https://responbot.com.ar/pago-ok',
+        failure: 'https://responbot.com.ar/pago-error',
+        pending: 'https://responbot.com.ar/pago-pendiente',
+      },
+      auto_return: 'approved',
+    }
+
+    const res = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(preference),
+    })
+
+    const data = await res.json()
+    return data.init_point ?? null
+  } catch (e) {
+    console.warn('[MP] Error generando link de pago:', e.message)
+    return null
+  }
+}
+
+// Detecta si el mensaje tiene intención de pagar / dejar seña
+function hasPaymentIntent(text) {
+  const lower = text.toLowerCase()
+  const keywords = ['seña', 'señar', 'reservar', 'reserva', 'pagar', 'pago', 'anticipo', 'abonar', 'link de pago', 'mercadopago', 'mercado pago', 'cómo pago', 'como pago', 'pago anticipado', 'confirmar turno']
+  return keywords.some(kw => lower.includes(kw))
+}
+
 async function isChannelPaused(businessId, channel) {
   try {
     const { data } = await supabase
@@ -432,7 +485,7 @@ export const botManager = {
         // Obtener configuración del negocio
         const { data: business } = await supabase
           .from('businesses')
-          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact, mp_payment_link, mp_payment_description')
+          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact, mp_payment_link, mp_payment_description, mp_payment_amount')
           .eq('id', businessId)
           .single()
 
@@ -484,6 +537,24 @@ export const botManager = {
 
         // ── GENERAR RESPUESTA ─────────────────────────────
         try {
+          // Pre-generar link de seña si el mensaje tiene intención de pago
+          let generatedMpLink = null
+          if (business.mp_payment_amount && hasPaymentIntent(text)) {
+            generatedMpLink = await generateMpPaymentLink(
+              businessId,
+              business.mp_payment_amount,
+              business.mp_payment_description
+            )
+            if (generatedMpLink) {
+              console.log(`[${businessId}] Link MP generado para seña: ${generatedMpLink}`)
+            }
+          }
+
+          // Inyectar link generado en el contexto del negocio para la IA
+          const businessWithMpLink = generatedMpLink
+            ? { ...business, mp_payment_link: generatedMpLink }
+            : business
+
           // Detección de escalación antes de llamar a la IA
           let response = null
           if (needsEscalation(text)) {
@@ -501,7 +572,7 @@ export const botManager = {
               continue
             }
           } else {
-            response = await generateAIResponse(text, business, history)
+            response = await generateAIResponse(text, businessWithMpLink, history)
           }
 
           // Aplicar delay configurado por el negocio
