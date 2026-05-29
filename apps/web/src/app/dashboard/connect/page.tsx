@@ -10,6 +10,7 @@ import {
   Clock3,
   Copy,
   Globe2,
+  Loader2,
   Lock,
   LogOut,
   Mail,
@@ -100,10 +101,7 @@ function ReconnectingPanel({ reconnectingSince, onForce, resetting }: { reconnec
 
 export default function ConnectPage() {
   const { business } = useDashboard()
-  const [status, setStatus] = useState<WAStatus>(() => {
-    if (typeof window !== 'undefined') return (sessionStorage.getItem('wa_status') as WAStatus) ?? null
-    return null
-  })
+  const [status, setStatus] = useState<WAStatus>(null)
   const [qr, setQR] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
@@ -119,6 +117,10 @@ export default function ConnectPage() {
   const [telegramError, setTelegramError] = useState<string | null>(null)
   const [waApiLoading, setWaApiLoading] = useState(false)
   const [waApiError, setWaApiError] = useState<string | null>(null)
+  const [waManual, setWaManual] = useState(false)
+  const [waManualWabaId, setWaManualWabaId] = useState('')
+  const [waManualPhoneId, setWaManualPhoneId] = useState('')
+  const [waManualToken, setWaManualToken] = useState('')
   const [metaLoading, setMetaLoading] = useState(false)
   const [metaError, setMetaError] = useState<string | null>(null)
   const [emailLoading, setEmailLoading] = useState<string | null>(null)
@@ -141,7 +143,8 @@ export default function ConnectPage() {
     .flatMap(plan => PLANS[plan].channels)
     .filter((channel, index, list) => list.indexOf(channel) === index)
   // gmail is a sub-provider of email, not a standalone channel card
-  const HIDDEN_CHANNEL_CARDS: ChannelId[] = ['gmail']
+  // Canales no disponibles aún — se ocultan completamente de la UI
+  const HIDDEN_CHANNEL_CARDS: ChannelId[] = ['gmail', 'whatsapp_api', 'instagram', 'facebook', 'calendar_google']
   const lockedChannels = (Object.keys(CHANNELS) as ChannelId[]).filter(channel => !includedChannels.includes(channel) && !HIDDEN_CHANNEL_CARDS.includes(channel))
   const nextPlan = PLAN_ORDER.find(plan => PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan))
   const [origin, setOrigin] = useState('')
@@ -406,6 +409,24 @@ export default function ConnectPage() {
   }
 
 
+  const connectWhatsAppApiManual = async () => {
+    if (!waManualPhoneId.trim() || !waManualToken.trim()) return
+    setWaApiLoading(true)
+    setWaApiError(null)
+    try {
+      const res = await fetch('/api/whatsapp-business/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+        body: JSON.stringify({ accessToken: waManualToken.trim(), phoneNumberId: waManualPhoneId.trim(), wabaId: waManualWabaId.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) setWaApiError(data.error || 'No se pudo conectar')
+      else { setWaManual(false); setWaManualToken(''); setWaManualPhoneId(''); setWaManualWabaId(''); await reloadChannels() }
+    } finally {
+      setWaApiLoading(false)
+    }
+  }
+
   const disconnectWhatsAppApi = async () => {
     setWaApiLoading(true)
     setWaApiError(null)
@@ -489,10 +510,12 @@ export default function ConnectPage() {
   }
 
   const IMAP_PRESETS: Record<string, { label: string; imap_host: string; imap_port: string; smtp_host: string; smtp_port: string }> = {
+    gmail: { label: 'Gmail', imap_host: 'imap.gmail.com', imap_port: '993', smtp_host: 'smtp.gmail.com', smtp_port: '587' },
     yahoo: { label: 'Yahoo Mail', imap_host: 'imap.mail.yahoo.com', imap_port: '993', smtp_host: 'smtp.mail.yahoo.com', smtp_port: '465' },
     zoho: { label: 'Zoho Mail', imap_host: 'imap.zoho.com', imap_port: '993', smtp_host: 'smtp.zoho.com', smtp_port: '465' },
     titan: { label: 'Titan Mail', imap_host: 'imap.titan.email', imap_port: '993', smtp_host: 'smtp.titan.email', smtp_port: '465' },
     hostinger: { label: 'Hostinger Mail', imap_host: 'imap.hostinger.com', imap_port: '993', smtp_host: 'smtp.hostinger.com', smtp_port: '465' },
+    outlook: { label: 'Outlook / Hotmail', imap_host: 'outlook.office365.com', imap_port: '993', smtp_host: 'smtp.office365.com', smtp_port: '587' },
     custom: { label: 'Dominio propio / otro', imap_host: '', imap_port: '993', smtp_host: '', smtp_port: '587' },
   }
 
@@ -606,7 +629,7 @@ export default function ConnectPage() {
 
       {activeTool === 'whatsapp' && (
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_520px]">
-          <SectionCard className="relative min-h-[250px] overflow-hidden p-4 text-center">
+          <SectionCard className="relative overflow-hidden p-4 text-center">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_26%,rgba(34,197,94,0.14),transparent_30%),radial-gradient(circle_at_0%_90%,rgba(108,77,255,0.10),transparent_32%)]" />
             <div className="relative mx-auto max-w-2xl">
               {status === null && (
@@ -616,15 +639,15 @@ export default function ConnectPage() {
                 </div>
               )}
               {connected && (
-                <div className="py-4">
-                  <div className="relative mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#EAFBF1]">
-                    <Smartphone className="h-7 w-7 text-[#22C55E]" />
-                    <CheckCircle2 className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-[#22C55E] text-white" />
+                <div className="py-2">
+                  <div className="relative mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#EAFBF1]">
+                    <Smartphone className="h-6 w-6 text-[#22C55E]" />
+                    <CheckCircle2 className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-[#22C55E] text-white" />
                   </div>
-                  <h2 className="text-xl font-semibold text-slate-950">WhatsApp conectado</h2>
-                  <p className="mt-1 text-sm text-slate-500">El bot esta activo en el canal principal.</p>
-                  <div className="mt-2"><StatusPill tone="green">En linea</StatusPill></div>
-                  <p className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-600">
+                  <h2 className="text-lg font-semibold text-slate-950">WhatsApp conectado</h2>
+                  <p className="mt-0.5 text-sm text-slate-500">El bot esta activo en el canal principal.</p>
+                  <div className="mt-1.5"><StatusPill tone="green">En linea</StatusPill></div>
+                  <p className="mt-2 flex items-center justify-center gap-2 text-sm text-slate-600">
                     <Clock3 className="h-4 w-4 text-[#22C55E]" />
                     Ultima sincronizacion: <span className="font-semibold text-[#22C55E]">hace unos segundos</span>
                   </p>
@@ -677,8 +700,8 @@ export default function ConnectPage() {
               </button>
             </ToolCard>
             <ToolCard icon={Pause} title="Pausar bot" desc="Pausa solo WhatsApp.">
-              <button onClick={disconnectBot} disabled={!connected || disconnecting} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50">
-                <LogOut className="h-4 w-4" /> {disconnecting ? 'Desconectando...' : 'Pausar bot'}
+              <button onClick={disconnectBot} disabled={(status !== 'connected' && status !== 'reconnecting') || disconnecting} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50">
+                <LogOut className="h-4 w-4" /> {disconnecting ? 'Desconectando...' : 'Desconectar'}
               </button>
             </ToolCard>
             <ToolCard icon={Smartphone} title="Vincular sin QR" desc="Recibi un codigo en tu telefono.">
@@ -755,20 +778,33 @@ export default function ConnectPage() {
 
           {whatsappApi && (
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={connectWhatsAppApi} disabled={waApiLoading} className="rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
-                {waApiLoading ? 'Abriendo Meta...' : 'Reconectar WhatsApp oficial'}
+              <button onClick={() => { window.location.href = `/api/whatsapp-business/connect/start?bid=${business?.id ?? ''}` }} className="rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-semibold text-white">
+                Reconectar WhatsApp oficial
               </button>
               <button onClick={disconnectWhatsAppApi} disabled={waApiLoading} className="rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-600">Desactivar API</button>
             </div>
           )}
           {!whatsappApi && (
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={connectWhatsAppApi} disabled={waApiLoading} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 disabled:opacity-60">
-                {waApiLoading ? 'Abriendo Meta...' : 'Conectar con Meta'}
-              </button>
-              <button onClick={() => {}} className="rounded-xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700 hidden">
-                Ingresar IDs manualmente
-              </button>
+            <div className="mt-4 space-y-3">
+              <div className="flex flex-wrap gap-3">
+                <button onClick={() => { window.location.href = `/api/whatsapp-business/connect/start?bid=${business?.id ?? ''}` }} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600">
+                  Conectar con Meta
+                </button>
+                <button onClick={() => setWaManual(v => !v)} className="rounded-xl border border-violet-200 bg-violet-50 px-5 py-3 text-sm font-semibold text-violet-700">
+                  Ingresar IDs manualmente
+                </button>
+              </div>
+              {waManual && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                  <p className="text-xs text-slate-500">Encontrá estos datos en <strong>business.facebook.com → Cuentas de WhatsApp → Números de teléfono</strong></p>
+                  <input value={waManualWabaId} onChange={e => setWaManualWabaId(e.target.value)} placeholder="WABA ID (ej: 112727704795284)" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
+                  <input value={waManualPhoneId} onChange={e => setWaManualPhoneId(e.target.value)} placeholder="Phone Number ID" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
+                  <input value={waManualToken} onChange={e => setWaManualToken(e.target.value)} placeholder="Access Token (de Meta for Developers)" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
+                  <button onClick={connectWhatsAppApiManual} disabled={waApiLoading || !waManualPhoneId.trim() || !waManualToken.trim()} className="rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+                    {waApiLoading ? 'Conectando...' : 'Guardar conexión'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {waApiError && <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{waApiError}</p>}
@@ -823,9 +859,9 @@ export default function ConnectPage() {
         <SectionCard className="p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">Email: Gmail, Outlook, iCloud y cualquier proveedor</h2>
+              <h2 className="text-lg font-semibold text-slate-950">Email</h2>
               <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                Conecta casillas para leer, clasificar, detectar prioridad y preparar borradores. Por seguridad, el envio automatico queda apagado hasta definir reglas.
+                Conecta tu casilla con usuario y contraseña. Compatible con Gmail, Outlook, Yahoo, Zoho, iCloud y cualquier proveedor IMAP/SMTP.
               </p>
             </div>
             <StatusPill tone={emailConnections.some(item => item.status === 'active') ? 'green' : 'amber'}>
@@ -833,96 +869,56 @@ export default function ConnectPage() {
             </StatusPill>
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-slate-950">Gmail</h3>
-                  <p className="mt-1 text-sm text-slate-500">Lectura, clasificacion, etiquetas y borradores sugeridos.</p>
-                </div>
-                <Mail className="h-5 w-5 text-[#6C4DFF]" />
-              </div>
-              <button onClick={() => connectEmail('gmail')} disabled={emailLoading === 'gmail'} className="mt-4 w-full rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-                {emailLoading === 'gmail' ? 'Abriendo Google...' : 'Conectar Gmail'}
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-slate-950">Outlook / Microsoft 365</h3>
-                  <p className="mt-1 text-sm text-slate-500">Microsoft Graph para bandeja, prioridad y borradores.</p>
-                </div>
-                <Mail className="h-5 w-5 text-[#6C4DFF]" />
-              </div>
-              <button onClick={() => connectEmail('outlook')} disabled={emailLoading === 'outlook'} className="mt-4 w-full rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-                {emailLoading === 'outlook' ? 'Abriendo Microsoft...' : 'Conectar Outlook'}
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-slate-950">iCloud Mail</h3>
-                  <p className="mt-1 text-sm text-slate-500">Conexion IMAP/SMTP con contrasena especifica de app.</p>
-                </div>
-                <Mail className="h-5 w-5 text-[#6C4DFF]" />
-              </div>
-              <div className="mt-4 space-y-2">
-                <input value={icloudEmail} onChange={event => setIcloudEmail(event.target.value)} placeholder="tu-cuenta@icloud.com" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
-                <input value={icloudPassword} onChange={event => setIcloudPassword(event.target.value)} type="password" placeholder="Contrasena especifica de app" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
-                <p className="text-xs text-slate-500">Se crea en appleid.apple.com, seccion Inicio de sesion y seguridad.</p>
-                <button onClick={connectIcloud} disabled={emailLoading === 'icloud' || !icloudEmail.trim() || !icloudPassword.trim()} className="w-full rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-                  {emailLoading === 'icloud' ? 'Guardando...' : 'Conectar iCloud'}
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-violet-100 bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-slate-950">Otro correo (IMAP)</h3>
-                  <p className="mt-1 text-sm text-slate-500">Yahoo, Zoho, dominio propio, Titan, Hostinger y mas.</p>
-                </div>
-                <Mail className="h-5 w-5 text-[#6C4DFF]" />
-              </div>
-              <div className="mt-4 space-y-2">
-                <select value={imapPreset} onChange={e => applyImapPreset(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400 bg-white">
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Proveedor</label>
+                <select value={imapPreset} onChange={e => applyImapPreset(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400 bg-white">
                   <option value="">-- Elegir proveedor --</option>
                   {Object.entries(IMAP_PRESETS).map(([key, p]) => (
                     <option key={key} value={key}>{p.label}</option>
                   ))}
                 </select>
-                <input value={imapEmail} onChange={e => setImapEmail(e.target.value)} placeholder="tu@dominio.com" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
-                <input value={imapPassword} onChange={e => setImapPassword(e.target.value)} type="password" placeholder="Contrasena (o contrasena de app)" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400" />
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <p className="mb-1 text-xs text-slate-400">IMAP Host</p>
-                    <input value={imapHost} onChange={e => setImapHost(e.target.value)} placeholder="imap.dominio.com" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
-                  </div>
-                  <div className="w-20">
-                    <p className="mb-1 text-xs text-slate-400">Puerto</p>
-                    <input value={imapPort} onChange={e => setImapPort(e.target.value)} placeholder="993" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <p className="mb-1 text-xs text-slate-400">SMTP Host</p>
-                    <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.dominio.com" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
-                  </div>
-                  <div className="w-20">
-                    <p className="mb-1 text-xs text-slate-400">Puerto</p>
-                    <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" />
-                  </div>
-                </div>
-                <button
-                  onClick={connectImap}
-                  disabled={emailLoading === 'imap' || !imapEmail.trim() || !imapPassword.trim() || !imapHost.trim() || !smtpHost.trim()}
-                  className="w-full rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  {emailLoading === 'imap' ? 'Conectando...' : 'Conectar'}
-                </button>
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Correo electrónico</label>
+                <input value={imapEmail} onChange={e => setImapEmail(e.target.value)} placeholder="tu@gmail.com" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Contraseña{imapPreset === 'gmail' && <span className="ml-1 text-xs text-violet-500 font-normal">(<a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="underline">contraseña de app</a>)</span>}
+                  {imapPreset === 'outlook' && <span className="ml-1 text-xs text-slate-400 font-normal">(contraseña de Microsoft)</span>}
+                </label>
+                <input value={imapPassword} onChange={e => setImapPassword(e.target.value)} type="password" placeholder={imapPreset === 'gmail' ? '16 caracteres sin espacios' : 'Tu contraseña'} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" />
+              </div>
+              {(!imapPreset || imapPreset === 'custom') && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">IMAP Host</label>
+                    <div className="flex gap-2">
+                      <input value={imapHost} onChange={e => setImapHost(e.target.value)} placeholder="imap.dominio.com" className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" />
+                      <input value={imapPort} onChange={e => setImapPort(e.target.value)} placeholder="993" className="w-20 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">SMTP Host</label>
+                    <div className="flex gap-2">
+                      <input value={smtpHost} onChange={e => setSmtpHost(e.target.value)} placeholder="smtp.dominio.com" className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" />
+                      <input value={smtpPort} onChange={e => setSmtpPort(e.target.value)} placeholder="587" className="w-20 rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400" />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <button
+                onClick={connectImap}
+                disabled={emailLoading === 'imap' || !imapEmail.trim() || !imapPassword.trim() || !imapHost.trim() || !smtpHost.trim()}
+                className="rounded-xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {emailLoading === 'imap' ? 'Conectando...' : 'Conectar correo'}
+              </button>
+              {emailError && <p className="text-sm text-red-500">{emailError}</p>}
             </div>
           </div>
 
@@ -968,7 +964,109 @@ export default function ConnectPage() {
           {emailError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{emailError}</p>}
         </SectionCard>
       )}
+
+      {/* Mercado Pago */}
+      <MercadoPagoSection />
     </div>
+  )
+}
+
+function MercadoPagoSection() {
+  const [conn, setConn] = useState<{ display_name: string; mp_email?: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [connecting, setConnecting] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const { getAuthHeaders } = useDashboard() as unknown as { getAuthHeaders: () => Promise<HeadersInit> }
+
+  async function authH(): Promise<HeadersInit> {
+    const { data: { session } } = await createSupabaseClient().auth.getSession()
+    return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+  }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('mp') === 'connected') {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+    load()
+  }, [])
+
+  async function load() {
+    setLoading(true)
+    const h = await authH()
+    const res = await fetch('/api/channel-connections?channel=mercadopago', { headers: h }).catch(() => null)
+    if (res?.ok) {
+      const data = await res.json()
+      const active = (data.connections ?? []).find((c: { status: string; display_name: string; metadata?: { mp_email?: string } }) => c.status === 'active')
+      setConn(active ? { display_name: active.display_name, mp_email: active.metadata?.mp_email } : null)
+    }
+    setLoading(false)
+  }
+
+  async function connect() {
+    setConnecting(true)
+    const h = await authH()
+    const res = await fetch('/api/mp/connect', { headers: h })
+    const data = await res.json()
+    if (data.url) window.location.href = data.url
+    setConnecting(false)
+  }
+
+  async function disconnect() {
+    setDisconnecting(true)
+    const h = await authH()
+    await fetch('/api/mp/disconnect', { method: 'POST', headers: h })
+    setConn(null)
+    setDisconnecting(false)
+  }
+
+  return (
+    <SectionCard className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#009EE3] text-white font-bold text-sm flex-shrink-0">MP</span>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Mercado Pago</h2>
+            <p className="text-sm text-slate-500">Conectá tu cuenta para cobrar señas de turnos directamente a tus clientes.</p>
+          </div>
+        </div>
+        {!loading && (
+          conn
+            ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Conectado</span>
+            : <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Por conectar</span>
+        )}
+      </div>
+
+      <div className="mt-4">
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando...</div>
+        ) : conn ? (
+          <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-emerald-800">{conn.display_name}</p>
+              {conn.mp_email && <p className="text-xs text-emerald-600">{conn.mp_email}</p>}
+            </div>
+            <button onClick={disconnect} disabled={disconnecting} className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-60">
+              {disconnecting ? 'Desconectando...' : 'Desconectar'}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <button
+              onClick={connect}
+              disabled={connecting}
+              className="flex items-center gap-2 rounded-xl bg-[#009EE3] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0088CC] transition-colors disabled:opacity-60"
+            >
+              {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {connecting ? 'Redirigiendo...' : 'Conectar Mercado Pago'}
+            </button>
+            <p className="text-xs text-slate-400">
+              Vas a ser redirigido a Mercado Pago para autorizar el acceso. Los pagos van directo a tu cuenta.
+            </p>
+          </div>
+        )}
+      </div>
+    </SectionCard>
   )
 }
 
