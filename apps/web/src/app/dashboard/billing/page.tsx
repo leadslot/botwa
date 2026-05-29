@@ -279,8 +279,8 @@ export default function BillingPage() {
         </SectionCard>
       )}
 
-      {/* Funcionalidades extras (agenda/recordatorios) */}
-      {(isPaid || isLifetime) && (
+      {/* Funcionalidades extras (agenda/recordatorios) — ocultas hasta que estén disponibles */}
+      {false && (isPaid || isLifetime) && (
         <SectionCard className="p-5 space-y-4">
           <div>
             <h3 className="font-semibold text-slate-900">Módulos adicionales</h3>
