@@ -1,5 +1,5 @@
 export type PlanTier = 'whatsapp' | 'email' | 'social' | 'gold'
-export type ChannelId = 'whatsapp' | 'whatsapp_api' | 'webchat' | 'email' | 'telegram' | 'instagram' | 'facebook' | 'calendar_google' | 'gmail'
+export type ChannelId = 'whatsapp' | 'whatsapp_api' | 'webchat' | 'email' | 'telegram' | 'instagram' | 'facebook' | 'calendar_google' | 'gmail' | 'mercadopago'
 
 export const PLAN_ORDER: PlanTier[] = ['whatsapp', 'email', 'social', 'gold']
 
@@ -39,6 +39,7 @@ export const PLANS: Record<PlanTier, {
       'CRM basico: historial de conversaciones',
       'Panel de conversaciones',
       'Pausa del bot por canal',
+      // MP no incluido en Plan 1
     ],
     limit: 'Hasta 500 respuestas asistidas por mes',
     users: '1 usuario administrador',
@@ -55,7 +56,7 @@ export const PLANS: Record<PlanTier, {
     publicLabel: 'Desde $99.000 / mes',
     badge: 'Mas popular',
     description: 'WhatsApp QR y correos por IMAP/SMTP: atiende WhatsApp y clasifica mails con borradores.',
-    channels: ['whatsapp', 'webchat', 'email'],
+    channels: ['whatsapp', 'webchat', 'email', 'mercadopago'],
     features: [
       'Todo lo del plan WhatsApp QR',
       'Mail por IMAP/SMTP (usuario + contraseña)',
@@ -64,6 +65,7 @@ export const PLANS: Record<PlanTier, {
       'Borradores sugeridos antes de enviar',
       'Plantillas de respuesta',
       'Alertas de correos prioritarios',
+      'Cobro de senas por Mercado Pago',
     ],
     limit: '500 respuestas WhatsApp + 300 correos por mes',
     users: '1 usuario administrador',
@@ -80,12 +82,13 @@ export const PLANS: Record<PlanTier, {
     publicLabel: 'Desde $120.000 / mes',
     badge: 'Beta',
     description: 'WhatsApp, Telegram y Web Chat en un solo panel. Mas canales, mismo bot.',
-    channels: ['whatsapp', 'webchat', 'email', 'telegram'],
+    channels: ['whatsapp', 'webchat', 'email', 'telegram', 'mercadopago'],
     features: [
       'Todo lo del plan WhatsApp QR + Mail',
       'Telegram por bot propio (BotFather)',
       'Un solo panel para todos los canales',
       'CRM unificado entre canales',
+      'Cobro de senas por Mercado Pago',
     ],
     limit: '1.000 respuestas asistidas + 300 correos por mes',
     users: '2 usuarios',
@@ -103,12 +106,13 @@ export const PLANS: Record<PlanTier, {
     publicLabel: 'Desde $120.000 / mes',
     badge: 'Beta',
     description: 'WhatsApp, Telegram y Web Chat en un solo panel.',
-    channels: ['whatsapp', 'webchat', 'email', 'telegram'],
+    channels: ['whatsapp', 'webchat', 'email', 'telegram', 'mercadopago'],
     features: [
       'Todo lo del plan WhatsApp QR + Mail',
       'Telegram por bot propio (BotFather)',
       'Un solo panel para todos los canales',
       'CRM unificado entre canales',
+      'Cobro de senas por Mercado Pago',
     ],
     limit: '1.500 respuestas asistidas + 500 correos por mes',
     users: '2 usuarios',
@@ -199,6 +203,13 @@ export const CHANNELS: Record<ChannelId, {
     shortName: 'Gmail',
     description: 'Clasificar correos entrantes y generar respuestas automaticas.',
     requiredPlan: 'gold',
+    status: 'ready',
+  },
+  mercadopago: {
+    name: 'Mercado Pago',
+    shortName: 'Mercado Pago',
+    description: 'Cobra senas y pagos anticipados automaticamente desde el bot.',
+    requiredPlan: 'email',
     status: 'ready',
   },
 }

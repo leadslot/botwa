@@ -966,12 +966,12 @@ export default function ConnectPage() {
       )}
 
       {/* Mercado Pago */}
-      <MercadoPagoSection />
+      <MercadoPagoSection currentPlan={currentPlan} />
     </div>
   )
 }
 
-function MercadoPagoSection() {
+function MercadoPagoSection({ currentPlan }: { currentPlan: string }) {
   const [conn, setConn] = useState<{ display_name: string; mp_email?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
@@ -1048,24 +1048,41 @@ function MercadoPagoSection() {
     setDisconnecting(false)
   }
 
+  const mpLocked = currentPlan === 'whatsapp'
+
   return (
     <SectionCard className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#009EE3] text-white font-bold text-sm flex-shrink-0">MP</span>
+          <span className={`flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm flex-shrink-0 ${mpLocked ? 'bg-slate-200 text-slate-400' : 'bg-[#009EE3] text-white'}`}>MP</span>
           <div>
             <h2 className="text-lg font-semibold text-slate-950">Mercado Pago</h2>
             <p className="text-sm text-slate-500">Conectá tu cuenta para cobrar señas de turnos directamente a tus clientes.</p>
           </div>
         </div>
-        {!loading && (
-          conn
-            ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Conectado</span>
-            : <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Por conectar</span>
-        )}
+        {mpLocked
+          ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Plan superior</span>
+          : !loading && (conn
+              ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Conectado</span>
+              : <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Por conectar</span>
+            )
+        }
       </div>
 
-      <div className="mt-4">
+      {/* Upgrade prompt para Plan 1 */}
+      {mpLocked && (
+        <div className="mt-4 rounded-xl border border-[#009EE3]/25 bg-[#009EE3]/5 p-4">
+          <p className="text-sm font-semibold text-slate-800">Disponible desde el plan <span className="text-[#009EE3]">WhatsApp QR + Mail</span></p>
+          <p className="mt-1 text-xs text-slate-500 leading-5">
+            Con el plan de $99.000/mes podés cobrar señas automáticamente desde el bot. El cliente recibe el link de pago de Mercado Pago directo en el chat.
+          </p>
+          <a href="/dashboard/billing" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#009EE3] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0088CC] transition-colors">
+            Ver planes →
+          </a>
+        </div>
+      )}
+
+      {!mpLocked && <div className="mt-4">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando...</div>
         ) : conn ? (
@@ -1093,9 +1110,10 @@ function MercadoPagoSection() {
             </p>
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* Configuración de señas — siempre visible */}
+      {/* Configuración de señas — solo visible cuando no está bloqueado */}
+      {!mpLocked && <>
       <div className="mt-5 border-t border-slate-100 pt-5 space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Cobro de señas por el bot</h3>
@@ -1139,7 +1157,7 @@ function MercadoPagoSection() {
         <div className="rounded-xl border border-[#009EE3]/20 bg-[#009EE3]/5 p-3 text-xs text-slate-600 leading-5">
           <span className="font-semibold text-[#0088CC]">Cómo funciona:</span> el bot no agenda nada automáticamente. Cuando el cliente pide reservar o pagar, recibe el link directamente en el chat y paga desde su celular. Vos ves el cobro en tu cuenta de Mercado Pago.
         </div>
-      </div>
+      </div></>}
     </SectionCard>
   )
 }

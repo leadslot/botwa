@@ -136,8 +136,8 @@ const faqs = [
     answer: 'El plan de entrada es WhatsApp QR: WhatsApp, Web Chat, panel, prompt del negocio y hasta 500 respuestas asistidas por mes. Simple y listo para funcionar el mismo día.',
   },
   {
-    question: '¿El plan de mails incluye WhatsApp?',
-    answer: 'Sí. El plan WhatsApp QR + Mail incluye todo lo del plan de entrada más conexión por IMAP/SMTP con cualquier casilla de correo, borradores sugeridos y plantillas de respuesta.',
+    question: '¿El plan de mails incluye WhatsApp y Mercado Pago?',
+    answer: 'Sí. El plan WhatsApp QR + Mail incluye WhatsApp, Web Chat, mail por IMAP/SMTP y también la integración con Mercado Pago para cobrar señas automáticamente desde el bot.',
   },
   {
     question: '¿Puedo pausar un canal sin apagar todo?',
@@ -657,7 +657,7 @@ export default function LandingPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <h4 className="text-2xl font-black">{PLANS[tier].name}</h4>
                         <span className={`rounded-full px-3 py-1 text-[11px] font-black ${tier === 'whatsapp' ? 'bg-emerald-500 text-white' : 'bg-[#F1EDFF] text-[#6C4DFF]'}`}>
-                          {tier === 'whatsapp' ? 'Entrada recomendada' : 'Plan de mails'}
+                          {tier === 'whatsapp' ? 'Entrada recomendada' : '+ Mails y Mercado Pago'}
                         </span>
                       </div>
                       <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">{PLANS[tier].description}</p>
