@@ -10,7 +10,8 @@ import UsageSummary from '@/components/dashboard/UsageSummary'
 
 type AddonRequest = { id: string; addon_type: string; addon_label: string; price: number; status: string; created_at: string }
 
-const PLAN_ORDER: PlanTier[] = ['whatsapp', 'email', 'social', 'gold']
+// gold es plan legacy — no se muestra en la UI pública
+const PLAN_ORDER: PlanTier[] = ['whatsapp', 'email', 'social']
 
 const PLAN_COLORS: Record<PlanTier, { border: string; bg: string; badge: string; btn: string }> = {
   whatsapp: { border: 'border-emerald-200', bg: 'bg-emerald-50/60', badge: 'bg-emerald-100 text-emerald-700', btn: 'bg-emerald-600 hover:bg-emerald-700' },
