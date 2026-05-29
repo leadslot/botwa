@@ -76,7 +76,7 @@ export default function UsageSummary({ business, addonRequests, onRequestAddon }
   const relevantAddons = ADDON_CATALOG.filter(a => {
     if (a.type.startsWith('responses') && plan.monthlyResponses === 0) return false
     if (a.type.startsWith('emails') && plan.monthlyEmails === 0) return false
-    if (a.type === 'agenda' || a.type === 'reminders') return true
+    if (a.type === 'agenda' || a.type === 'reminders') return false
     return true
   })
 
