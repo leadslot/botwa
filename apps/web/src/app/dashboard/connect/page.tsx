@@ -144,7 +144,8 @@ export default function ConnectPage() {
     .filter((channel, index, list) => list.indexOf(channel) === index)
   // gmail is a sub-provider of email, not a standalone channel card
   // Canales no disponibles aún — se ocultan completamente de la UI
-  const HIDDEN_CHANNEL_CARDS: ChannelId[] = ['gmail', 'whatsapp_api', 'instagram', 'facebook', 'calendar_google']
+  // mercadopago tiene su propia sección dedicada abajo — no mostrar como card genérica
+  const HIDDEN_CHANNEL_CARDS: ChannelId[] = ['gmail', 'whatsapp_api', 'instagram', 'facebook', 'calendar_google', 'mercadopago']
   const lockedChannels = (Object.keys(CHANNELS) as ChannelId[]).filter(channel => !includedChannels.includes(channel) && !HIDDEN_CHANNEL_CARDS.includes(channel))
   const nextPlan = PLAN_ORDER.find(plan => PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan))
   const [origin, setOrigin] = useState('')
