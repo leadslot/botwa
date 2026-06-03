@@ -192,6 +192,8 @@ export async function describeImage(buffer, mimetype = 'image/jpeg') {
 
   try {
     const base64 = buffer.toString('base64')
+    // Limpiar mimetype — Gemini no acepta parámetros como "image/jpeg; codecs=..."
+    const cleanMime = mimetype.split(';')[0].trim() || 'image/jpeg'
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent?key=${gemini.key}`,
       {
@@ -201,7 +203,7 @@ export async function describeImage(buffer, mimetype = 'image/jpeg') {
           contents: [{
             parts: [
               { text: 'Describí brevemente qué muestra esta imagen en español. Sé conciso y objetivo. Si es un producto, describí qué es. Si es un tatuaje o diseño, describí el estilo y los elementos. Si es texto, transcribilo.' },
-              { inline_data: { mime_type: mimetype, data: base64 } }
+              { inlineData: { mimeType: cleanMime, data: base64 } }
             ]
           }]
         })
