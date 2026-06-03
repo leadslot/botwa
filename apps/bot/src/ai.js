@@ -47,6 +47,9 @@ async function getPool() {
 // Keys bloqueadas temporalmente (rate limit). Se resetean solos al reiniciar.
 const blockedUntil = {}
 
+// Contador round-robin — avanza con cada llamada exitosa para distribuir carga entre keys
+let rrIndex = 0
+
 const ESCALATION_KEYWORDS = [
   'reclamo', 'queja', 'problema grave', 'estafa', 'denuncia', 'robo', 'fraude',
   'devolucion', 'devolución', 'reembolso', 'no funciona', 'no me respondieron',
@@ -98,11 +101,14 @@ El pago es opcional. No lo ofrezcas proactivamente, solo cuando el cliente lo pi
   const now = Date.now()
   const API_POOL = await getPool()
 
-  for (const entry of API_POOL) {
-    // Saltear si no tiene key configurada
-    if (!entry.key) continue
+  // Armar el orden de intento empezando desde el índice round-robin actual.
+  // Si la key elegida falla, pasa a la siguiente en orden, y así hasta probar todas.
+  const available = API_POOL.filter(e => e.key)
+  const n = available.length
+  const orderedPool = Array.from({ length: n }, (_, i) => available[(rrIndex + i) % n])
 
-    // Saltear si está en cooldown (rate limit reciente)
+  for (const entry of orderedPool) {
+    // Saltear si está en cooldown por rate limit
     if (blockedUntil[entry.label] && blockedUntil[entry.label] > now) {
       console.log(`[AI] ${entry.label} en cooldown, saltando...`)
       continue
@@ -111,10 +117,11 @@ El pago es opcional. No lo ofrezcas proactivamente, solo cuando el cliente lo pi
     try {
       console.log(`[AI] Usando ${entry.label} | historial: ${history.length} msgs`)
       const response = await callProvider(entry, userMessage, systemPrompt, maxTokens, history)
+      // Avanzar el índice solo cuando la llamada fue exitosa
+      rrIndex = (rrIndex + 1) % n
       return response
     } catch (err) {
       if (isRateLimit(err)) {
-        // Bloquear esta key por 1 hora y probar la siguiente
         blockedUntil[entry.label] = now + 60 * 60 * 1000
         console.warn(`[AI] ${entry.label} → rate limit. Bloqueada 1h. Probando siguiente...`)
       } else {
