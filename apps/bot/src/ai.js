@@ -134,6 +134,96 @@ El pago es opcional. No lo ofrezcas proactivamente, solo cuando el cliente lo pi
 }
 
 // ============================================
+// TRANSCRIPCIÓN DE AUDIO (Groq Whisper)
+// ============================================
+
+export async function transcribeAudio(buffer, mimetype = 'audio/ogg') {
+  const pool = await getPool()
+  const groqKey = pool.find(e => e.provider === 'groq' && e.key)?.key
+  if (!groqKey) {
+    console.warn('[Whisper] No hay key de Groq disponible para transcripción')
+    return null
+  }
+
+  try {
+    // Determinar extensión según mimetype
+    const ext = mimetype.includes('mp4') ? 'mp4'
+      : mimetype.includes('mp3') ? 'mp3'
+      : mimetype.includes('webm') ? 'webm'
+      : 'ogg'
+
+    const form = new FormData()
+    form.append('file', new Blob([buffer], { type: mimetype }), `audio.${ext}`)
+    form.append('model', 'whisper-large-v3-turbo')
+    form.append('response_format', 'text')
+    form.append('language', 'es')
+
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${groqKey}` },
+      body: form,
+    })
+
+    if (!res.ok) {
+      console.warn(`[Whisper] Error ${res.status}: ${await res.text()}`)
+      return null
+    }
+
+    const text = (await res.text()).trim()
+    console.log(`[Whisper] Transcripción: "${text.slice(0, 80)}..."`)
+    return text || null
+  } catch (e) {
+    console.error('[Whisper] Error:', e.message)
+    return null
+  }
+}
+
+// ============================================
+// DESCRIPCIÓN DE IMAGEN (Gemini Vision)
+// ============================================
+
+export async function describeImage(buffer, mimetype = 'image/jpeg') {
+  const pool = await getPool()
+  const gemini = pool.find(e => e.provider === 'gemini' && e.key)
+  if (!gemini) {
+    console.warn('[Vision] No hay key de Gemini disponible')
+    return null
+  }
+
+  try {
+    const base64 = buffer.toString('base64')
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent?key=${gemini.key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Describí brevemente qué muestra esta imagen en español. Sé conciso y objetivo. Si es un producto, describí qué es. Si es un tatuaje o diseño, describí el estilo y los elementos. Si es texto, transcribilo.' },
+              { inline_data: { mime_type: mimetype, data: base64 } }
+            ]
+          }]
+        })
+      }
+    )
+
+    if (!res.ok) {
+      console.warn(`[Vision] Error ${res.status}: ${await res.text()}`)
+      return null
+    }
+
+    const data = await res.json()
+    const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+    console.log(`[Vision] Descripción: "${description?.slice(0, 80)}..."`)
+    return description || null
+  } catch (e) {
+    console.error('[Vision] Error:', e.message)
+    return null
+  }
+}
+
+// ============================================
 // LLAMADAS POR PROVEEDOR
 // ============================================
 

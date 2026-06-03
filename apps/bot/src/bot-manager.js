@@ -4,12 +4,13 @@ import makeWASocket, {
   BufferJSON,
   makeCacheableSignalKeyStore,
   fetchLatestBaileysVersion,
+  downloadMediaMessage,
   proto,
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import { createClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
-import { generateAIResponse, needsEscalation } from './ai.js'
+import { generateAIResponse, needsEscalation, transcribeAudio, describeImage } from './ai.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -418,10 +419,57 @@ export const botManager = {
         if (msg.key.fromMe) continue
         if (!msg.message) continue
 
-        const text =
+        let text =
           msg.message.conversation ||
           msg.message.extendedTextMessage?.text ||
+          msg.message.buttonsResponseMessage?.selectedDisplayText ||
+          msg.message.listResponseMessage?.title ||
           ''
+
+        // ── MEDIA: audio e imágenes ──────────────────────────
+        const audioMsg = msg.message.audioMessage || msg.message.pttMessage
+        const imageMsg = msg.message.imageMessage
+
+        if (!text && audioMsg) {
+          try {
+            const buffer = await downloadMediaMessage(msg, 'buffer', {})
+            const mimetype = audioMsg.mimetype || 'audio/ogg; codecs=opus'
+            const transcription = await transcribeAudio(buffer, mimetype)
+            if (transcription) {
+              text = transcription
+              console.log(`[${businessId}] Audio transcripto: "${transcription.slice(0, 60)}..."`)
+            } else {
+              await sock.sendMessage(from, { text: 'Recibí tu audio pero no pude escucharlo bien. ¿Podés escribirme qué necesitás?' })
+              continue
+            }
+          } catch (e) {
+            console.error(`[${businessId}] Error descargando audio:`, e.message)
+            continue
+          }
+        }
+
+        if (!text && imageMsg) {
+          try {
+            const buffer = await downloadMediaMessage(msg, 'buffer', {})
+            const mimetype = imageMsg.mimetype || 'image/jpeg'
+            const caption = imageMsg.caption || ''
+            const description = await describeImage(buffer, mimetype)
+            if (description) {
+              text = caption
+                ? `[El cliente mandó una imagen. Lo que muestra: ${description}. Texto del cliente: ${caption}]`
+                : `[El cliente mandó una imagen. Lo que muestra: ${description}]`
+              console.log(`[${businessId}] Imagen descripta`)
+            } else if (caption) {
+              text = caption
+            } else {
+              await sock.sendMessage(from, { text: 'Recibí tu imagen. ¿Querés contarme algo más sobre lo que buscás?' })
+              continue
+            }
+          } catch (e) {
+            console.error(`[${businessId}] Error descargando imagen:`, e.message)
+            continue
+          }
+        }
 
         if (!text) continue
 
