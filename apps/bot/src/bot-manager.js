@@ -531,13 +531,21 @@ export const botManager = {
         }
 
         // Obtener configuración del negocio
-        const { data: business } = await supabase
-          .from('businesses')
-          .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact, mp_payment_link, mp_payment_description, mp_payment_amount')
-          .eq('id', businessId)
-          .single()
+        const [{ data: business }, { data: bizFiles }] = await Promise.all([
+          supabase
+            .from('businesses')
+            .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact, mp_payment_link, mp_payment_description, mp_payment_amount')
+            .eq('id', businessId)
+            .single(),
+          supabase
+            .from('business_files')
+            .select('id, name, description, url, mimetype')
+            .eq('business_id', businessId),
+        ])
+        const businessWithFiles = business ? { ...business, files: bizFiles ?? [] } : null
 
-        if (!business?.ai_enabled) continue
+        if (!businessWithFiles?.ai_enabled) continue
+        const business = businessWithFiles
 
         // Chequear si el número está excluido
         // Funciona tanto con números reales como con LIDs (el usuario puede bloquear desde el panel)
@@ -631,7 +639,28 @@ export const botManager = {
             await sock.sendPresenceUpdate('paused', from)
           }
 
-          await sock.sendMessage(from, { text: response })
+          // Detectar si la IA quiere mandar un archivo
+          const fileMatch = response.match(/\[FILE:([a-f0-9-]+)\]/)
+          if (fileMatch) {
+            const fileId = fileMatch[1]
+            const fileRecord = business.files?.find(f => f.id === fileId)
+            if (fileRecord) {
+              const isImage = fileRecord.mimetype.startsWith('image/')
+              if (isImage) {
+                await sock.sendMessage(from, { image: { url: fileRecord.url }, caption: fileRecord.name })
+              } else {
+                await sock.sendMessage(from, {
+                  document: { url: fileRecord.url },
+                  mimetype: fileRecord.mimetype,
+                  fileName: fileRecord.name,
+                })
+              }
+            } else {
+              await sock.sendMessage(from, { text: response.replace(/\[FILE:[^\]]+\]/g, '').trim() || '¡Aquí va la información!' })
+            }
+          } else {
+            await sock.sendMessage(from, { text: response })
+          }
 
           // Actualizar contadores (atómico via SQL function)
           await supabase.from('whatsapp_messages').insert({

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useDashboard } from '../DashboardContext'
 import dynamic from 'next/dynamic'
 import { parseWizardDataFromPrompt } from './SetupWizard'
+import FileLibrary from './FileLibrary'
 const SetupWizard = dynamic(() => import('./SetupWizard'), { ssr: false })
 
 type PriceRow = { name: string; price: string }
@@ -553,6 +554,8 @@ El prompt debe ser en primera persona, como si el bot fuera un empleado de mi ne
           {saveError}
         </div>
       )}
+
+      <FileLibrary />
 
       <button onClick={save} disabled={saving} className={`sticky bottom-3 z-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#6C4DFF] to-[#A855F7] px-5 py-3 text-sm font-black text-white shadow-2xl shadow-violet-200 ${saved ? '!from-green-500 !to-green-500' : ''}`}>
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

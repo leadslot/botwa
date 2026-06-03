@@ -217,7 +217,7 @@ const TONES = [
 ]
 
 const PAYMENT_OPTIONS = ['Efectivo', 'MercadoPago', 'Transferencia', 'Tarjeta', 'Cripto']
-const CHANNEL_OPTIONS = ['WhatsApp', 'Instagram', 'Facebook', 'Email', 'Telegram']
+const CHANNEL_OPTIONS = ['WhatsApp', 'Email', 'Telegram']
 
 type FieldDef =
   | { key: string; label: string; type: 'textarea' | 'text'; placeholder?: string }
@@ -669,7 +669,7 @@ function buildPrompt(d: WizardData): string {
 
   const prompt = `Sos ${d.contactName || 'del equipo'} de ${d.businessName} (${rubroLabel}).
 Respondés consultas de forma ${d.tone} a través de: ${channelsLine}.
-Cada canal tiene su propio estilo (WhatsApp: breve y directo; Instagram: moderno y conciso; Facebook: amable y claro; Email: ordenado y completo). Adaptá el tono al canal pero siempre con la misma información.
+Cada canal tiene su propio estilo (WhatsApp: breve y directo; Email: ordenado y completo; Telegram: conciso y amigable). Adaptá el tono al canal pero siempre con la misma información.
 
 ${UNIVERSAL_PROMPT}
 

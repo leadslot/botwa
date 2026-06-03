@@ -73,6 +73,16 @@ export async function generateAIResponse(userMessage, business, history = []) {
     if (lines) priceBlock = `\n\nLISTA DE PRECIOS (EXACTA, usá solo estos valores):\n${lines}\nSi te preguntan por algo que no está en esta lista, decí que ese precio se maneja por consulta.`
   }
 
+  // Inyectar archivos disponibles si existen
+  let filesBlock = ''
+  if (business.files && business.files.length > 0) {
+    const list = business.files.map(f => `- [FILE:${f.id}] "${f.name}"${f.description ? ` — mandalo ${f.description}` : ''}`).join('\n')
+    filesBlock = `\n\nARCHIVOS QUE PODÉS ENVIAR AL CLIENTE:
+Cuando el cliente pida uno de estos archivos o su descripción coincida con lo indicado, respondé ÚNICAMENTE con la etiqueta exacta [FILE:id] en tu respuesta, sin texto adicional:
+${list}
+Ejemplo: si el cliente pide la lista de precios y hay un archivo para eso, respondé solo: [FILE:abc-123]`
+  }
+
   // Inyectar link de seña/pago si está configurado
   let paymentBlock = ''
   if (business.mp_payment_link) {
@@ -83,7 +93,7 @@ El pago es opcional. No lo ofrezcas proactivamente, solo cuando el cliente lo pi
   }
 
   const basePrompt = (business.ai_prompt ||
-    `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`) + priceBlock + paymentBlock
+    `Sos el asistente de ${business.name}. Respondé consultas de clientes de forma amable y concisa. No des información que no tenés. Si no podés ayudar, decí que se comunicarán a la brevedad.`) + priceBlock + filesBlock + paymentBlock
 
   const WHATSAPP_FORMAT_RULE = `\n\nFORMATO WHATSAPP (OBLIGATORIO, NO IGNORAR):
 - Máximo 2-3 oraciones por mensaje. Nunca más.
