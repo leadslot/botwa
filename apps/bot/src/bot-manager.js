@@ -419,6 +419,9 @@ export const botManager = {
         if (msg.key.fromMe) continue
         if (!msg.message) continue
 
+        let from = msg.key.remoteJid
+        const pushName = msg.pushName || ''
+
         let text =
           msg.message.conversation ||
           msg.message.extendedTextMessage?.text ||
@@ -472,9 +475,6 @@ export const botManager = {
         }
 
         if (!text) continue
-
-        let from = msg.key.remoteJid
-        const pushName = msg.pushName || ''
 
         // Si el JID es un LID (@lid), resolverlo al número real
         if (from?.endsWith('@lid')) {
