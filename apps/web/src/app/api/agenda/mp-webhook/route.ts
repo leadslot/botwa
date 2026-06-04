@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
     const [, ts, , v1] = xSignature.split(',').flatMap(p => p.split('='))
     const toSign = `ts:${ts};v1:${v1};`
     if (toSign !== `ts:${ts};v1:${hmac};`) {
-      // Log but don't block — MP sometimes sends without signature in sandbox
-      console.warn('MP webhook signature mismatch')
+      console.error('[agenda-webhook] HMAC signature mismatch — request rejected')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
   }
 

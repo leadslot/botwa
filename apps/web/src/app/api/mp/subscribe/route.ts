@@ -97,7 +97,8 @@ export async function POST(req: NextRequest) {
       }
     } else {
       console.error('MP subscribe error:', data)
-      return NextResponse.json({ error: 'Error al crear suscripción en MP', detail: data }, { status: 500 })
+      console.error('MP subscribe error:', data)
+    return NextResponse.json({ error: 'Error al crear suscripción. Intentá de nuevo.' }, { status: 500 })
     }
   }
 

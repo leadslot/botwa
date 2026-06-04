@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
   const data = await res.json()
   if (!data.init_point) {
     console.error('MP first-month error:', data)
-    return NextResponse.json({ error: 'Error al crear preferencia MP', detail: data }, { status: 500 })
+    console.error('MP first-month error:', data)
+    return NextResponse.json({ error: 'Error al crear preferencia. Intentá de nuevo.' }, { status: 500 })
   }
 
   return NextResponse.json({ init_point: data.init_point, first_month_price: plan.firstMonthPrice, monthly_price: plan.monthlyPrice })
