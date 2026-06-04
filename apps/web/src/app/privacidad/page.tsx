@@ -88,7 +88,7 @@ export default function PrivacidadPage() {
             <li>Desconectar canales de WhatsApp o Telegram en cualquier momento.</li>
             <li>Exportar el historial de conversaciones.</li>
           </ul>
-          <p>Para ejercer estos derechos o hacer consultas: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
+          <p>Para ejercer estos derechos o hacer consultas: <a href="mailto:soporte@responbot.com.ar" className="text-violet-600 hover:underline">soporte@responbot.com.ar</a></p>
         </section>
 
         <section className="space-y-3">
@@ -103,7 +103,7 @@ export default function PrivacidadPage() {
 
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-slate-900">11. Contacto</h2>
-          <p>Consultas de privacidad: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
+          <p>Consultas de privacidad: <a href="mailto:soporte@responbot.com.ar" className="text-violet-600 hover:underline">soporte@responbot.com.ar</a></p>
         </section>
       </main>
 

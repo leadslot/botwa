@@ -115,7 +115,7 @@ export default function TerminosPage() {
 
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-slate-900">14. Contacto</h2>
-          <p>Consultas: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
+          <p>Consultas: <a href="mailto:soporte@responbot.com.ar" className="text-violet-600 hover:underline">soporte@responbot.com.ar</a></p>
         </section>
       </main>
 

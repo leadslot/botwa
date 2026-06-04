@@ -3,7 +3,8 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Usar dominio propio si está verificado en Resend, sino fallback
-const FROM = 'Responbot <hola@responbot.com.ar>'
+const FROM = 'Responbot <noreply@responbot.com.ar>'
+const SOPORTE = 'soporte@responbot.com.ar'
 
 // ─── Colores y estilos ────────────────────────────────────────────────────────
 const PURPLE = '#6C4DFF'
@@ -107,7 +108,7 @@ export async function sendWelcomeEmail(opts: {
     ${p('Tu bot ya está listo para conectar. Entrá al panel y vinculá tu WhatsApp con el código QR.')}
     ${button('Ir al panel', 'https://responbot.com.ar/dashboard')}
     ${divider()}
-    ${p(`Si tenés alguna duda, respondé este email o escribinos a <a href="mailto:hola@responbot.com.ar" style="color:${PURPLE};">hola@responbot.com.ar</a>.`)}
+    ${p(`Si tenés alguna duda, respondé este email o escribinos a <a href="mailto:soporte@responbot.com.ar" style="color:${PURPLE};">soporte@responbot.com.ar</a>.`)}
   `
   return resend.emails.send({
     from: FROM,
@@ -250,7 +251,7 @@ export async function sendSubscriptionCancelledEmail(opts: {
     ${p('Después de esa fecha el bot dejará de responder. Podés reactivar tu cuenta en cualquier momento.')}
     ${button('Reactivar mi cuenta', 'https://responbot.com.ar/dashboard/billing')}
     ${divider()}
-    ${p(`Si cancelaste por error o querés contarnos algo, escribinos a <a href="mailto:hola@responbot.com.ar" style="color:${PURPLE};">hola@responbot.com.ar</a>.`)}
+    ${p(`Si cancelaste por error o querés contarnos algo, escribinos a <a href="mailto:soporte@responbot.com.ar" style="color:${PURPLE};">soporte@responbot.com.ar</a>.`)}
   `
   return resend.emails.send({
     from: FROM,
