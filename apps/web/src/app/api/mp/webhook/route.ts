@@ -1,27 +1,51 @@
 import { createClient } from '@supabase/supabase-js'
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { PLANS, normalizePlan, type PlanTier } from '@/lib/plans'
+import { sendWelcomeEmail, sendPackConfirmationEmail, sendSubscriptionCancelledEmail } from '@/lib/mailer'
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-)
+type AdminClient = ReturnType<typeof createClient>
+let cachedAdmin: AdminClient | null = null
 
-function verifySignature(req: NextRequest, rawBody: string): boolean {
+function getAdmin() {
+  if (cachedAdmin) return cachedAdmin
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_KEY
+  if (!url || !key) throw new Error('Supabase admin env missing')
+  cachedAdmin = createClient(url, key)
+  return cachedAdmin
+}
+
+function parseSignature(header: string) {
+  return Object.fromEntries(header.split(',').map((part) => {
+    const [key, ...rest] = part.trim().split('=')
+    return [key, rest.join('=')]
+  }))
+}
+
+function secureEqual(a: string, b: string) {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  return left.length === right.length && timingSafeEqual(left, right)
+}
+
+function verifySignature(req: NextRequest): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET
-  if (!secret) return true
+  if (!secret) return false
   const xSignature = req.headers.get('x-signature')
   const xRequestId = req.headers.get('x-request-id')
   const url = new URL(req.url)
   const dataId = url.searchParams.get('data.id') || url.searchParams.get('id') || ''
-  if (!xSignature) return false
-  const parts = Object.fromEntries(xSignature.split(',').map(p => p.split('=')))
+  if (!xSignature || !xRequestId || !dataId) return false
+  const parts = parseSignature(xSignature)
   const ts = parts['ts']
   const v1 = parts['v1']
+  if (!ts || !v1) return false
+  const timestamp = Number(ts)
+  if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > 5 * 60 * 1000) return false
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
   const hash = createHmac('sha256', secret).update(manifest).digest('hex')
-  return hash === v1
+  return secureEqual(hash, v1)
 }
 
 // Parsea external_reference:
@@ -42,7 +66,7 @@ function parseExternalRef(ref: string): { businessId: string; type: 'subscriptio
   return { businessId: parts[0], type: 'subscription', planTier: 'whatsapp' }
 }
 
-async function findBusinessByEmail(email: string): Promise<string | null> {
+async function findBusinessByEmail(admin: AdminClient, email: string): Promise<string | null> {
   const { data: { users } } = await admin.auth.admin.listUsers()
   const user = users.find(u => u.email === email)
   if (!user) return null
@@ -53,10 +77,11 @@ async function findBusinessByEmail(email: string): Promise<string | null> {
 export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text()
-    if (!verifySignature(req, rawBody)) {
+    if (!verifySignature(req)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
     const body = JSON.parse(rawBody)
+    const admin = getAdmin()
     const { type, data } = body
     const today = new Date().toISOString().split('T')[0]
 
@@ -83,7 +108,7 @@ export async function POST(req: NextRequest) {
 
       // Fallback: buscar por email del pagador
       if (!businessId && sub.payer_email) {
-        businessId = await findBusinessByEmail(sub.payer_email)
+        businessId = await findBusinessByEmail(admin, sub.payer_email)
       }
 
       if (!businessId) return NextResponse.json({ ok: true })
@@ -105,6 +130,19 @@ export async function POST(req: NextRequest) {
           is_paid: false,
           mp_subscription_id: null,
         }).eq('id', businessId)
+
+        // Email de cancelación
+        if (sub.payer_email) {
+          const nextMonth = new Date()
+          nextMonth.setMonth(nextMonth.getMonth() + 1)
+          const activeUntil = nextMonth.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+          const { data: bizData } = await admin.from('businesses').select('name').eq('id', businessId).single()
+          sendSubscriptionCancelledEmail({
+            to: sub.payer_email,
+            businessName: bizData?.name ?? 'tu negocio',
+            activeUntil,
+          }).catch(() => {})
+        }
       }
     }
 
@@ -156,6 +194,16 @@ export async function POST(req: NextRequest) {
               status: 'activo',
               updated_at: new Date().toISOString(),
             }).eq('id', addonReq.id)
+
+            // Email confirmación de pack
+            if (payment.payer?.email) {
+              sendPackConfirmationEmail({
+                to: payment.payer.email,
+                businessName: (await admin.from('businesses').select('name').eq('id', parsed.businessId).single()).data?.name ?? 'tu negocio',
+                responsesAdded: addonReq.responses_added,
+                price: addonReq.price,
+              }).catch(() => {})
+            }
           }
 
           return NextResponse.json({ ok: true })
@@ -182,6 +230,16 @@ export async function POST(req: NextRequest) {
           if (!payerEmail && payerBiz?.user_id) {
             const { data: { user } } = await admin.auth.admin.getUserById(payerBiz.user_id)
             payerEmail = user?.email
+          }
+
+          // Email de bienvenida
+          if (payerEmail && plan) {
+            sendWelcomeEmail({
+              to: payerEmail,
+              businessName: (await admin.from('businesses').select('name').eq('id', parsed.businessId).single()).data?.name ?? 'tu negocio',
+              planName: plan.name,
+              monthlyResponses: plan.monthlyResponses,
+            }).catch(() => {})
           }
 
           if (payerEmail && plan) {
@@ -225,7 +283,7 @@ export async function POST(req: NextRequest) {
       // Fallback por email (legado)
       const email = payment.payer?.email
       if (email) {
-        const businessId = await findBusinessByEmail(email)
+          const businessId = await findBusinessByEmail(admin, email)
         if (businessId) {
           await admin.from('businesses').update({
             is_paid: true,
