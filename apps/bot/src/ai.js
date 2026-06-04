@@ -210,7 +210,7 @@ export async function describeImage(buffer, mimetype = 'image/jpeg') {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groq.key}` },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'llama-3.2-11b-vision-preview',
           messages: [{
             role: 'user',
             content: [
