@@ -196,49 +196,68 @@ export async function describeImage(buffer, mimetype = 'image/jpeg') {
   const pool = await getPool()
   const cleanMime = mimetype.split(';')[0].trim() || 'image/jpeg'
   const base64 = buffer.toString('base64')
-  const prompt = 'Describí brevemente qué muestra esta imagen en español. Sé conciso y objetivo. Si hay texto o números, transcribílos exactamente. Si es un diseño o tatuaje, describí el estilo y elementos principales.'
+  const prompt = 'Describe briefly what this image shows in Spanish. Be concise and objective. If there is text or numbers, transcribe them exactly. If it is a tattoo or design, describe the style and main elements.'
 
-  console.log(`[Vision] Procesando imagen | mime: ${cleanMime} | tamaño: ${buffer.length} bytes`)
+  console.log(`[Vision] mime: ${cleanMime} | tamaño: ${buffer.length} bytes`)
 
-  // Usar gemini-2.0-flash — mismo modelo que funciona para texto
+  // 1. Groq Llama 4 Scout (multimodal, política permisiva)
+  const groqKeys = pool.filter(e => e.provider === 'groq' && e.key)
+  for (const groq of groqKeys) {
+    try {
+      console.log(`[Vision] Groq ${groq.label} | meta-llama/llama-4-scout-17b-16e-instruct`)
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groq.key}` },
+        body: JSON.stringify({
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{ role: 'user', content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: `data:${cleanMime};base64,${base64}` } }
+          ]}],
+          max_tokens: 200
+        })
+      })
+      const body = await res.text()
+      if (!res.ok) { console.warn(`[Vision] Groq ${groq.label} → ${res.status}: ${body.slice(0, 300)}`); continue }
+      const description = JSON.parse(body).choices?.[0]?.message?.content?.trim()
+      if (description) { console.log(`[Vision] OK Groq ${groq.label}`); return description }
+      console.warn(`[Vision] Groq ${groq.label} → vacío`)
+    } catch (e) { console.error(`[Vision] Groq ${groq.label} → ${e.message}`) }
+  }
+
+  // 2. Gemini con safetySettings BLOCK_NONE (para no filtrar tatuajes con armas)
   const geminiKeys = pool.filter(e => e.provider === 'gemini' && e.key)
+  const safetyOff = [
+    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+  ]
   for (const gemini of geminiKeys) {
     try {
-      console.log(`[Vision] Intentando con ${gemini.label} (${gemini.model})`)
+      console.log(`[Vision] Gemini ${gemini.label} | ${gemini.model}`)
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent?key=${gemini.key}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [
-              { text: prompt },
-              { inlineData: { mimeType: cleanMime, data: base64 } }
-            ]}],
+            contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: cleanMime, data: base64 } }] }],
+            safetySettings: safetyOff,
             generationConfig: { maxOutputTokens: 200 }
           })
         }
       )
-
       const body = await res.text()
-      if (!res.ok) {
-        console.warn(`[Vision] ${gemini.label} → HTTP ${res.status}: ${body.slice(0, 400)}`)
-        continue
-      }
-
+      if (!res.ok) { console.warn(`[Vision] Gemini ${gemini.label} → ${res.status}: ${body.slice(0, 400)}`); continue }
       const data = JSON.parse(body)
       const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-      if (description) {
-        console.log(`[Vision] OK con ${gemini.label}: "${description.slice(0, 80)}..."`)
-        return description
-      }
-      console.warn(`[Vision] ${gemini.label} → sin descripción. Body: ${body.slice(0, 200)}`)
-    } catch (e) {
-      console.error(`[Vision] ${gemini.label} → excepción: ${e.message}`)
-    }
+      if (description) { console.log(`[Vision] OK Gemini ${gemini.label}`); return description }
+      console.warn(`[Vision] Gemini ${gemini.label} → sin texto. finishReason: ${data.candidates?.[0]?.finishReason} | body: ${body.slice(0, 300)}`)
+    } catch (e) { console.error(`[Vision] Gemini ${gemini.label} → ${e.message}`) }
   }
 
-  console.error('[Vision] Gemini no pudo describir la imagen')
+  console.error('[Vision] Todos los proveedores fallaron')
   return null
 }
 
