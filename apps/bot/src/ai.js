@@ -196,57 +196,17 @@ export async function describeImage(buffer, mimetype = 'image/jpeg') {
   const pool = await getPool()
   const cleanMime = mimetype.split(';')[0].trim() || 'image/jpeg'
   const base64 = buffer.toString('base64')
-  const dataUrl = `data:${cleanMime};base64,${base64}`
-  const prompt = 'Describí brevemente qué muestra esta imagen en español. Sé conciso y objetivo. Si es texto o números, transcribílos exactamente. Si es un producto, describí qué es. Si es un diseño o tatuaje, describí el estilo y elementos.'
+  const prompt = 'Describí brevemente qué muestra esta imagen en español. Sé conciso y objetivo. Si hay texto o números, transcribílos exactamente. Si es un diseño o tatuaje, describí el estilo y elementos principales.'
 
   console.log(`[Vision] Procesando imagen | mime: ${cleanMime} | tamaño: ${buffer.length} bytes`)
 
-  // --- Intentar con Groq Vision (llama-3.2-11b-vision-preview) ---
-  const groqKeys = pool.filter(e => e.provider === 'groq' && e.key)
-  for (const groq of groqKeys) {
-    try {
-      console.log(`[Vision] Probando Groq Vision con ${groq.label}`)
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groq.key}` },
-        body: JSON.stringify({
-          model: 'llama-3.2-11b-vision-preview',
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: dataUrl } }
-            ]
-          }],
-          max_tokens: 200
-        })
-      })
-
-      const body = await res.text()
-      if (!res.ok) {
-        console.warn(`[Vision] Groq ${groq.label} → Error ${res.status}: ${body.slice(0, 300)}`)
-        continue
-      }
-
-      const data = JSON.parse(body)
-      const description = data.choices?.[0]?.message?.content?.trim()
-      if (description) {
-        console.log(`[Vision] OK con Groq ${groq.label}: "${description.slice(0, 80)}..."`)
-        return description
-      }
-      console.warn(`[Vision] Groq ${groq.label} → respuesta vacía`)
-    } catch (e) {
-      console.error(`[Vision] Groq ${groq.label} → excepción: ${e.message}`)
-    }
-  }
-
-  // --- Fallback: Gemini Vision ---
+  // Usar gemini-2.0-flash — mismo modelo que funciona para texto
   const geminiKeys = pool.filter(e => e.provider === 'gemini' && e.key)
   for (const gemini of geminiKeys) {
     try {
-      console.log(`[Vision] Probando Gemini Vision con ${gemini.label}`)
+      console.log(`[Vision] Intentando con ${gemini.label} (${gemini.model})`)
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${gemini.key}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent?key=${gemini.key}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -262,23 +222,23 @@ export async function describeImage(buffer, mimetype = 'image/jpeg') {
 
       const body = await res.text()
       if (!res.ok) {
-        console.warn(`[Vision] Gemini ${gemini.label} → Error ${res.status}: ${body.slice(0, 300)}`)
+        console.warn(`[Vision] ${gemini.label} → HTTP ${res.status}: ${body.slice(0, 400)}`)
         continue
       }
 
       const data = JSON.parse(body)
       const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
       if (description) {
-        console.log(`[Vision] OK con Gemini ${gemini.label}: "${description.slice(0, 80)}..."`)
+        console.log(`[Vision] OK con ${gemini.label}: "${description.slice(0, 80)}..."`)
         return description
       }
-      console.warn(`[Vision] Gemini ${gemini.label} → respuesta vacía:`, body.slice(0, 200))
+      console.warn(`[Vision] ${gemini.label} → sin descripción. Body: ${body.slice(0, 200)}`)
     } catch (e) {
-      console.error(`[Vision] Gemini ${gemini.label} → excepción: ${e.message}`)
+      console.error(`[Vision] ${gemini.label} → excepción: ${e.message}`)
     }
   }
 
-  console.error('[Vision] Todos los proveedores fallaron')
+  console.error('[Vision] Gemini no pudo describir la imagen')
   return null
 }
 
