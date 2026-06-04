@@ -93,52 +93,60 @@ export default function FileLibrary() {
       </div>
 
       {/* Upload form */}
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 space-y-3">
-        <div
-          className="flex flex-col items-center gap-2 cursor-pointer py-2"
-          onClick={() => inputRef.current?.click()}
-        >
-          <Upload className="h-6 w-6 text-slate-400" />
-          <span className="text-sm text-slate-500">
-            {selectedFile ? selectedFile.name : 'Hacé clic para seleccionar un archivo'}
-          </span>
-          <span className="text-xs text-slate-400">PDF, imagen, Word — máx 20 MB</span>
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-600">Título</label>
           <input
-            ref={inputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-            onChange={e => {
-              const f = e.target.files?.[0] ?? null
-              setSelectedFile(f)
-              if (f && !name) setName(f.name.replace(/\.[^.]+$/, ''))
-            }}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Ej: Lista de precios, Oferta de la semana, Menú..."
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-violet-400"
           />
         </div>
 
-        {selectedFile && (
-          <div className="space-y-2">
+        <div>
+          <label className="text-xs font-semibold text-slate-600 mb-1 block">Archivo</label>
+          <div
+            className="flex flex-col items-center gap-1.5 cursor-pointer rounded-xl border border-dashed border-slate-300 bg-white py-4 hover:border-violet-400 transition-colors"
+            onClick={() => inputRef.current?.click()}
+          >
+            <Upload className="h-5 w-5 text-slate-400" />
+            <span className="text-sm text-slate-500">
+              {selectedFile ? selectedFile.name : 'Hacé clic para seleccionar'}
+            </span>
+            <span className="text-xs text-slate-400">PDF, imagen, Word — máx 20 MB</span>
             <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Nombre del archivo (ej: Lista de precios)"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400"
+              ref={inputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+              onChange={e => {
+                const f = e.target.files?.[0] ?? null
+                setSelectedFile(f)
+                if (f && !name) setName(f.name.replace(/\.[^.]+$/, ''))
+              }}
             />
-            <input
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="¿Cuándo mandarlo? (ej: cuando pidan precios o tarifas)"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-violet-400"
-            />
-            <button
-              onClick={upload}
-              disabled={uploading || !name.trim()}
-              className="w-full rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-violet-700 transition-colors flex items-center justify-center gap-2"
-            >
-              {uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo...</> : 'Subir archivo'}
-            </button>
           </div>
-        )}
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-600">¿Cuándo mandarlo? <span className="font-normal text-slate-400">(opcional)</span></label>
+          <input
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Ej: cuando pidan precios, cuando pregunten por la oferta..."
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-violet-400"
+          />
+        </div>
+
+        <button
+          onClick={upload}
+          disabled={uploading || !name.trim() || !selectedFile}
+          className="w-full rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 hover:bg-violet-700 transition-colors flex items-center justify-center gap-2"
+        >
+          {uploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Subiendo...</> : 'Subir archivo'}
+        </button>
 
         {error && <p className="text-xs text-red-600">{error}</p>}
       </div>

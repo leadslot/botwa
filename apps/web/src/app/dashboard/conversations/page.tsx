@@ -26,14 +26,14 @@ type Contact = {
 const cleanNumber = (n: string) => n.replace(/@[^@]+$/, '').replace(/[^0-9+]/g, '')
 
 // Detecta si es un LID irresolvible (no es un numero de telefono real)
-const isLid = (n: string) => n.includes('@lid') || n.replace(/\D/g,'').length > 14
+const isLid = (n: string) => n.includes('@lid') || n.replace(/\D/g,'').length > 13
 
 // Muestra nombre o numero segun lo que este disponible
 function contactLabel(number: string, msgs: Msg[], index?: number): string {
   const channel = msgs[0]?.channel
   if (channel && channel !== 'whatsapp') return msgs.find(m => m.push_name)?.push_name || number
   if (!isLid(number)) return `+${number}`
-  const name = msgs.find(m => m.direction === 'inbound' && m.push_name)?.push_name
+  const name = msgs.find(m => m.push_name)?.push_name
   if (name) return name
   return index !== undefined ? `Cliente ${index + 1}` : 'Cliente'
 }
@@ -54,7 +54,7 @@ function formatTimeShort(iso: string) {
 }
 
 export default function ConversationsPage() {
-  const { loading: bizLoading } = useDashboard()
+  const { loading: bizLoading, business } = useDashboard()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -206,14 +206,14 @@ export default function ConversationsPage() {
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); blockContact(number) }}
-                      className="absolute right-10 top-3 rounded-xl p-2 text-slate-300 opacity-0 transition hover:bg-orange-50 hover:text-orange-500 group-hover:opacity-100"
+                      className="absolute right-10 top-3 rounded-xl p-2 text-slate-300 opacity-0 pointer-events-none transition hover:bg-orange-50 hover:text-orange-500 group-hover:opacity-100 group-hover:pointer-events-auto"
                       title="Bloquear contacto (el bot no responderá)"
                     >
                       <Ban className="h-4 w-4" />
                     </button>
                     <button
                       onClick={e => { e.stopPropagation(); deleteConversation(number) }}
-                      className="absolute right-3 top-3 rounded-xl p-2 text-slate-300 opacity-0 transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                      className="absolute right-3 top-3 rounded-xl p-2 text-slate-300 opacity-0 pointer-events-none transition hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 group-hover:pointer-events-auto"
                       title="Eliminar conversación"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -327,9 +327,11 @@ export default function ConversationsPage() {
             <div className="grid grid-cols-2 gap-3">
               <SectionCard className="p-2.5">
                 <Clock3 className="mb-2 h-6 w-6 text-[#6C4DFF]" />
-                <p className="text-xs font-semibold text-slate-500">Respuesta</p>
-                <p className="text-xl font-semibold text-slate-950">3 seg</p>
-                <p className="text-xs text-slate-500">Promedio</p>
+                <p className="text-xs font-semibold text-slate-500">Demora configurada</p>
+                <p className="text-xl font-semibold text-slate-950">
+                  {business?.response_delay_seconds ? `${business.response_delay_seconds} seg` : 'Inmediata'}
+                </p>
+                <p className="text-xs text-slate-500">Tiempo de respuesta</p>
               </SectionCard>
               <SectionCard className="p-2.5">
                 <Bot className="mb-2 h-6 w-6 text-[#6C4DFF]" />

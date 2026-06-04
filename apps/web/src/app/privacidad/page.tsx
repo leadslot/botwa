@@ -2,8 +2,8 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Política de Privacidad — Responbot',
-  description: 'Política de privacidad y tratamiento de datos personales de Responbot.',
+  title: 'Política de Privacidad - Responbot',
+  description: 'Cómo Responbot recopila, usa y protege los datos de negocios y sus clientes.',
 }
 
 export default function PrivacidadPage() {
@@ -13,80 +13,97 @@ export default function PrivacidadPage() {
         <Link href="/" className="text-lg font-bold text-slate-900">Responbot</Link>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-12 space-y-8 text-slate-700">
+      <main className="mx-auto max-w-3xl space-y-8 px-6 py-12 text-slate-700">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Política de Privacidad</h1>
-          <p className="mt-2 text-sm text-slate-500">Última actualización: mayo de 2026</p>
+          <p className="mt-2 text-sm text-slate-500">Última actualización: junio de 2026</p>
         </div>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">1. Introducción</h2>
-          <p>Responbot ("nosotros", "nuestro") opera el sitio web responbot.com.ar y los servicios asociados. Esta Política de Privacidad explica cómo recopilamos, usamos, compartimos y protegemos su información personal cuando utiliza nuestro Servicio.</p>
+          <h2 className="text-xl font-semibold text-slate-900">1. Quiénes somos</h2>
+          <p>Responbot es una plataforma argentina de automatización de atención al cliente por WhatsApp y Telegram. Permite a negocios configurar un asistente con inteligencia artificial que responde consultas de sus clientes de forma automática.</p>
+          <p>Al usar Responbot, el negocio registrado actúa como responsable del tratamiento de datos de sus propios clientes. Responbot actúa como encargado del tratamiento en nombre del negocio.</p>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-slate-900">2. Información que recopilamos</h2>
-          <p><strong>Información de cuenta:</strong> nombre, dirección de correo electrónico, datos de la empresa y contraseña al registrarse.</p>
-          <p><strong>Datos de uso:</strong> conversaciones gestionadas, métricas de respuesta, configuración de canales y preferencias del bot.</p>
-          <p><strong>Datos de integración:</strong> al conectar Google Calendar o Gmail, accedemos a los datos necesarios para proveer la función solicitada (eventos de calendario, correos electrónicos). Estos datos se usan únicamente para operar el Servicio y no se comparten con terceros con fines comerciales.</p>
-          <p><strong>Datos de pago:</strong> los pagos se procesan a través de Mercado Pago. No almacenamos datos de tarjetas de crédito.</p>
+          <p><strong>Del negocio registrado:</strong> nombre, email, nombre del negocio, contraseña (almacenada con hash), configuración del bot (prompt, lista de precios, demora de respuesta), archivos subidos al panel y link de pago de Mercado Pago si lo configura.</p>
+          <p><strong>De los canales conectados:</strong> sesión de WhatsApp vinculada por código QR desde el dispositivo del negocio. No almacenamos contraseñas de WhatsApp. Los mensajes entrantes y salientes se guardan en nuestra base de datos para mostrar el historial de conversaciones en el panel.</p>
+          <p><strong>De los clientes del negocio:</strong> número de teléfono, nombre (si WhatsApp lo provee) y contenido de los mensajes que intercambian con el bot. Estos datos pertenecen al negocio y Responbot los procesa en su nombre.</p>
+          <p><strong>Datos de uso:</strong> cantidad de respuestas generadas, fechas y métricas agregadas para mostrar estadísticas en el panel.</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">3. Uso de la información de Google</h2>
-          <p>Responbot usa los datos obtenidos de las APIs de Google (Calendar, Gmail) exclusivamente para proveer las funcionalidades que usted activa. Específicamente:</p>
-          <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Google Calendar:</strong> leer disponibilidad y crear eventos de turnos confirmados por sus clientes.</li>
-            <li><strong>Gmail:</strong> clasificar correos entrantes y generar borradores de respuesta.</li>
+          <h2 className="text-xl font-semibold text-slate-900">3. Cómo usamos la información</h2>
+          <ul className="list-disc space-y-1 pl-6">
+            <li>Operar el bot y responder mensajes entrantes en nombre del negocio.</li>
+            <li>Mostrar conversaciones e historial en el panel de control.</li>
+            <li>Medir el uso del servicio y los límites del plan.</li>
+            <li>Procesar las consultas con modelos de inteligencia artificial externos (ver sección 4).</li>
+            <li>Enviar comunicaciones administrativas relacionadas con la cuenta.</li>
+            <li>Cumplir obligaciones legales aplicables en Argentina.</li>
           </ul>
-          <p>No usamos estos datos para publicidad, no los vendemos a terceros, y no los compartimos salvo que sea necesario para operar el Servicio o lo requiera la ley.</p>
-          <p>El uso de información recibida de las APIs de Google cumple con la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline">Política de datos de usuario de los servicios de API de Google</a>, incluidos los requisitos de Uso Limitado.</p>
+          <p>No usamos datos de conversaciones para publicidad de terceros. No habilitamos envíos masivos de mensajes desde la plataforma.</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">4. Compartición de datos</h2>
-          <p>No vendemos ni alquilamos su información personal. Podemos compartir datos con:</p>
-          <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Proveedores de servicio:</strong> Supabase (base de datos), Vercel (hosting), Mercado Pago (pagos), OpenAI (procesamiento de lenguaje natural). Todos operan bajo acuerdos de confidencialidad.</li>
-            <li><strong>Requerimientos legales:</strong> cuando la ley lo exija o para proteger derechos legítimos.</li>
+          <h2 className="text-xl font-semibold text-slate-900">4. Proveedores de inteligencia artificial</h2>
+          <p>Para generar respuestas automáticas, el contenido de los mensajes se envía a APIs externas de inteligencia artificial. Actualmente usamos:</p>
+          <ul className="list-disc space-y-1 pl-6">
+            <li><strong>Groq (groq.com):</strong> modelos de lenguaje para generación de texto y transcripción de audios.</li>
+            <li><strong>Google Gemini (ai.google.dev):</strong> modelos de lenguaje y visión para descripción de imágenes.</li>
+          </ul>
+          <p>Estos proveedores reciben el texto de los mensajes para generar respuestas. Cada uno tiene su propia política de privacidad. Los mensajes procesados pueden incluir consultas de los clientes del negocio.</p>
+          <p>Si el negocio maneja información sensible, debe evaluar si estos servicios de IA son apropiados para su caso.</p>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold text-slate-900">5. Infraestructura y subprocesadores</h2>
+          <ul className="list-disc space-y-1 pl-6">
+            <li><strong>Supabase:</strong> base de datos PostgreSQL y almacenamiento de archivos.</li>
+            <li><strong>Vercel:</strong> hosting del panel web.</li>
+            <li><strong>Railway:</strong> hosting del servidor del bot.</li>
+            <li><strong>Mercado Pago:</strong> procesamiento de pagos de suscripciones. No almacenamos datos de tarjetas.</li>
           </ul>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">5. Seguridad</h2>
-          <p>Implementamos medidas técnicas y organizativas apropiadas para proteger su información, incluyendo cifrado en tránsito (HTTPS/TLS) y en reposo. Los tokens de acceso OAuth se almacenan cifrados y se renuevan automáticamente.</p>
+          <h2 className="text-xl font-semibold text-slate-900">6. Seguridad</h2>
+          <p>Implementamos HTTPS/TLS en todas las comunicaciones, autenticación segura con tokens cifrados, y controles de acceso por negocio. Los archivos se almacenan en buckets con permisos restringidos. Nunca almacenamos contraseñas en texto plano.</p>
+          <p>Ningún sistema es 100% seguro. En caso de brecha de seguridad que afecte datos personales, notificaremos a los usuarios afectados en el plazo que establezca la normativa aplicable.</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">6. Retención de datos</h2>
-          <p>Conservamos sus datos mientras mantenga una cuenta activa. Al cancelar su cuenta, eliminamos sus datos personales en un plazo de 30 días, salvo obligación legal de conservarlos por más tiempo.</p>
+          <h2 className="text-xl font-semibold text-slate-900">7. Retención de datos</h2>
+          <p>Los datos de cuenta y conversaciones se conservan mientras la cuenta esté activa. Al cancelar la suscripción, los datos se mantienen por 30 días para permitir recuperación. Luego se eliminan, salvo obligación legal de conservarlos.</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">7. Sus derechos</h2>
-          <p>Usted tiene derecho a:</p>
-          <ul className="list-disc pl-6 space-y-1">
-            <li>Acceder a los datos personales que tenemos sobre usted.</li>
-            <li>Solicitar la corrección de datos inexactos.</li>
+          <h2 className="text-xl font-semibold text-slate-900">8. Sus derechos</h2>
+          <p>Como usuario de Responbot (negocio registrado), usted puede:</p>
+          <ul className="list-disc space-y-1 pl-6">
+            <li>Acceder a sus datos desde el panel de control.</li>
+            <li>Corregir información de su perfil y negocio.</li>
             <li>Solicitar la eliminación de su cuenta y datos.</li>
-            <li>Revocar el acceso a integraciones (Google Calendar, Gmail) desde su panel de control en cualquier momento.</li>
+            <li>Desconectar canales de WhatsApp o Telegram en cualquier momento.</li>
+            <li>Exportar el historial de conversaciones.</li>
           </ul>
-          <p>Para ejercer estos derechos, contáctenos en <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a>.</p>
+          <p>Para ejercer estos derechos o hacer consultas: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">8. Cookies</h2>
-          <p>Usamos cookies estrictamente necesarias para el funcionamiento del Servicio (autenticación de sesión). No utilizamos cookies de rastreo ni publicidad de terceros.</p>
+          <h2 className="text-xl font-semibold text-slate-900">9. Cookies</h2>
+          <p>Usamos cookies estrictamente necesarias para autenticación de sesión en el panel. No usamos cookies de seguimiento ni publicidad de terceros.</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">9. Cambios a esta política</h2>
-          <p>Podemos actualizar esta política periódicamente. Le notificaremos cambios materiales por correo electrónico. El uso continuado del Servicio implica la aceptación de la política actualizada.</p>
+          <h2 className="text-xl font-semibold text-slate-900">10. Cambios a esta política</h2>
+          <p>Notificaremos cambios materiales por email o mediante aviso en el panel con al menos 15 días de anticipación. El uso continuado del servicio implica aceptación de la política actualizada.</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">10. Contacto</h2>
-          <p>Para consultas sobre privacidad o para ejercer sus derechos: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
+          <h2 className="text-xl font-semibold text-slate-900">11. Contacto</h2>
+          <p>Consultas de privacidad: <a href="mailto:responbot.app@gmail.com" className="text-violet-600 hover:underline">responbot.app@gmail.com</a></p>
         </section>
       </main>
 
