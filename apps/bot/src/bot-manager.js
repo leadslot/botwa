@@ -141,6 +141,24 @@ async function useSupabaseAuthState(businessId) {
   }
 }
 
+// ─── Alerta al panel web cuando algo falla ───────────────────────────────────
+const WEB_URL = process.env.WEB_URL || 'https://responbot.com.ar'
+
+async function alertWebApp({ type, businessId, businessName, detail }) {
+  const secret = process.env.BOT_SECRET
+  if (!secret) return
+  try {
+    await fetch(`${WEB_URL}/api/internal/alert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-bot-secret': secret },
+      body: JSON.stringify({ type, businessId, businessName, detail }),
+      signal: AbortSignal.timeout(8000),
+    })
+  } catch (e) {
+    console.warn('[alert] No se pudo notificar al panel:', e.message)
+  }
+}
+
 // Mapa de sesiones activas en memoria: businessId -> socket
 const activeSessions = new Map()
 // Mapa de QR pendientes: businessId -> qrBase64
@@ -387,6 +405,12 @@ export const botManager = {
             await supabase
               .from('whatsapp_sessions')
               .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
+            // Alertar: el bot no pudo reconectarse solo
+            alertWebApp({
+              type: 'wa_max_retries',
+              businessId,
+              detail: `WhatsApp de ${businessId} no pudo reconectarse después de ${attempts} intentos. Necesita QR nuevo.`,
+            })
             return
           }
 
@@ -408,6 +432,12 @@ export const botManager = {
           await supabase
             .from('whatsapp_sessions')
             .upsert({ business_id: businessId, status: 'disconnected', session_data: null, qr_code: null }, { onConflict: 'business_id' })
+          // Alertar: el número fue desconectado desde el celular
+          alertWebApp({
+            type: 'wa_logged_out',
+            businessId,
+            detail: `WhatsApp de ${businessId} fue desconectado (logout desde el dispositivo). Necesita reconectar con QR nuevo.`,
+          })
         }
       }
     })
