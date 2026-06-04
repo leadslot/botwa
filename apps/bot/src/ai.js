@@ -194,45 +194,57 @@ export async function transcribeAudio(buffer, mimetype = 'audio/ogg') {
 
 export async function describeImage(buffer, mimetype = 'image/jpeg') {
   const pool = await getPool()
-  const gemini = pool.find(e => e.provider === 'gemini' && e.key)
-  if (!gemini) {
-    console.warn('[Vision] No hay key de Gemini disponible')
+  // Usar todas las keys Gemini disponibles, intentando cada una
+  const geminiKeys = pool.filter(e => e.provider === 'gemini' && e.key)
+  if (geminiKeys.length === 0) {
+    console.warn('[Vision] No hay keys de Gemini disponibles')
     return null
   }
 
-  try {
-    const base64 = buffer.toString('base64')
-    // Limpiar mimetype — Gemini no acepta parámetros como "image/jpeg; codecs=..."
-    const cleanMime = mimetype.split(';')[0].trim() || 'image/jpeg'
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent?key=${gemini.key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: 'Describí brevemente qué muestra esta imagen en español. Sé conciso y objetivo. Si es un producto, describí qué es. Si es un tatuaje o diseño, describí el estilo y los elementos. Si es texto, transcribilo.' },
-              { inlineData: { mimeType: cleanMime, data: base64 } }
-            ]
-          }]
-        })
+  const cleanMime = mimetype.split(';')[0].trim() || 'image/jpeg'
+  const base64 = buffer.toString('base64')
+  // gemini-1.5-flash tiene soporte vision más estable que 2.0-flash en free tier
+  const visionModel = 'gemini-1.5-flash'
+
+  for (const gemini of geminiKeys) {
+    try {
+      console.log(`[Vision] Intentando con ${gemini.label} | modelo: ${visionModel} | mime: ${cleanMime} | tamaño: ${buffer.length} bytes`)
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${visionModel}:generateContent?key=${gemini.key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: 'Describí brevemente qué muestra esta imagen en español. Sé conciso y objetivo. Si es un producto, describí qué es. Si es un tatuaje o diseño, describí el estilo y los elementos. Si es texto, transcribilo.' },
+                { inlineData: { mimeType: cleanMime, data: base64 } }
+              ]
+            }],
+            generationConfig: { maxOutputTokens: 200 }
+          })
+        }
+      )
+
+      const body = await res.text()
+      if (!res.ok) {
+        console.warn(`[Vision] ${gemini.label} → Error ${res.status}: ${body.slice(0, 200)}`)
+        continue
       }
-    )
 
-    if (!res.ok) {
-      console.warn(`[Vision] Error ${res.status}: ${await res.text()}`)
-      return null
+      const data = JSON.parse(body)
+      const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+      if (description) {
+        console.log(`[Vision] OK con ${gemini.label}: "${description.slice(0, 80)}..."`)
+        return description
+      }
+      console.warn(`[Vision] ${gemini.label} → respuesta vacía:`, body.slice(0, 200))
+    } catch (e) {
+      console.error(`[Vision] ${gemini.label} → excepción: ${e.message}`)
     }
-
-    const data = await res.json()
-    const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-    console.log(`[Vision] Descripción: "${description?.slice(0, 80)}..."`)
-    return description || null
-  } catch (e) {
-    console.error('[Vision] Error:', e.message)
-    return null
   }
+
+  return null
 }
 
 // ============================================
