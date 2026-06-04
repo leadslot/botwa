@@ -12,3 +12,4 @@ apps/bot/auth_info_baileys/
 supabase/.temp/
 
 .vercel
+CREDENTIALS.md
