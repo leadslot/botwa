@@ -192,19 +192,70 @@ export async function transcribeAudio(buffer, mimetype = 'audio/ogg') {
 // DESCRIPCIÓN DE IMAGEN (Groq Vision primero, Gemini como fallback)
 // ============================================
 
+// Sube imagen a Gemini Files API y retorna el fileUri
+async function _uploadImageToGemini(buffer, mimeType, apiKey) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=media&key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': mimeType, 'Content-Length': String(buffer.length) },
+      body: buffer,
+    }
+  )
+  const body = await res.text()
+  if (!res.ok) {
+    console.warn(`[Vision] Upload error ${res.status}: ${body.slice(0, 300)}`)
+    return null
+  }
+  const data = JSON.parse(body)
+  return data.file?.uri || null
+}
+
 export async function describeImage(buffer, mimetype = 'image/jpeg') {
   const pool = await getPool()
   const cleanMime = mimetype.split(';')[0].trim() || 'image/jpeg'
-  const base64 = buffer.toString('base64')
-  const prompt = 'Describe briefly what this image shows in Spanish. Be concise and objective. If there is text or numbers, transcribe them exactly. If it is a tattoo or design, describe the style and main elements.'
+  const prompt = 'Describí brevemente en español qué muestra esta imagen. Si hay texto o números, transcribílos. Si es un tatuaje o diseño, describí estilo y elementos.'
 
   console.log(`[Vision] mime: ${cleanMime} | tamaño: ${buffer.length} bytes`)
 
-  // 1. Groq Llama 4 Scout (multimodal, política permisiva)
+  // Intentar con cada key de Gemini usando Files API (más confiable que base64 inline)
+  const geminiKeys = pool.filter(e => e.provider === 'gemini' && e.key)
+  for (const gemini of geminiKeys) {
+    try {
+      console.log(`[Vision] ${gemini.label}: subiendo imagen a Files API...`)
+      const fileUri = await _uploadImageToGemini(buffer, cleanMime, gemini.key)
+      if (!fileUri) { console.warn(`[Vision] ${gemini.label}: upload falló`); continue }
+
+      console.log(`[Vision] ${gemini.label}: fileUri=${fileUri}`)
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent?key=${gemini.key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [
+              { text: prompt },
+              { fileData: { mimeType: cleanMime, fileUri } }
+            ]}],
+            generationConfig: { maxOutputTokens: 200 }
+          })
+        }
+      )
+      const body = await res.text()
+      if (!res.ok) { console.warn(`[Vision] ${gemini.label} generateContent → ${res.status}: ${body.slice(0, 400)}`); continue }
+      const data = JSON.parse(body)
+      const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+      if (description) { console.log(`[Vision] OK ${gemini.label}: "${description.slice(0, 80)}"`); return description }
+      console.warn(`[Vision] ${gemini.label} → finishReason: ${data.candidates?.[0]?.finishReason} | ${body.slice(0, 200)}`)
+    } catch (e) { console.error(`[Vision] ${gemini.label} → ${e.message}`) }
+  }
+
+  // Fallback: base64 inline con Groq Llama 4 Scout
+  const base64 = buffer.toString('base64')
   const groqKeys = pool.filter(e => e.provider === 'groq' && e.key)
   for (const groq of groqKeys) {
     try {
-      console.log(`[Vision] Groq ${groq.label} | meta-llama/llama-4-scout-17b-16e-instruct`)
+      console.log(`[Vision] Groq fallback ${groq.label}`)
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groq.key}` },
@@ -221,40 +272,7 @@ export async function describeImage(buffer, mimetype = 'image/jpeg') {
       if (!res.ok) { console.warn(`[Vision] Groq ${groq.label} → ${res.status}: ${body.slice(0, 300)}`); continue }
       const description = JSON.parse(body).choices?.[0]?.message?.content?.trim()
       if (description) { console.log(`[Vision] OK Groq ${groq.label}`); return description }
-      console.warn(`[Vision] Groq ${groq.label} → vacío`)
     } catch (e) { console.error(`[Vision] Groq ${groq.label} → ${e.message}`) }
-  }
-
-  // 2. Gemini con safetySettings BLOCK_NONE (para no filtrar tatuajes con armas)
-  const geminiKeys = pool.filter(e => e.provider === 'gemini' && e.key)
-  const safetyOff = [
-    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-  ]
-  for (const gemini of geminiKeys) {
-    try {
-      console.log(`[Vision] Gemini ${gemini.label} | ${gemini.model}`)
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${gemini.model}:generateContent?key=${gemini.key}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: cleanMime, data: base64 } }] }],
-            safetySettings: safetyOff,
-            generationConfig: { maxOutputTokens: 200 }
-          })
-        }
-      )
-      const body = await res.text()
-      if (!res.ok) { console.warn(`[Vision] Gemini ${gemini.label} → ${res.status}: ${body.slice(0, 400)}`); continue }
-      const data = JSON.parse(body)
-      const description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-      if (description) { console.log(`[Vision] OK Gemini ${gemini.label}`); return description }
-      console.warn(`[Vision] Gemini ${gemini.label} → sin texto. finishReason: ${data.candidates?.[0]?.finishReason} | body: ${body.slice(0, 300)}`)
-    } catch (e) { console.error(`[Vision] Gemini ${gemini.label} → ${e.message}`) }
   }
 
   console.error('[Vision] Todos los proveedores fallaron')
