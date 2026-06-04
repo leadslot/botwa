@@ -465,8 +465,7 @@ export const botManager = {
             } else if (caption) {
               text = caption
             } else {
-              await sock.sendMessage(from, { text: 'Recibí tu imagen. ¿Querés contarme algo más sobre lo que buscás?' })
-              continue
+              text = '[El cliente mandó una imagen, pero el sistema no pudo interpretarla. Respondé breve: indicá que no pudiste leer bien la imagen y que la reenvíe con mejor calidad si necesita una respuesta sobre esa imagen.]'
             }
           } catch (e) {
             console.error(`[${businessId}] Error descargando imagen:`, e.message)
@@ -531,7 +530,7 @@ export const botManager = {
         }
 
         // Obtener configuración del negocio
-        const [{ data: business }, { data: bizFiles }] = await Promise.all([
+        const [{ data: businessRow }, { data: bizFiles }] = await Promise.all([
           supabase
             .from('businesses')
             .select('name, ai_prompt, ai_enabled, messages_used, is_paid, daily_messages_count, daily_reset_date, tokens_estimated, excluded_numbers, price_list, response_delay_seconds, escalation_contact, mp_payment_link, mp_payment_description, mp_payment_amount')
@@ -542,7 +541,7 @@ export const botManager = {
             .select('id, name, description, url, mimetype')
             .eq('business_id', businessId),
         ])
-        const businessWithFiles = business ? { ...business, files: bizFiles ?? [] } : null
+        const businessWithFiles = businessRow ? { ...businessRow, files: bizFiles ?? [] } : null
 
         if (!businessWithFiles?.ai_enabled) continue
         const business = businessWithFiles

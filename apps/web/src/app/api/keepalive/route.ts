@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const BOT_URL = process.env.BOT_SERVER_URL || 'http://localhost:3001'
 
 export async function GET() {

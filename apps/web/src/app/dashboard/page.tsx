@@ -86,7 +86,6 @@ export default function DashboardPage() {
         }
       })
       .catch(() => {})
-    // note: activeChannelsCount is later adjusted +1 for webchat and +1 for whatsapp if connected
   }, [])
 
   const planData = useMemo(() => {
@@ -137,12 +136,11 @@ export default function DashboardPage() {
   const currentPlan = planData.currentPlan
   const nextPlan = planData.nextPlan
   // gmail is a sub-provider of email, not a standalone channel card
-  const allowedChannels = PLANS[currentPlan].channels.filter(c => c !== 'gmail')
-  const totalInbound = statDays.reduce((sum, day) => sum + day.inbound, 0)
+const totalInbound = statDays.reduce((sum, day) => sum + day.inbound, 0)
   const totalOutbound = statDays.reduce((sum, day) => sum + day.outbound, 0)
 
   const quickActions = [
-    { href: '/dashboard/connect', icon: Wifi, title: 'Canales', desc: currentPlan === 'whatsapp' ? 'WhatsApp y Web Chat' : 'Conexiones del plan' },
+    { href: '/dashboard/connect', icon: Wifi, title: 'Canales', desc: currentPlan === 'whatsapp' ? 'WhatsApp QR' : 'WhatsApp y Telegram' },
     { href: '/dashboard/conversations', icon: MessageSquare, title: 'Conversaciones', desc: 'Mensajes y contactos' },
     { href: '/dashboard/settings', icon: Settings, title: 'Bot', desc: 'Prompt y precios' },
     { href: '/dashboard/billing', icon: CreditCard, title: 'Plan', desc: PLANS[currentPlan].name },
@@ -202,13 +200,11 @@ export default function DashboardPage() {
         </SectionCard>
         <SectionCard className="p-3">
           <Globe2 className="h-5 w-5 text-emerald-600" />
-          <p className="mt-2 text-xs font-semibold text-slate-500">Canales activos</p>
+          <p className="mt-2 text-xs font-semibold text-slate-500">Canal principal</p>
           <p className="text-2xl font-semibold text-slate-950">
-            {activeChannelsCount !== null
-              ? (activeChannelsCount + 1 /* webchat */ + (waStatus === 'connected' ? 1 : 0))
-              : '—'
-            }<span className="text-sm text-slate-400">/{allowedChannels.length}</span>
+            {waStatus === 'connected' ? 'WhatsApp' : '—'}
           </p>
+          <p className="text-[10px] text-slate-400">{waStatus === 'connected' ? 'En línea' : 'Desconectado'}</p>
         </SectionCard>
         <SectionCard className="p-3">
           <TrendingUp className="h-5 w-5 text-[#6C4DFF]" />
@@ -309,7 +305,7 @@ export default function DashboardPage() {
                 ? date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
                 : date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
               const isLid = number.replace(/\D/g, '').length > 13
-              const displayName = isLid ? (pushName ?? 'Cliente') : `+${number}`
+              const displayName = pushName ?? (isLid ? 'Cliente' : `+${number}`)
               return (
                 <div key={number} className="flex items-center gap-3 py-2">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-emerald-100 text-xs font-semibold text-[#6C4DFF]">

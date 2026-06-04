@@ -1,5 +1,5 @@
 {
-  "name": "botwa-bot",
+  "name": "responbot-bot",
   "version": "1.0.0",
   "type": "module",
   "main": "src/index.js",

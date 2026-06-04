@@ -1,18 +1,12 @@
 'use server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/supabase/server'
 
 export async function applyCoupon(code: string) {
-  const supabase = await createClient()
-  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
-  if (!user) return { error: 'No autenticado' }
+  const ctx = await getAuthContext()
+  if (!ctx) return { error: 'No autenticado' }
+  const { businessId: id, adminClient: supabase } = ctx
 
-  const { data: business } = await supabase
-    .from('businesses')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!business) return { error: 'Negocio no encontrado' }
+  const business = { id }
 
   const { data, error } = await supabase.rpc('apply_coupon', {
     p_business_id: business.id,

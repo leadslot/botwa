@@ -6,6 +6,7 @@ import { sendICloudDraft } from '@/lib/email/icloud'
 import { sendImapSmtp } from '@/lib/email/imap'
 import type { ImapConfig } from '@/lib/email/imap'
 import { getAuthContext } from '@/lib/supabase/server'
+import { decryptMetadataSecrets } from '@/lib/secrets'
 
 async function getAuth() {
   const ctx = await getAuthContext()
@@ -48,7 +49,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       .eq('id', draft.connection_id)
       .single()
 
-    const meta = conn?.metadata as ConnectionMetadata | undefined
+    const rawMeta = (conn?.metadata ?? {}) as ConnectionMetadata
+    const meta = decryptMetadataSecrets(rawMeta as Record<string, unknown>, ['access_token', 'refresh_token', 'app_password']) as unknown as ConnectionMetadata
 
     try {
       if (draft.provider === 'gmail' && meta?.access_token) {

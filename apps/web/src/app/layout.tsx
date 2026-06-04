@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Responbot — Tu negocio respondiendo solo',
-  description: 'Respondé WhatsApp, Web Chat, Telegram, Meta, Email y CRM desde una sola plataforma.',
+  title: 'Responbot - Tu negocio respondiendo solo',
+  description: 'Responde WhatsApp por QR y Telegram desde un mismo panel, sin API oficial de WhatsApp.',
   icons: { icon: '/logo.png', apple: '/logo.png' },
 }
 

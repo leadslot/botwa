@@ -60,10 +60,10 @@ export function register() {
           localStorage.removeItem(key)
         }
       }
-      console.warn('[botwa] Cleared corrupt Supabase session (non-ISO-8859-1 token detected)')
+      console.warn('[responbot] Cleared corrupt Supabase session (non-ISO-8859-1 token detected)')
     }
   } catch (e) {
     // Storage may be blocked (private browsing restrictions etc.) — safe to ignore
-    console.warn('[botwa] Could not inspect Supabase session storage:', e)
+    console.warn('[responbot] Could not inspect Supabase session storage:', e)
   }
 }

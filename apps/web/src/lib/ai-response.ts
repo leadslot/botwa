@@ -53,8 +53,8 @@ async function getPool(): Promise<PoolEntry[]> {
   apiPool = [
     { provider: 'groq', key: process.env.GROQ_API_KEY_1!, model: 'llama-3.3-70b-versatile', label: 'Groq-1' },
     { provider: 'groq', key: process.env.GROQ_API_KEY_2!, model: 'llama-3.3-70b-versatile', label: 'Groq-2' },
-    { provider: 'gemini', key: process.env.GEMINI_API_KEY_1!, model: 'gemini-2.0-flash', label: 'Gemini-1' },
-    { provider: 'gemini', key: process.env.GEMINI_API_KEY_2!, model: 'gemini-2.0-flash', label: 'Gemini-2' },
+    { provider: 'gemini', key: process.env.GEMINI_API_KEY_1!, model: 'gemini-3.1-flash-lite', label: 'Gemini-1' },
+    { provider: 'gemini', key: process.env.GEMINI_API_KEY_2!, model: 'gemini-3.1-flash-lite', label: 'Gemini-2' },
     { provider: 'openai', key: process.env.OPENAI_API_KEY!, model: 'gpt-4o-mini', label: 'OpenAI' },
   ].filter((entry): entry is PoolEntry => Boolean(entry.key))
   poolLoadedAt = now

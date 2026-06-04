@@ -1,12 +1,19 @@
 const BOT_SECRET = process.env.BOT_SECRET
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function authMiddleware(req, res, next) {
-  if (!BOT_SECRET) {
-    console.warn('[auth] BOT_SECRET no configurado — acceso sin autenticación')
-    return next()
-  }
+  // Sin BOT_SECRET el servidor no debería haber arrancado (validado en index.js)
+  // Pero como segunda línea de defensa, rechazamos en lugar de permitir
+  if (!BOT_SECRET) return res.status(503).json({ error: 'Server misconfigured' })
   const provided = req.headers['x-bot-secret']
   if (provided !== BOT_SECRET) return res.status(401).json({ error: 'Unauthorized' })
+  next()
+}
+
+function validateBusinessId(req, res, next) {
+  const id = req.params.businessId || req.body?.businessId
+  if (id && !UUID_RE.test(id)) return res.status(400).json({ error: 'businessId inválido' })
   next()
 }
 
@@ -15,8 +22,9 @@ export function setupRoutes(app, botManager) {
   // Health check — sin auth (necesario para keepalive)
   app.get('/health', (req, res) => res.json({ ok: true }))
 
-  // Todas las demás rutas requieren el secret
+  // Todas las demás rutas requieren el secret y businessId válido
   app.use(authMiddleware)
+  app.use(validateBusinessId)
 
   // Iniciar sesión / obtener QR
   app.post('/session/start', async (req, res) => {
@@ -106,7 +114,8 @@ export function setupRoutes(app, botManager) {
       const code = await botManager.requestPairingCode(businessId, phone.replace(/\D/g, ''))
       res.json({ code })
     } catch (e) {
-      res.status(500).json({ error: e.message })
+      console.error(`[pair-code] ${businessId}:`, e.message)
+      res.status(500).json({ error: 'No se pudo generar el código de vinculación' })
     }
   })
 
@@ -115,7 +124,11 @@ export function setupRoutes(app, botManager) {
     const { businessId, to, text } = req.body
     const sock = botManager.activeSessions?.get(businessId)
     if (!sock) return res.status(400).json({ error: 'No conectado' })
-    await sock.sendMessage(`${to}@s.whatsapp.net`, { text })
+    const cleanTo = (to || '').replace(/\D/g, '')
+    if (!cleanTo || cleanTo.length < 7 || cleanTo.length > 15) {
+      return res.status(400).json({ error: 'Número de destino inválido' })
+    }
+    await sock.sendMessage(`${cleanTo}@s.whatsapp.net`, { text })
     res.json({ ok: true })
   })
 }

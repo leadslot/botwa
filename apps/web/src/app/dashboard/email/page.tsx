@@ -31,6 +31,7 @@ type EmailDraft = {
 
 type EmailConnection = {
   id: string
+  channel?: string
   display_name: string | null
   external_id: string
   status: string
@@ -85,7 +86,7 @@ export default function EmailPage() {
     ])
     const chData = await chRes.json()
     const drData = await drRes.json()
-    const emailConns = (chData.channels ?? []).filter((c: EmailConnection) => c.status !== 'disconnected' && c.external_id?.includes(':'))
+    const emailConns = (chData.channels ?? []).filter((c: EmailConnection) => c.channel === 'email' && c.status !== 'disconnected')
     setConnections(emailConns)
     setDrafts(drData.drafts ?? [])
     setLoading(false)

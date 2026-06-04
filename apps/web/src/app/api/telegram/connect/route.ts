@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
+import { decryptMetadataSecrets, encryptSecret } from '@/lib/secrets'
 
 async function getAuth() {
   const ctx = await getAuthContext()
@@ -20,11 +21,11 @@ export async function POST(req: NextRequest) {
   if (!me.ok) return NextResponse.json({ error: 'token invalido' }, { status: 400 })
 
   const webhookSecret = crypto.randomUUID().replaceAll('-', '')
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/api/telegram/webhook?businessId=${auth.businessId}&secret=${webhookSecret}`
+  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar'}/api/telegram/webhook?businessId=${auth.businessId}`
   const hookRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: webhookUrl, allowed_updates: ['message'] }),
+    body: JSON.stringify({ url: webhookUrl, allowed_updates: ['message'], secret_token: webhookSecret }),
   })
   const hook = await hookRes.json()
   if (!hook.ok) return NextResponse.json({ error: hook.description || 'no se pudo activar webhook' }, { status: 500 })
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       bot_id: me.result.id,
       username: me.result.username,
       first_name: me.result.first_name,
-      bot_token: botToken,
+      bot_token: encryptSecret(botToken),
       webhook_secret: webhookSecret,
     },
     updated_at: new Date().toISOString(),
@@ -62,7 +63,8 @@ export async function DELETE() {
     .limit(1)
     .single()
 
-  const token = (data?.metadata as { bot_token?: string } | null)?.bot_token
+  const metadata = decryptMetadataSecrets((data?.metadata ?? {}) as Record<string, unknown>, ['bot_token']) as { bot_token?: string }
+  const token = metadata.bot_token
   if (token) {
     await fetch(`https://api.telegram.org/bot${token}/deleteWebhook`, { method: 'POST' })
   }

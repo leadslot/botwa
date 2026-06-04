@@ -1,7 +1,6 @@
 'use client'
 
-import { PLANS, ADDON_CATALOG, getUsageStatus, getTotalLimit, normalizePlan, type PlanTier } from '@/lib/plans'
-import { useState } from 'react'
+import { PLANS, getUsageStatus, getTotalLimit, normalizePlan, type PlanTier } from '@/lib/plans'
 
 type Business = {
   plan_tier?: string
@@ -55,9 +54,7 @@ export default function UsageSummary({ business, addonRequests, onRequestAddon }
   addonRequests: AddonRequest[]
   onRequestAddon: (type: string) => Promise<void>
 }) {
-  const [requesting, setRequesting] = useState<string | null>(null)
   const planTier = normalizePlan(business.plan_tier) as PlanTier
-  const plan = PLANS[planTier]
   const responsesUsed = business.monthly_responses_used ?? 0
   const emailsUsed = business.monthly_emails_used ?? 0
   const extraResponses = business.extra_responses ?? 0
@@ -66,66 +63,23 @@ export default function UsageSummary({ business, addonRequests, onRequestAddon }
   const bonusEmails = business.bonus_emails ?? 0
   const { responses: responsesLimit, emails: emailsLimit } = getTotalLimit(planTier, extraResponses, extraEmails, bonusResponses, bonusEmails)
 
-  const pendingTypes = new Set(addonRequests.filter(r => r.status === 'pendiente').map(r => r.addon_type))
-
-  const handleRequest = async (type: string) => {
-    setRequesting(type)
-    try { await onRequestAddon(type) } finally { setRequesting(null) }
-  }
-
-  const relevantAddons = ADDON_CATALOG.filter(a => {
-    if (a.type.startsWith('responses') && plan.monthlyResponses === 0) return false
-    if (a.type.startsWith('emails') && plan.monthlyEmails === 0) return false
-    if (a.type === 'agenda' || a.type === 'reminders') return false
-    return true
-  })
+  // addonRequests y onRequestAddon siguen en props por compatibilidad con billing page
+  void addonRequests
+  void onRequestAddon
 
   return (
-    <div className="space-y-6">
-      {/* Consumo mensual */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900">Consumo mensual</h3>
-          {business.cycle_start_date && (
-            <span className="text-xs text-slate-400">Ciclo desde {new Date(business.cycle_start_date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</span>
-          )}
-        </div>
-        <UsageBar label="Respuestas asistidas" used={responsesUsed} limit={responsesLimit} />
-        <UsageBar label="Correos procesados" used={emailsUsed} limit={emailsLimit} />
-        {responsesLimit === 0 && emailsLimit === 0 && (
-          <p className="text-sm text-slate-400">Tu plan no incluye límites de uso en este período.</p>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-slate-900">Consumo mensual</h3>
+        {business.cycle_start_date && (
+          <span className="text-xs text-slate-400">Ciclo desde {new Date(business.cycle_start_date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</span>
         )}
       </div>
-
-      {/* Packs adicionales */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
-        <h3 className="font-semibold text-slate-900">Ampliar plan</h3>
-        <p className="text-xs text-slate-500">Los planes incluyen un volumen mensual de uso asistido. Nunca se cobrará un adicional sin tu aprobación previa.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {relevantAddons.map(addon => {
-            const isPending = pendingTypes.has(addon.type)
-            return (
-              <div key={addon.type} className="rounded-xl border border-slate-100 bg-slate-50 p-4 flex flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-sm font-medium text-slate-800">{addon.label}</span>
-                  <span className="shrink-0 text-sm font-semibold text-violet-700">${addon.price.toLocaleString()}<span className="text-xs font-normal text-slate-400">/mes</span></span>
-                </div>
-                {isPending ? (
-                  <span className="text-xs text-amber-600 font-medium">Solicitud enviada — pendiente de aprobación</span>
-                ) : (
-                  <button
-                    onClick={() => handleRequest(addon.type)}
-                    disabled={requesting === addon.type}
-                    className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 hover:bg-violet-700 transition-colors"
-                  >
-                    {requesting === addon.type ? 'Enviando...' : 'Solicitar pack'}
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      <UsageBar label="Respuestas asistidas" used={responsesUsed} limit={responsesLimit} />
+      <UsageBar label="Correos procesados" used={emailsUsed} limit={emailsLimit} />
+      {responsesLimit === 0 && emailsLimit === 0 && (
+        <p className="text-sm text-slate-400">Tu plan no incluye límites de uso en este período.</p>
+      )}
     </div>
   )
 }

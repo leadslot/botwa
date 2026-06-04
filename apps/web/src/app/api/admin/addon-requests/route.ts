@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'maxijrodriguez09@gmail.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL
 
 export async function GET() {
   const ctx = await getAuthContext()

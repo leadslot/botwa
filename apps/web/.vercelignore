@@ -1,0 +1,5 @@
+.env.local
+.env.production
+.env.tmp
+.env.bot.tmp
+.env.prod.tmp

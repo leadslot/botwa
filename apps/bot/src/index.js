@@ -4,6 +4,15 @@ import { createServer } from 'http'
 import { botManager } from './bot-manager.js'
 import { setupRoutes } from './routes.js'
 
+// Validar variables críticas antes de arrancar
+const REQUIRED_VARS = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'BOT_SECRET']
+for (const v of REQUIRED_VARS) {
+  if (!process.env[v]) {
+    console.error(`FATAL: ${v} no está configurado. El servidor no puede arrancar sin esta variable.`)
+    process.exit(1)
+  }
+}
+
 const app = express()
 app.use(express.json())
 

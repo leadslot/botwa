@@ -31,6 +31,12 @@ export async function DELETE(req: NextRequest) {
         .delete()
         .eq('business_id', business.id)
         .in('conversation_id', conversationIds)
+
+      await adminClient
+        .from('channel_conversations')
+        .delete()
+        .eq('business_id', business.id)
+        .in('id', conversationIds)
     }
 
     return NextResponse.json({ ok: true })

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateChannelResponse } from '@/lib/ai-response'
+import { decryptMetadataSecrets } from '@/lib/secrets'
 
 type TelegramUpdate = {
   update_id?: number
@@ -15,7 +16,8 @@ type TelegramUpdate = {
 export async function POST(req: NextRequest) {
   try {
     const businessId = req.nextUrl.searchParams.get('businessId')
-    const secret = req.nextUrl.searchParams.get('secret')
+    const querySecret = req.nextUrl.searchParams.get('secret')
+    const headerSecret = req.headers.get('x-telegram-bot-api-secret-token')
     if (!businessId) return NextResponse.json({ error: 'businessId requerido' }, { status: 400 })
     const update = await req.json() as TelegramUpdate
     const incoming = update.message
@@ -31,11 +33,12 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .single()
 
-    const metadata = (connection?.metadata ?? {}) as { bot_token?: string; webhook_secret?: string }
-    if (metadata.webhook_secret && secret !== metadata.webhook_secret) {
-      return NextResponse.json({ error: 'secret invalido' }, { status: 401 })
+    const metadata = decryptMetadataSecrets((connection?.metadata ?? {}) as Record<string, unknown>, ['bot_token']) as { bot_token?: string; webhook_secret?: string }
+    const expectedSecret = metadata.webhook_secret || process.env.TELEGRAM_WEBHOOK_SECRET
+    if (!expectedSecret) {
+      return NextResponse.json({ error: 'webhook secret no configurado' }, { status: 503 })
     }
-    if (!metadata.webhook_secret && process.env.TELEGRAM_WEBHOOK_SECRET && secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+    if (headerSecret !== expectedSecret && querySecret !== expectedSecret) {
       return NextResponse.json({ error: 'secret invalido' }, { status: 401 })
     }
     if (!connection || connection.status !== 'active') {

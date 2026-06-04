@@ -9,7 +9,7 @@ export async function GET() {
     .from('channel_connections')
     .select('id, channel, status, display_name, external_id')
     .eq('business_id', ctx.businessId)
-    .in('channel', ['calendar_google', 'calendar_icloud', 'gmail'])
+    .in('channel', ['calendar_google', 'calendar_icloud'])
     .eq('status', 'active')
 
   return NextResponse.json({ connections: connections ?? [] })

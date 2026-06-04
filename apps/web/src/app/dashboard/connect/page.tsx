@@ -23,6 +23,7 @@ import {
   Send,
   Smartphone,
   WifiOff,
+  Zap,
 } from 'lucide-react'
 import { useDashboard } from '../DashboardContext'
 import { createClient as createSupabaseClient } from '@/lib/supabase/client'
@@ -66,6 +67,7 @@ const channelIcons: Record<ChannelId, ElementType> = {
   facebook: MessagesSquare,
   calendar_google: CalendarDays,
   gmail: Mail,
+  mercadopago: Zap,
 }
 
 function ReconnectingPanel({ reconnectingSince, onForce, resetting }: { reconnectingSince: number | null; onForce: () => void; resetting: boolean }) {
@@ -145,7 +147,7 @@ export default function ConnectPage() {
   // gmail is a sub-provider of email, not a standalone channel card
   // Canales no disponibles aún — se ocultan completamente de la UI
   // mercadopago tiene su propia sección dedicada abajo — no mostrar como card genérica
-  const HIDDEN_CHANNEL_CARDS: ChannelId[] = ['gmail', 'whatsapp_api', 'instagram', 'facebook', 'calendar_google', 'mercadopago']
+  const HIDDEN_CHANNEL_CARDS: ChannelId[] = ['gmail', 'whatsapp_api', 'instagram', 'facebook', 'calendar_google', 'mercadopago', 'webchat', 'email']
   const lockedChannels = (Object.keys(CHANNELS) as ChannelId[]).filter(channel => !includedChannels.includes(channel) && !HIDDEN_CHANNEL_CARDS.includes(channel))
   const nextPlan = PLAN_ORDER.find(plan => PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan))
   const [origin, setOrigin] = useState('')
@@ -184,12 +186,8 @@ export default function ConnectPage() {
   }
 
   const visibleTools = useMemo(() => {
-    const tools: ChannelId[] = ['whatsapp', 'webchat']
-    if (planAllows(currentPlan, 'whatsapp_api')) tools.push('whatsapp_api')
+    const tools: ChannelId[] = ['whatsapp']
     if (planAllows(currentPlan, 'telegram')) tools.push('telegram')
-    if (planAllows(currentPlan, 'facebook') || planAllows(currentPlan, 'instagram')) tools.push('facebook')
-    if (planAllows(currentPlan, 'email')) tools.push('email')
-    if (planAllows(currentPlan, 'calendar_google')) tools.push('calendar_google')
     return tools
   }, [currentPlan])
 
@@ -596,7 +594,7 @@ export default function ConnectPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Canales</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Mostramos primero lo que incluye tu plan. El resto queda como desbloqueo, sin tapar la operacion diaria.
+            Gestiona WhatsApp por QR y Telegram desde el mismo panel.
           </p>
         </div>
         <StatusPill tone="violet">{PLANS[currentPlan].name} - {PLANS[currentPlan].priceLabel}</StatusPill>
@@ -966,52 +964,30 @@ export default function ConnectPage() {
         </SectionCard>
       )}
 
-      {/* Mercado Pago */}
-      <MercadoPagoSection currentPlan={currentPlan} />
+      {false && <MercadoPagoSection currentPlan={currentPlan} />}
     </div>
   )
 }
 
-function MercadoPagoSection({ currentPlan }: { currentPlan: string }) {
-  const [conn, setConn] = useState<{ display_name: string; mp_email?: string } | null>(null)
+function MercadoPagoSection({ currentPlan: _currentPlan }: { currentPlan: string }) {
   const [loading, setLoading] = useState(true)
-  const [connecting, setConnecting] = useState(false)
-  const [disconnecting, setDisconnecting] = useState(false)
   const [mpLink, setMpLink] = useState('')
   const [mpDesc, setMpDesc] = useState('')
   const [savingSeña, setSavingSeña] = useState(false)
   const [señaSaved, setSeñaSaved] = useState(false)
-  const { getAuthHeaders } = useDashboard() as unknown as { getAuthHeaders: () => Promise<HeadersInit> }
 
-  async function authH(): Promise<HeadersInit> {
-    const { data: { session } } = await createSupabaseClient().auth.getSession()
-    return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
-  }
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('mp') === 'connected') {
-      window.history.replaceState({}, '', window.location.pathname)
-    }
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
-    const h = await authH()
-    const [connRes, bizRes] = await Promise.all([
-      fetch('/api/channel-connections?channel=mercadopago', { headers: h }).catch(() => null),
-      fetch('/api/business', { headers: h }).catch(() => null),
-    ])
-    if (connRes?.ok) {
-      const data = await connRes.json()
-      const active = (data.connections ?? []).find((c: { status: string; display_name: string; metadata?: { mp_email?: string } }) => c.status === 'active')
-      setConn(active ? { display_name: active.display_name, mp_email: active.metadata?.mp_email } : null)
-    }
-    if (bizRes?.ok) {
-      const biz = await bizRes.json()
-      setMpLink(biz.business?.mp_payment_link ?? '')
-      setMpDesc(biz.business?.mp_payment_description ?? '')
+    const { data: { session } } = await createSupabaseClient().auth.getSession()
+    if (session?.access_token) {
+      const res = await fetch('/api/business', { headers: { Authorization: `Bearer ${session.access_token}` } }).catch(() => null)
+      if (res?.ok) {
+        const biz = await res.json()
+        setMpLink(biz.business?.mp_payment_link ?? '')
+        setMpDesc(biz.business?.mp_payment_description ?? '')
+      }
     }
     setLoading(false)
   }
@@ -1032,133 +1008,59 @@ function MercadoPagoSection({ currentPlan }: { currentPlan: string }) {
     setSavingSeña(false)
   }
 
-  async function connect() {
-    setConnecting(true)
-    const h = await authH()
-    const res = await fetch('/api/mp/connect', { headers: h })
-    const data = await res.json()
-    if (data.url) window.location.href = data.url
-    setConnecting(false)
-  }
-
-  async function disconnect() {
-    setDisconnecting(true)
-    const h = await authH()
-    await fetch('/api/mp/disconnect', { method: 'POST', headers: h })
-    setConn(null)
-    setDisconnecting(false)
-  }
-
-  const mpLocked = currentPlan === 'whatsapp'
-
   return (
     <SectionCard className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className={`flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm flex-shrink-0 ${mpLocked ? 'bg-slate-200 text-slate-400' : 'bg-[#009EE3] text-white'}`}>MP</span>
-          <div>
-            <h2 className="text-lg font-semibold text-slate-950">Mercado Pago</h2>
-            <p className="text-sm text-slate-500">Conectá tu cuenta para cobrar señas de turnos directamente a tus clientes.</p>
-          </div>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#009EE3] font-bold text-sm text-white flex-shrink-0">MP</span>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">Mercado Pago</h2>
+          <p className="text-sm text-slate-500">Configurá el link de pago para cobrar señas desde el bot.</p>
         </div>
-        {mpLocked
-          ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Plan superior</span>
-          : !loading && (conn
-              ? <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Conectado</span>
-              : <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Por conectar</span>
-            )
-        }
       </div>
 
-      {/* Upgrade prompt para Plan 1 */}
-      {mpLocked && (
-        <div className="mt-4 rounded-xl border border-[#009EE3]/25 bg-[#009EE3]/5 p-4">
-          <p className="text-sm font-semibold text-slate-800">Disponible desde el plan <span className="text-[#009EE3]">WhatsApp QR + Mail</span></p>
-          <p className="mt-1 text-xs text-slate-500 leading-5">
-            Con el plan de $99.000/mes podés cobrar señas automáticamente desde el bot. El cliente recibe el link de pago de Mercado Pago directo en el chat.
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando...</div>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 leading-5">
+            Cuando un cliente pregunte cómo reservar o dejar una seña, el bot va a compartir tu link de pago.
+            El turno no se agenda — solo se recibe el pago. Generá el link desde <span className="font-medium text-[#009EE3]">mercadopago.com.ar → Cobrar → Link de pago</span>.
           </p>
-          <a href="/dashboard/billing" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#009EE3] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0088CC] transition-colors">
-            Ver planes →
-          </a>
-        </div>
-      )}
-
-      {!mpLocked && <div className="mt-4">
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando...</div>
-        ) : conn ? (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-emerald-800">{conn.display_name}</p>
-              {conn.mp_email && <p className="text-xs text-emerald-600">{conn.mp_email}</p>}
-            </div>
-            <button onClick={disconnect} disabled={disconnecting} className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-60">
-              {disconnecting ? 'Desconectando...' : 'Desconectar'}
-            </button>
-          </div>
-        ) : (
           <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-700">Link de pago de Mercado Pago</label>
+              <input
+                type="url"
+                value={mpLink}
+                onChange={e => setMpLink(e.target.value)}
+                placeholder="https://mpago.la/..."
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#009EE3]"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-700">Descripción del cobro (opcional)</label>
+              <input
+                type="text"
+                value={mpDesc}
+                onChange={e => setMpDesc(e.target.value)}
+                placeholder="Ej: Para reservar tu turno dejá una seña de $5.000"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#009EE3]"
+              />
+            </div>
             <button
-              onClick={connect}
-              disabled={connecting}
+              onClick={saveSeña}
+              disabled={savingSeña}
               className="flex items-center gap-2 rounded-xl bg-[#009EE3] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0088CC] transition-colors disabled:opacity-60"
             >
-              {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {connecting ? 'Redirigiendo...' : 'Conectar Mercado Pago'}
+              {savingSeña ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {señaSaved ? '✓ Guardado' : savingSeña ? 'Guardando...' : 'Guardar configuración'}
             </button>
-            <p className="text-xs text-slate-400">
-              Vas a ser redirigido a Mercado Pago para autorizar el acceso. Los pagos van directo a tu cuenta.
-            </p>
           </div>
-        )}
-      </div>}
-
-      {/* Configuración de señas — solo visible cuando no está bloqueado */}
-      {!mpLocked && <>
-      <div className="mt-5 border-t border-slate-100 pt-5 space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">Cobro de señas por el bot</h3>
-          <p className="mt-1 text-xs text-slate-500 leading-5">
-            Cuando un cliente pregunte cómo reservar o dejar una seña, el bot va a compartir tu link de pago de Mercado Pago.
-            El turno no se agenda en ningún lado — solo se recibe el pago. Generá el link desde tu cuenta de MP en <span className="font-medium text-[#009EE3]">mercadopago.com.ar → Cobrar → Link de pago</span>.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Link de pago de Mercado Pago</label>
-            <input
-              type="url"
-              value={mpLink}
-              onChange={e => setMpLink(e.target.value)}
-              placeholder="https://mpago.la/..."
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#009EE3]"
-            />
+          <div className="rounded-xl border border-[#009EE3]/20 bg-[#009EE3]/5 p-3 text-xs text-slate-600 leading-5">
+            <span className="font-semibold text-[#0088CC]">Cómo funciona:</span> el bot no agenda nada automáticamente. Cuando el cliente pide reservar o pagar, recibe el link en el chat y paga desde su celular. Vos ves el cobro en tu cuenta de MP.
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Descripción del cobro (opcional)</label>
-            <input
-              type="text"
-              value={mpDesc}
-              onChange={e => setMpDesc(e.target.value)}
-              placeholder="Ej: Para reservar tu turno dejá una seña de $5.000"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#009EE3]"
-            />
-          </div>
-          <button
-            onClick={saveSeña}
-            disabled={savingSeña}
-            className="flex items-center gap-2 rounded-xl bg-[#009EE3] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0088CC] transition-colors disabled:opacity-60"
-          >
-            {savingSeña ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {señaSaved ? '✓ Guardado' : savingSeña ? 'Guardando...' : 'Guardar configuración'}
-          </button>
         </div>
-
-        <div className="rounded-xl border border-[#009EE3]/20 bg-[#009EE3]/5 p-3 text-xs text-slate-600 leading-5">
-          <span className="font-semibold text-[#0088CC]">Cómo funciona:</span> el bot no agenda nada automáticamente. Cuando el cliente pide reservar o pagar, recibe el link directamente en el chat y paga desde su celular. Vos ves el cobro en tu cuenta de Mercado Pago.
-        </div>
-      </div></>}
+      )}
     </SectionCard>
   )
 }

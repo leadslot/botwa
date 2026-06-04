@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
+import { encryptSecret } from '@/lib/secrets'
 
 export async function POST(req: NextRequest) {
   const ctx = await getAuthContext()
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     metadata: {
       provider: 'icloud_calendar',
       email,
-      app_password, // en producción real: encriptar — por ahora igual que iCloud Mail
+      app_password: encryptSecret(app_password),
     },
     updated_at: new Date().toISOString(),
   }, { onConflict: 'business_id,channel,external_id' })

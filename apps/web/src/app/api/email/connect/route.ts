@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
+import { encryptSecret } from '@/lib/secrets'
 
 async function getAuth() {
   const ctx = await getAuthContext()
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         provider: 'imap',
         email,
-        app_password: password,
+        app_password: encryptSecret(password),
         imap_host: imapHost,
         imap_port: imapPort,
         smtp_host: smtpHost,
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
     metadata: {
       provider: 'icloud',
       email,
-      app_password: appPassword,
+      app_password: encryptSecret(appPassword),
       auth_type: 'app_password',
       imap_host: 'imap.mail.me.com',
       imap_port: 993,

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
 import { PLANS, PLAN_ORDER } from '@/lib/plans'
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'maxijrodriguez09@gmail.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL
 const BASE_URL = 'https://responbot.com.ar'
 
 export async function POST() {

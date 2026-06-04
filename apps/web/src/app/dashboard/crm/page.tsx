@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
-  BadgeDollarSign,
   CalendarClock,
   Flame,
   MessageSquare,
@@ -190,7 +189,7 @@ export default function CRMPage() {
         stage,
         intent: contact.notes ? 'Tiene nota comercial' : 'Seguimiento manual',
         score: stage === 'Calificado' ? 82 : stage === 'Seguimiento' ? 68 : 45 + (index % 20),
-        value: 18500 + index * 2500,
+        value: 0,
         nextAction: stage === 'Ganado' ? 'Pedir resena' : stage === 'Seguimiento' ? 'Reactivar' : 'Calificar',
         tags: contact.tags ?? [channel],
         updatedAt: contact.updated_at,
@@ -210,7 +209,7 @@ export default function CRMPage() {
         stage,
         intent: stage === 'Nuevo' ? 'Consulta entrante' : 'Necesita seguimiento',
         score: stage === 'Calificado' ? 80 : stage === 'Seguimiento' ? 62 : 42 + (index % 25),
-        value: 18500 + index * 1800,
+        value: 0,
         nextAction: stage === 'Ganado' ? 'Pedir resena' : stage === 'Seguimiento' ? 'Reactivar' : 'Responder',
         tags: [channel, contact.status || 'activo'].filter(Boolean),
         updatedAt: contact.updated_at,
@@ -226,7 +225,6 @@ export default function CRMPage() {
   const selectedContact = rows.find(contact => contact.id === selectedId) ?? rows[0]
   const usingDemo = false
   const hotLeads = rows.filter(contact => contact.score >= 70).length
-  const totalValue = rows.reduce((sum, contact) => sum + contact.value, 0)
   const channels = new Set(rows.map(contact => contact.channel)).size
 
   async function saveSelectedContact() {
@@ -261,8 +259,7 @@ export default function CRMPage() {
     { label: 'Contactos', value: rows.length, hint: usingDemo ? 'demo' : 'real', icon: UsersRound },
     { label: 'Calientes', value: hotLeads, hint: 'score 70+', icon: Flame },
     { label: 'Canales', value: channels, hint: 'origen', icon: MessageSquare },
-    { label: 'Tareas', value: Math.max(3, Math.ceil(rows.length * 0.45)), hint: 'pendientes', icon: CalendarClock },
-    { label: 'Pipeline', value: `$${totalValue.toLocaleString('es-AR')}`, hint: 'estimado', icon: BadgeDollarSign },
+    { label: 'Tareas', value: 0, hint: 'pendientes', icon: CalendarClock },
   ]
 
   return (
@@ -271,9 +268,6 @@ export default function CRMPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-950">CRM</h1>
-            <span className="rounded-full border border-violet-200 bg-[#F1EDFF] px-3 py-1 text-xs font-semibold text-[#6C4DFF]">
-              Premium
-            </span>
           </div>
           <p className="mt-1 text-sm text-slate-500">
             Leads, intencion, score, proxima accion y seguimiento comercial en una vista operativa.
@@ -388,10 +382,9 @@ export default function CRMPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <DetailItem label="Canal" value={selectedContact.channel} />
                 <DetailItem label="Score" value={`${selectedContact.score}/100`} />
-                <DetailItem label="Valor" value={`$${selectedContact.value.toLocaleString('es-AR')}`} />
                 <DetailItem label="Actividad" value={formatRelativeDate(selectedContact.updatedAt)} />
               </div>
 
@@ -432,13 +425,7 @@ export default function CRMPage() {
         </SectionCard>
       </div>
 
-      <SectionCard className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-950">Proximas capas del CRM</h3>
-          <p className="text-sm text-slate-500">Radar de intencion, agenda, reactivacion y resenas quedan como modulos premium a activar despues.</p>
-        </div>
-        <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500">Pendiente de definir flujo</span>
-      </SectionCard>
+
     </div>
   )
 }

@@ -1,18 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
+import { getVerifiedUser } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { TrendingUp, Users, MessageSquare, Zap, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import AdminAddonRequests from './AdminAddonRequests'
 import AdminBonusPanel from './AdminBonusPanel'
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'maxijrodriguez09@gmail.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL
 const DAILY_LIMIT = 200
 const TRIAL_LIMIT = 50
 
 export default async function AdminPage() {
-  const supabase = await createClient()
-  const { data: { session: _s } } = await supabase.auth.getSession(); const user = _s?.user ?? null
-
+  if (!ADMIN_EMAIL) redirect('/dashboard')
+  const user = await getVerifiedUser()
   if (!user || user.email !== ADMIN_EMAIL) redirect('/dashboard')
+
+  const supabase = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
 
   const { data: businesses } = await supabase
     .from('businesses')

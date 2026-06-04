@@ -1,27 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-const REDIRECT_BASE = 'https://responbot.com.ar/dashboard/calendar'
+import { encryptSecret } from '@/lib/secrets'
 
 export async function GET(req: NextRequest) {
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar').replace(/\/$/, '')
+  const redirectBase = `${appUrl}/dashboard/calendar`
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-  if (!clientId || !clientSecret)
-    return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=missing_env`))
+  if (!clientId || !clientSecret) {
+    return NextResponse.redirect(new URL(`${redirectBase}?cal=missing_env`))
+  }
 
   const code = req.nextUrl.searchParams.get('code')
   const state = req.nextUrl.searchParams.get('state')
-  // state format: "businessId:nonce"
   const businessId = state?.split(':')[0]
-  if (!code || !businessId)
-    return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=invalid_state`))
+  if (!code || !businessId) {
+    return NextResponse.redirect(new URL(`${redirectBase}?cal=invalid_state`))
+  }
 
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!
   )
 
-  const redirectUri = `https://responbot.com.ar/api/calendar/google/callback`
+  const redirectUri = `${appUrl}/api/calendar/google/callback`
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -33,13 +35,13 @@ export async function GET(req: NextRequest) {
       grant_type: 'authorization_code',
     }),
   })
+
   const tokenData = await tokenRes.json()
   if (!tokenRes.ok || !tokenData.access_token) {
     console.error('GCal token error:', tokenData)
-    return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=token_error`))
+    return NextResponse.redirect(new URL(`${redirectBase}?cal=token_error`))
   }
 
-  // Obtener email del usuario
   const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: { Authorization: `Bearer ${tokenData.access_token}` },
   })
@@ -55,17 +57,17 @@ export async function GET(req: NextRequest) {
     channel: 'calendar_google',
     status: 'active',
     external_id: `gcal:${email}`,
-    display_name: `Google Calendar — ${email}`,
+    display_name: `Google Calendar - ${email}`,
     metadata: {
       provider: 'google_calendar',
       email,
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token ?? null,
+      access_token: encryptSecret(tokenData.access_token),
+      refresh_token: encryptSecret(tokenData.refresh_token ?? null),
       expires_at: expiresAt,
       scope: tokenData.scope ?? null,
     },
     updated_at: new Date().toISOString(),
   }, { onConflict: 'business_id,channel,external_id' })
 
-  return NextResponse.redirect(new URL(`${REDIRECT_BASE}?cal=connected`))
+  return NextResponse.redirect(new URL(`${redirectBase}?cal=connected`))
 }

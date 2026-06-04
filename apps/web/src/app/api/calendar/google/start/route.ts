@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const clientId = process.env.GOOGLE_CLIENT_ID
   if (!clientId) return NextResponse.json({ error: 'GOOGLE_CLIENT_ID no configurado' }, { status: 500 })
 
@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   // Encodear businessId en state para recuperarlo en callback (browser no envía auth headers en redirect)
   const state = `${ctx.businessId}:${crypto.randomUUID()}`
 
-  const redirectUri = `https://responbot.com.ar/api/calendar/google/callback`
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://responbot.com.ar').replace(/\/$/, '')
+  const redirectUri = `${appUrl}/api/calendar/google/callback`
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   url.searchParams.set('client_id', clientId)
   url.searchParams.set('redirect_uri', redirectUri)

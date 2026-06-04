@@ -1,0 +1,8 @@
+{
+  "experimentalServices": {
+    "bot": {
+      "entrypoint": "apps/bot",
+      "routePrefix": "/"
+    }
+  }
+}

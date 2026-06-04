@@ -1,25 +1,35 @@
 'use client'
-import { useState, useEffect } from 'react'
+export const dynamic = 'force-dynamic'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Trash2, ToggleLeft, ToggleRight, Eye, EyeOff, Loader2, GripVertical } from 'lucide-react'
 
 const PROVIDERS = [
   { id: 'groq',   label: 'Groq',   model: 'llama-3.3-70b-versatile', hint: 'console.groq.com — Gratis 14.400 req/día' },
-  { id: 'gemini', label: 'Gemini', model: 'gemini-2.0-flash',        hint: 'aistudio.google.com — Gratis 1.500 req/día' },
+  { id: 'gemini', label: 'Gemini', model: 'gemini-3.1-flash-lite',   hint: 'aistudio.google.com — Free Tier multimodal' },
   { id: 'openai', label: 'OpenAI', model: 'gpt-4o-mini',             hint: 'platform.openai.com — Pago, fallback final' },
 ]
 
+type ApiKeyRow = {
+  id: string
+  provider: string
+  label: string
+  key_value: string
+  model: string
+  is_active: boolean
+}
+
 export default function ApiKeysPage() {
-  const [keys, setKeys] = useState<any[]>([])
+  const [keys, setKeys] = useState<ApiKeyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [visible, setVisible] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState({ provider: 'groq', label: '', key_value: '', model: '' })
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase
       .from('api_keys')
@@ -27,9 +37,12 @@ export default function ApiKeysPage() {
       .order('priority', { ascending: true })
     setKeys(data || [])
     setLoading(false)
-  }
+  }, [supabase])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
 
   const addKey = async () => {
     if (!form.label || !form.key_value) return
@@ -153,7 +166,7 @@ export default function ApiKeysPage() {
           ) : keys.length === 0 ? (
             <div className="p-12 text-center text-gray-400">
               <p className="font-medium">No hay keys configuradas</p>
-              <p className="text-sm mt-1">Agregá al menos una key de Groq para que el bot funcione</p>
+              <p className="text-sm mt-1">Agregá al menos una key activa de Gemini, Groq u OpenAI para que el bot funcione</p>
             </div>
           ) : (
             <div>

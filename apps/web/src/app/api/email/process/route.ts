@@ -6,6 +6,7 @@ import { getUnreadICloudMessages, createICloudDraft, sendICloudDraft, markICloud
 import { getUnreadImapMessages, createImapDraft, sendImapSmtp, markImapRead } from '@/lib/email/imap'
 import type { ImapConfig } from '@/lib/email/imap'
 import { generateChannelResponse, needsEscalation } from '@/lib/ai-response'
+import { decryptMetadataSecrets, encryptSecret } from '@/lib/secrets'
 
 import { getVerifiedUser } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
@@ -27,6 +28,7 @@ async function getAuth() {
 async function ensureFreshToken(
   adminClient: any,
   conn: ChannelConnection,
+  rawMeta: ConnectionMetadata,
   meta: ConnectionMetadata
 ): Promise<string> {
   const now = new Date()
@@ -49,7 +51,7 @@ async function ensureFreshToken(
   // Save refreshed token back
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (adminClient as any).from('channel_connections').update({
-    metadata: { ...meta, access_token: refreshed.access_token, expires_at: refreshed.expires_at },
+    metadata: { ...rawMeta, access_token: encryptSecret(refreshed.access_token), expires_at: refreshed.expires_at },
     updated_at: new Date().toISOString(),
   }).eq('id', conn.id)
 
@@ -76,14 +78,15 @@ export async function POST() {
   const errors: string[] = []
 
   for (const conn of connections as ChannelConnection[]) {
-    const meta = conn.metadata as ConnectionMetadata
+    const rawMeta = (conn.metadata ?? {}) as ConnectionMetadata
+    const meta = decryptMetadataSecrets(rawMeta as Record<string, unknown>, ['access_token', 'refresh_token', 'app_password']) as unknown as ConnectionMetadata
     if (!meta?.provider) continue
 
     try {
       const autoSend = Boolean(meta.auto_send_enabled)
 
       if (meta.provider === 'gmail') {
-        const token = await ensureFreshToken(adminClient, conn, meta)
+        const token = await ensureFreshToken(adminClient, conn, rawMeta, meta)
         const messages = await getUnreadGmailMessages(token, 5)
 
         for (const msg of messages) {
@@ -151,7 +154,7 @@ export async function POST() {
           totalDrafts++
         }
       } else if (meta.provider === 'outlook') {
-        const token = await ensureFreshToken(adminClient, conn, meta)
+        const token = await ensureFreshToken(adminClient, conn, rawMeta, meta)
         const messages = await getUnreadOutlookMessages(token, 5)
 
         for (const msg of messages) {

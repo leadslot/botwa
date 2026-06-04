@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/supabase/server'
+import { encryptSecret } from '@/lib/secrets'
 
 async function getBusinessId() {
   const ctx = await getAuthContext()
@@ -65,8 +66,8 @@ export async function GET(req: NextRequest) {
       provider: 'outlook',
       email,
       microsoft_user_id: profile.id ?? null,
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token ?? null,
+      access_token: encryptSecret(tokenData.access_token),
+      refresh_token: encryptSecret(tokenData.refresh_token ?? null),
       expires_at: expiresAt,
       scope: tokenData.scope ?? null,
       mode: 'drafts_first',

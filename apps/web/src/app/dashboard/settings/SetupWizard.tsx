@@ -95,7 +95,7 @@ const BOT_PROFILES: {
   {
     key: 'marketing',
     label: 'Marketing',
-    description: 'El bot presenta novedades, promociones, capta leads y mantiene el interés del cliente con mensajes atractivos.',
+    description: 'El bot presenta novedades, promociones y mantiene el interes del cliente con mensajes utiles.',
     Icon: Megaphone,
     promptInstruction: 'Tu objetivo es generar interés. Mencioná promociones cuando sea natural, sin ser invasivo.',
   },
@@ -216,8 +216,8 @@ const TONES = [
   { value: 'divertido y cercano',      label: 'Divertido y cercano' },
 ]
 
-const PAYMENT_OPTIONS = ['Efectivo', 'MercadoPago', 'Transferencia', 'Tarjeta', 'Cripto']
-const CHANNEL_OPTIONS = ['WhatsApp', 'Email', 'Telegram']
+const PAYMENT_OPTIONS = ['Efectivo', 'Transferencia', 'Tarjeta']
+const CHANNEL_OPTIONS = ['WhatsApp', 'Telegram']
 
 type FieldDef =
   | { key: string; label: string; type: 'textarea' | 'text'; placeholder?: string }
@@ -229,7 +229,7 @@ const RUBRO_FIELDS: Record<string, FieldDef[]> = {
   peluqueria: [
     { key: 'servicios', label: '¿Qué servicios ofrecés?', type: 'textarea', placeholder: 'Ej: Corte de pelo, barba, color, mechas...' },
     { key: 'precios',   label: '¿Cómo son los precios?',  type: 'textarea', placeholder: 'Ej: Corte $5.000, barba $3.000, mechas desde $15.000' },
-    { key: 'turno',     label: '¿Cómo se saca turno?',    type: 'textarea', placeholder: 'Ej: Por WhatsApp o Instagram, con 48hs de anticipación' },
+    { key: 'turno',     label: '¿Cómo se saca turno?',    type: 'textarea', placeholder: 'Ej: Por WhatsApp o Telegram, con 48hs de anticipacion' },
     { key: 'duracion',  label: '¿Cuánto dura cada servicio aprox?', type: 'text', placeholder: 'Ej: Corte 30min, mechas 2hs' },
   ],
   tatuajes: [
@@ -290,7 +290,7 @@ const RUBRO_FIELDS: Record<string, FieldDef[]> = {
     { key: 'productos', label: '¿Qué productos vendés?', type: 'textarea', placeholder: 'Ej: Ropa femenina, calzado, accesorios...' },
     { key: 'envios', label: '¿Hacés envíos?', type: 'select', options: ['Sí', 'No', 'Solo zona'] },
     { key: 'precios', label: '¿Cuál es el rango de precios?', type: 'textarea', placeholder: 'Ej: Remeras desde $X, pantalones desde $Y' },
-    { key: 'pedido', label: '¿Cómo se hace un pedido?', type: 'textarea', placeholder: 'Ej: Por WhatsApp con foto del producto, pago por transferencia o MercadoPago' },
+    { key: 'pedido', label: '¿Cómo se hace un pedido?', type: 'textarea', placeholder: 'Ej: Por WhatsApp con foto del producto o pago por transferencia' },
   ],
   ecommerce: [
     { key: 'productos', label: '¿Qué productos vendés?', type: 'textarea', placeholder: 'Ej: Suplementos deportivos, productos naturales...' },
@@ -669,7 +669,7 @@ function buildPrompt(d: WizardData): string {
 
   const prompt = `Sos ${d.contactName || 'del equipo'} de ${d.businessName} (${rubroLabel}).
 Respondés consultas de forma ${d.tone} a través de: ${channelsLine}.
-Cada canal tiene su propio estilo (WhatsApp: breve y directo; Email: ordenado y completo; Telegram: conciso y amigable). Adaptá el tono al canal pero siempre con la misma información.
+Cada canal tiene su propio estilo (WhatsApp: breve y directo; Telegram: conciso y amigable). Adapta el tono al canal pero siempre con la misma informacion.
 
 ${UNIVERSAL_PROMPT}
 
@@ -998,11 +998,11 @@ export default function SetupWizard({ businessId, onClose, onSaved, initialData,
                 <input className={inp} value={data.bookingLink} onChange={e => set('bookingLink', e.target.value)} placeholder="https://booksy.com/..." />
               </div>
 
-              {/* Señas / pago anticipado */}
+              {/* Senas / pago anticipado */}
               <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
                 <div>
-                  <p className="text-sm font-bold text-gray-800">Seña / pago anticipado con Mercado Pago</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Si pedís seña para confirmar turnos, el bot puede generar un link de pago automáticamente cuando el cliente lo pida. Necesitás conectar tu cuenta de Mercado Pago en la sección Canales.</p>
+                  <p className="text-sm font-bold text-gray-800">Sena / pago anticipado</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Si pedis sena para confirmar turnos, deja aca el monto y la descripcion para que el bot informe como continuar.</p>
                 </div>
                 <div>
                   <label className={lbl}>Monto de la seña <span className="text-gray-400 font-normal">(en pesos)</span></label>

@@ -24,8 +24,6 @@ export async function GET(req: NextRequest) {
     'email',
     'profile',
     'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/gmail.modify',
-    'https://www.googleapis.com/auth/gmail.compose',
   ].join(' '))
 
   return NextResponse.json({ url: url.toString() }, { headers: { 'Cache-Control': 'no-store, max-age=0' } })
